@@ -101,7 +101,7 @@ class NeuralNet(object) :
 
 	def _initUpdates(self) :
 		self.outputs = self.layers[-1].outputs
-		cost = self.costFct(self.y, self.outputs)
+		# cost = self.costFct(self.y, self.outputs)
 		self.updates = []
 		for layer in self.layers :
 			self.params.extend(layer.params)
