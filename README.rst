@@ -14,4 +14,4 @@ The one liner MLP
   mlp = Input(10) > Hidden(4) > Classifier(2)
   
   for x, y in trainingSet.iteritems() :
-    mlp.train()
+    mlp.train(x, y)
