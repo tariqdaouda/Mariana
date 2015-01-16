@@ -32,7 +32,7 @@ class Layer(object) :
 		if self.activation is None :
 			self.outputs = tt.dot(self.inputs, self.W) + self.b
 		else :
-			self.outputs = self.activation(tt.dot(self.inputs, self.W) + self.b)
+			self.outputs = theano.printing.Print('this is a very important value for %s' % self.name)(self.activation(tt.dot(self.inputs, self.W) + self.b))
 
 	def serialize(self) :
 		"returns a dict {name, nbInputs, nbOutputs, activation, W, b}"
@@ -102,6 +102,10 @@ class NeuralNet(object) :
 	def _initUpdates(self) :
 		self.outputs = self.layers[-1].outputs
 		# cost = self.costFct(self.y, self.outputs)
+		L1 =  self.l1 * sum([abs(l.W).sum() for l in self.layers])
+		L2 = self.l2 * sum([(l.W**2).sum() for l in self.layers])
+		cost = self.costFct(self.y, self.outputs) + L1 + L2
+
 		self.updates = []
 		for layer in self.layers :
 			self.params.extend(layer.params)
@@ -111,11 +115,6 @@ class NeuralNet(object) :
 				momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
 				self.updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
 				self.updates.append((param, param - self.lr * momentum_param))
-				
-				
-		L1 =  self.l1 * sum([abs(l.W).sum() for l in self.layers])
-		L2 = self.l2 * sum([(l.W**2).sum() for l in self.layers])
-		cost = self.costFct(self.y, self.outputs) + L1 + L2
 
 		self.theano_train = theano.function(inputs = [self.inputs, self.y], outputs = [cost, self.outputs], updates = self.updates)
 		self.theano_test = theano.function(inputs = [self.inputs, self.y], outputs = [cost, self.outputs])
