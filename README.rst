@@ -7,4 +7,4 @@ Named after the deepest place on earth (Marianas trench), Mariana is a machine l
 What to expect:
 ==============
 
-A surpisigly compact interface.
+A surprisingly compact interface.
