@@ -159,23 +159,24 @@ class Output(Hidden) :
 
 		inputLayer = self.network.entryLayer
 		
-		# L1 =  self.l1 * ( abs(self.W) + sum( [abs(l.W).sum() for l in self.dependencies.values()] ) )
-		# L2 = self.l2 * ( self.W**2 + sum( [(l.W**2).sum() for l in self.dependencies.values()] ) )
+		L1 =  self.l1 * ( abs(self.W) + sum( [abs(l.W).sum() for l in self.dependencies.values()] ) )
+		L2 = self.l2 * ( self.W**2 + sum( [(l.W**2).sum() for l in self.dependencies.values()] ) )
 		self.cost = self.costFct(self.y, self.outputs) #+ L1 + L2
 
 		self.updates = []
 		for param in self.params :
 			gparam = tt.grad(self.cost, param)
-			# momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
-			# self.updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
-			# self.updates.append((param, param - self.lr * momentum_param))
-			self.updates.append((param, param - self.lr * gparam))
+			momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
+			self.updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
+			self.updates.append((param, param - self.lr * momentum_param))
+			# self.updates.append((param, param - self.lr * gparam))
 
 		self.theano_train = theano.function(inputs = [inputLayer.outputs, self.y], outputs = [self.cost, self.outputs], updates = self.updates)#,  mode='DebugMode')
 		self.theano_test = theano.function(inputs = [inputLayer.outputs, self.y], outputs = [self.cost, self.outputs])
 		self.theano_propagate = theano.function(inputs = [inputLayer.outputs], outputs = self.outputs)
 		self.theano_predict = theano.function(inputs = [inputLayer.outputs], outputs = tt.argmax(self.outputs, axis = 1))
-
+		# print theano.printing.debugprint(self.theano_train)
+		# stop
 
 class Network(object) :
 

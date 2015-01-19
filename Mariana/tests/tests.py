@@ -1,6 +1,6 @@
 import unittest
 
-from layers import *
+from Marian.layers import *
 import Mariana.costs as MC
 import theano.tensor as tt
 import numpy as N
