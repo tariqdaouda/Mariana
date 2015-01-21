@@ -41,17 +41,17 @@ class MLPTests(unittest.TestCase):
 		self.assertEqual(mlp.predict( [ self.xor_ins[2] ] )["out"][0], 1 )
 		self.assertEqual(mlp.predict( [ self.xor_ins[3] ] )["out"][0], 0 )
 
-	def test_save(self) :
-		import cPickle
+	# def test_save(self) :
+	# 	import cPickle
 
-		mlp = self.trainMLP_xor()
-		mlp.save("test_save")
-		cPickle.load(open('test_save.mariana.pkl'))
+	# 	mlp = self.trainMLP_xor()
+	# 	mlp.save("test_save")
+	# 	cPickle.load(open('test_save.mariana.pkl'))
 
-		self.assertEqual(mlp.predict( [ self.xor_ins[0] ] )["out"][0], 0 )
-		self.assertEqual(mlp.predict( [ self.xor_ins[1] ] )["out"][0], 1 )
-		self.assertEqual(mlp.predict( [ self.xor_ins[2] ] )["out"][0], 1 )
-		self.assertEqual(mlp.predict( [ self.xor_ins[3] ] )["out"][0], 0 )
+	# 	self.assertEqual(mlp.predict( [ self.xor_ins[0] ] )["out"][0], 0 )
+	# 	self.assertEqual(mlp.predict( [ self.xor_ins[1] ] )["out"][0], 1 )
+	# 	self.assertEqual(mlp.predict( [ self.xor_ins[2] ] )["out"][0], 1 )
+	# 	self.assertEqual(mlp.predict( [ self.xor_ins[3] ] )["out"][0], 0 )
 
 if __name__ == '__main__' :
 	unittest.main()
