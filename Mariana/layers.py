@@ -168,21 +168,22 @@ class Output(Hidden) :
 			self.updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
 			self.updates.append((param, param - self.lr * momentum_param))
 
-		self._setTheanoFcts()
+		self._setTheanoFunction()
 
-	def _setTheanoFcts(self) :
+	def _setTheanoFunction(self) :
 		self.theano_train = theano.function(inputs = [self.inputLayer.outputs, self.y], outputs = [self.cost, self.outputs], updates = self.updates)#,  mode='DebugMode')
 		self.theano_test = theano.function(inputs = [self.inputLayer.outputs, self.y], outputs = [self.cost, self.outputs])
 		self.theano_propagate = theano.function(inputs = [self.inputLayer.outputs], outputs = self.outputs)
-		self.theano_predict = theano.function(inputs = [self.inputLayer.outputs], outputs = tt.argmax(self.outputs, axis = 1))
-
+		# print theano.printing.debugprint(self.theano_train)
+		# stop
 class SoftmaxClassifier(Output) :
 
 	def __init__(self, nbOutputs, lr = 0.1, l1 = 0, l2 = 0, momentum = 0, name = None) :
-		Output.__init__(self, nbOutputs, activation = tt.nnet.softmax, costFct = MC.negativeLogLikelihood, lr = lr, l1 = l1, l2 = l2, momentum = momentum, name = name)
+		Output.__init__(self, nbOutputs,  costFct = MC.negativeLogLikelihood, activation = tt.nnet.softmax, lr = lr, l1 = l1, l2 = l2, momentum = momentum, name = name)
 
-	def _setTheanoFcts(self) :
-		Output._setTheanoFcts(self)
+	def _setTheanoFunction(self) :
+		Output._setTheanoFunction(self)
+		self.theano_predict = theano.function(inputs = [self.inputLayer.outputs], outputs = tt.argmax(self.outputs, axis = 1))
 
 class Network(object) :
 
