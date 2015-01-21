@@ -97,6 +97,7 @@ class Hidden(LayerABC) :
 		self.activation = activation
 
 	def _setOutputs(self) :
+		# print "====", self, self.inputs
 		initWeights = numpy.random.random((self.nbInputs, self.nbOutputs))
 		initWeights = (initWeights/sum(initWeights))
 		initWeights = numpy.asarray(initWeights, dtype=theano.config.floatX)
@@ -140,7 +141,7 @@ class Output(Hidden) :
 	def _backTrckDependencies(self) :
 		def _bckTrk(deps, layer) :		
 			for l in layer.feededBy.itervalues() :
-				if isinstance(l, Input) or issubclass(l.__class__, Input) :
+				if l.__class__ is not Input :
 					deps[l.name] = l
 					_bckTrk(deps, l)
 			return deps
@@ -151,6 +152,7 @@ class Output(Hidden) :
 		
 		Hidden._setOutputs(self)
 
+		# self.outputs = sum([l.outputs for l in self.feededBy.itervalues()])
 		self._backTrckDependencies()
 		for l in self.dependencies.itervalues() :
 			self.params.extend(l.params)
@@ -159,7 +161,7 @@ class Output(Hidden) :
 		
 		L1 =  self.l1 * ( abs(self.W) + sum( [abs(l.W).sum() for l in self.dependencies.values()] ) )
 		L2 = self.l2 * ( self.W**2 + sum( [(l.W**2).sum() for l in self.dependencies.values()] ) )
-		self.cost = self.costFct(self.y, self.outputs)# + L1 + L2
+		self.cost = self.costFct(self.y, self.outputs) #+ L1 + L2
 
 		self.updates = []
 		for param in self.params :
@@ -167,6 +169,7 @@ class Output(Hidden) :
 			momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
 			self.updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
 			self.updates.append((param, param - self.lr * momentum_param))
+			# self.updates.append((param, param - self.lr * gparam))
 
 		self._setTheanoFunction()
 
@@ -176,6 +179,7 @@ class Output(Hidden) :
 		self.theano_propagate = theano.function(inputs = [self.inputLayer.outputs], outputs = self.outputs)
 		# print theano.printing.debugprint(self.theano_train)
 		# stop
+
 class SoftmaxClassifier(Output) :
 
 	def __init__(self, nbOutputs, lr = 0.1, l1 = 0, l2 = 0, momentum = 0, name = None) :
@@ -233,11 +237,11 @@ class Network(object) :
 			ret[o.name] = o.theano_train(x, y)
 		return ret
 
-	def test(self, x, y) :
+	def test(self, x) :
 		self._init()
 		ret = {}
 		for o in self.outputs.itervalues() :
-			ret[o.name] = o.theano_test(x, y)
+			ret[o.name] = o.theano_test(x)
 		return ret
 
 	def propagate(self, x) :
@@ -253,13 +257,6 @@ class Network(object) :
 		for o in self.outputs.itervalues() :
 			ret[o.name] = o.theano_predict(x)
 		return ret
-
-	def save(self, filename) :
-		"save the model into filename.mariana.pkl"
-		import cPickle
-		f = open(filename + '.mariana.pkl', 'wb')
-		cPickle.dump(self, f, -1)
-		f.close()
 
 	def __str__(self) :
 		s = []
