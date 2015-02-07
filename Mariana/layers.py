@@ -1,13 +1,30 @@
 from abc import ABCMeta#, abstractmethod
-from collections import OrderedDict
 
 from types import *
 import cPickle
 
-import theano, numpy
+import theano, numpy, time
 import theano.tensor as tt
 import Mariana.costs as MC
+from Network import *
 
+class TheanoFct(object) :
+
+	def __init__(self, name, theano_fct) :
+		self.theano_fct = theano_fct
+		self.name = name
+
+	def run(self, *args) :
+		return self.theano_fct(*args)
+	
+	def __call__(self, *args) :
+		return self.run(*args)
+
+	def __repr__(self) :
+		return "<Mariana Theano Fct '%s'>" % self.name
+
+	def __str__(self) :
+		return "<Mariana Theano Fct '%s': %s>" % (self.name, self.theano_fct)
 
 class LayerABC(object) :
 
@@ -32,6 +49,16 @@ class LayerABC(object) :
 		self.network = None
 		self._inputRegistrations = set()
 	
+		self.W = None
+		self.b = None
+		
+	def clone(self) :
+		"""Returns a free layer with the same weights and bias"""
+		res = self.__class__(self.nbOutputs)
+		res.W = self.W
+		res.b = self.b
+		return res
+
 	def _registerInput(self, inputLayer) :
 		self._inputRegistrations.add(inputLayer.name)
 
@@ -88,23 +115,47 @@ class LayerABC(object) :
 		return self._con(pathOrLayer)
 
 	def __repr__(self) :
-		return "(%s: %sx%s )" % (self.name, self.nbInputs, self.nbOutputs)
+		return "(Mariana Layer %s: %sx%s )" % (self.name, self.nbInputs, self.nbOutputs)
 
 class Hidden(LayerABC) :
 
-	def __init__(self, nbOutputs, activation = tt.tanh, name = None) :
+	def __init__(self, nbOutputs, activation = tt.tanh, name = None, sparsity = 0) :
 		LayerABC.__init__(self, nbOutputs, name = name)
 		self.activation = activation
+		self.sparsity = sparsity
 
 	def _setOutputs(self) :
-		# print "====", self, self.inputs
-		initWeights = numpy.random.random((self.nbInputs, self.nbOutputs))
-		initWeights = (initWeights/sum(initWeights))
-		initWeights = numpy.asarray(initWeights, dtype=theano.config.floatX)
-		self.W = theano.shared(value = initWeights, name = self.name + "_W")
-			
-		initBias = numpy.zeros((self.nbOutputs,), dtype=theano.config.floatX)
-		self.b = theano.shared(value = initBias, name = self.name + "_b")
+
+		if self.W is None :
+			rng = numpy.random.RandomState(int(time.time()))
+			if self.activation is tt.tanh :
+				initWeights = rng.uniform(
+					low = -numpy.sqrt(6. / (self.nbInputs + self.nbOutputs)),
+					high = numpy.sqrt(6. / (self.nbInputs + self.nbOutputs)),
+					size = (self.nbInputs, self.nbOutputs)
+				)
+			else :
+				initWeights = numpy.random.random((self.nbInputs, self.nbOutputs))
+				initWeights = initWeights/sum(initWeights)
+
+			initWeights = numpy.asarray(initWeights, dtype=theano.config.floatX)
+		
+			for i in xrange(initWeights.shape[0]) :
+				for j in xrange(initWeights.shape[1]) :
+					if numpy.random.random() < self.sparsity :
+						initWeights[i, j] = 0
+
+			self.W = theano.shared(value = initWeights, name = self.name + "_W")
+		else :
+			if self.W.get_value().shape != (self.nbInputs, self.nbOutputs) :
+				raise ValueError("weights have shape %s, but the layer has %s inputs and %s outputs" % (self.W.get_value().shape, self.nbInputs, self.nbOutputs))
+
+		if self.b is None :
+			initBias = numpy.zeros((self.nbOutputs,), dtype=theano.config.floatX)
+			self.b = theano.shared(value = initBias, name = self.name + "_b")
+		else :
+			if self.b.get_value().shape[0] != self.nbOutputs :
+				raise ValueError("bias has a length of %s, but there are %s outputs" % (self.b.get_value().shape[0], self.nbOutputs))
 
 		self.params = [self.W, self.b]
 		self.network.addParams(self.params)
@@ -124,6 +175,9 @@ class Input(Hidden) :
 
 	def _setOutputs(self) :
 		self.outputs = tt.matrix(name = self.name + "_X")
+
+	def __repr__(self) :
+		return "(Mariana input %s: %s)" % (self.name, self.nbInputs)
 
 class Output(Hidden) :
 
@@ -171,96 +225,44 @@ class Output(Hidden) :
 			self.updates.append((param, param - self.lr * momentum_param))
 			# self.updates.append((param, param - self.lr * gparam))
 
-		self._setTheanoFunction()
-
-	def _setTheanoFunction(self) :
 		self.theano_train = theano.function(inputs = [self.inputLayer.outputs, self.y], outputs = [self.cost, self.outputs], updates = self.updates)#,  mode='DebugMode')
 		self.theano_test = theano.function(inputs = [self.inputLayer.outputs, self.y], outputs = [self.cost, self.outputs])
 		self.theano_propagate = theano.function(inputs = [self.inputLayer.outputs], outputs = self.outputs)
-		# print theano.printing.debugprint(self.theano_train)
-		# stop
-
-class SoftmaxClassifier(Output) :
-
-	def __init__(self, nbOutputs, lr = 0.1, l1 = 0, l2 = 0, momentum = 0, name = None) :
-		Output.__init__(self, nbOutputs,  costFct = MC.negativeLogLikelihood, activation = tt.nnet.softmax, lr = lr, l1 = l1, l2 = l2, momentum = momentum, name = name)
+		
+		self._setTheanoFunction()
+	
+	def _initThenoFunctions(self) :
+		for k, v in self.__dict__ :
+			if k.find("theano") == 0 :
+				self.__dict__[k] = TheanoFct(v)
 
 	def _setTheanoFunction(self) :
-		Output._setTheanoFunction(self)
+		"This is where you should put the definitions of your custom theano functions"
+		pass
+
+	def toHidden(self) :
+		"returns a hidden layer with the same activation function, weights and bias"
+		h = Hidden(self.nbOutputs, activation = self.activation, name = self.name, sparsity = 0)
+		h.W = self.W
+		h.b = self.b
+		return h
+
+class ClassifierABC(Output):
+		"An abstract Classifier"
+		def __init__(self, nbOutputs, activation, costFct, lr = 0.1, l1 = 0, l2 = 0, momentum = 0, name = None) :
+			Output.__init__(self, nbOutputs, activation,  costFct, lr, l1, l2, momentum , name)
+
+		def _setTheanoFunction(self) :
+			self.theano_predict = None
+
+		def predict(self) :
+			if self.theano_predict is None :
+				raise NotImplemented("theano predict must be defined in child's _setTheanoFunction()")
+
+class SoftmaxClassifier(ClassifierABC) :
+
+	def __init__(self, nbOutputs, lr = 0.1, l1 = 0, l2 = 0, momentum = 0, name = None) :
+		ClassifierABC.__init__(self, nbOutputs, activation = tt.nnet.softmax, costFct = MC.negativeLogLikelihood, lr = lr, l1 = l1, l2 = l2, momentum = momentum, name = name)
+
+	def _setTheanoFunction(self) :
 		self.theano_predict = theano.function(inputs = [self.inputLayer.outputs], outputs = tt.argmax(self.outputs, axis = 1))
-
-class Network(object) :
-
-	def __init__(self, entryLayer, inputLayer = None) :
-		
-		self.entryLayer = entryLayer
-		self.inputLayer = inputLayer
-		self.layers = OrderedDict()
-		self.outputs = OrderedDict()
-		self.edges = set()
-
-		self.params = []
-
-		self._mustInit = True
-
-	def addParams(self, params) :
-		self.params.extend(params)
-
-	def addEdge(self, layer1, layer2) :
-		self.layers[layer1.name] = layer1
-		self.layers[layer2.name] = layer2
-		self.edges.add( (layer1.name, layer2.name))
-
-	def addOutput(self, ou) :
-		self.outputs[ou.name] = ou
-
-	def merge(self, conLayer, network) :
-		if network.inputLayer is not None and network.inputLayer is not self.inputLayer :
-			raise ValueError("Can't merge, the network already has an input layer")
-
-		self.addEdge(conLayer, network.entryLayer)
-		
-		network.entryLayer = self.entryLayer
-		self.outputs.update(network.outputs)
-		self.layers.update(network.layers)
-		self.edges = self.edges.union(network.edges)
-
-	def _init(self) :
-		if self._mustInit :
-			self.entryLayer._init()
-			self._mustInit = False
-
-	def train(self, x, y) :
-		self._init()
-		ret = {}
-		for o in self.outputs.itervalues() :
-			ret[o.name] = o.theano_train(x, y)
-		return ret
-
-	def test(self, x) :
-		self._init()
-		ret = {}
-		for o in self.outputs.itervalues() :
-			ret[o.name] = o.theano_test(x)
-		return ret
-
-	def propagate(self, x) :
-		self._init()
-		ret = {}
-		for o in self.outputs.itervalues() :
-			ret[o.name] = o.theano_propagate(x)
-		return ret
-
-	def predict(self, x) :
-		self._init()
-		ret = {}
-		for o in self.outputs.itervalues() :
-			ret[o.name] = o.theano_predict(x)
-		return ret
-
-	def __str__(self) :
-		s = []
-		for o in self.outputs :
-			s.append(o)
-
-		return "Net: %s > ... > [%s]" % (self.inputLayer.name, ', '.join(s))
