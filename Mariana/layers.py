@@ -9,6 +9,7 @@ import Mariana.costs as MC
 from Network import *
 
 class TheanoFct(object) :
+	"This class encapsulates a Theano function"
 
 	def __init__(self, name, theano_fct) :
 		self.theano_fct = theano_fct
@@ -27,6 +28,7 @@ class TheanoFct(object) :
 		return "<Mariana Theano Fct '%s': %s>" % (self.name, self.theano_fct)
 
 class LayerABC(object) :
+	"the abstract layer class"
 
 	__metaclass__ = ABCMeta
 
@@ -60,9 +62,11 @@ class LayerABC(object) :
 		return res
 
 	def _registerInput(self, inputLayer) :
+		"Registers an input to the layer. This function is called inputLayer"
 		self._inputRegistrations.add(inputLayer.name)
 
 	def _init(self) :
+		"Initialise the layer making it ready for training. This function is automatically called before train/test etc..."
 		if len(self._inputRegistrations) == len(self.feededBy) :
 			self._setOutputs()
 			if self.outputs == None :
@@ -78,14 +82,17 @@ class LayerABC(object) :
 
 	#theano hates abstract methods defined with a decorator
 	def _setOutputs(self) :
+		"""Sets the output of the layer. This function is called by _init() ans should be initialised in child"""
 		raise NotImplemented("Should be implemented in child")
 
 	def _setNbInputs(self, layer) :
+		"""Sets the size of input that the layer receives"""
 		if self.nbInputs is not None and self.nbInputs != layer.nbOutputs :
 			raise ValueError("There's already a layer of '%d' outputs feeding into %s', can't connect '%s' of '%d' outputs" % (self.nbInputs, self.name, layer.name, layer.nbOutputs))
 		self.nbInputs = layer.nbOutputs
 	
-	def _con(self, layerOrList) :
+	def connect(self, layerOrList) :
+		"""Connect the layer to list of layers or to a single layer"""
 		def _connectLayer(me, layer) :
 			layer._setNbInputs(me)
 			me.feedsInto[layer.name] = layer
@@ -112,20 +119,22 @@ class LayerABC(object) :
 		return self.network
 
 	def __gt__(self, pathOrLayer) :
-		return self._con(pathOrLayer)
+		"""Alias to connect, make it possible to write things such as layer1 > layer2"""
+		return self.connect(pathOrLayer)
 
 	def __repr__(self) :
 		return "(Mariana Layer %s: %sx%s )" % (self.name, self.nbInputs, self.nbOutputs)
 
 class Hidden(LayerABC) :
-
+	"A basic hidden layer"
 	def __init__(self, nbOutputs, activation = tt.tanh, name = None, sparsity = 0) :
 		LayerABC.__init__(self, nbOutputs, name = name)
 		self.activation = activation
 		self.sparsity = sparsity
 
 	def _setOutputs(self) :
-
+		"""initialises weights and bias, If the activation fct in tanh, weights will be initialised using Glorot[10],
+		if it is something else wight will simply have small values."""
 		if self.W is None :
 			rng = numpy.random.RandomState(int(time.time()))
 			if self.activation is tt.tanh :
@@ -167,22 +176,24 @@ class Hidden(LayerABC) :
 			self.outputs = self.activation(tt.dot(self.inputs, self.W) + self.b)
 
 class Input(Hidden) :
-
+	"An input layer"
 	def __init__(self, nbInputs, name = None) :
 		LayerABC.__init__(self, nbInputs, name = name)
 		self.nbInputs = nbInputs
 		self.network = Network(self, self)
 
 	def _setOutputs(self) :
+		"initialises the ouput to be the same as the inputs"
 		self.outputs = tt.matrix(name = self.name + "_X")
 
 	def __repr__(self) :
 		return "(Mariana input %s: %s)" % (self.name, self.nbInputs)
 
 class Output(Hidden) :
-
+	"""An output layer"""
 	def __init__(self, nbOutputs, activation, costFct, lr = 0.1, l1 = 0, l2 = 0, momentum = 0, name = None) :
-		
+		"""The output layer defines the learning rate (lr), as well as any other parameters related to the learning"""
+
 		Hidden.__init__(self, nbOutputs, activation = activation, name = name)
 		self.costFct = costFct
 		self.lr = lr
@@ -193,6 +204,7 @@ class Output(Hidden) :
 		self.dependencies = OrderedDict()
 
 	def _backTrckDependencies(self) :
+		"""Finds all the layers the ouput layer is connected to"""
 		def _bckTrk(deps, layer) :		
 			for l in layer.feededBy.itervalues() :
 				if l.__class__ is not Input :
@@ -203,7 +215,9 @@ class Output(Hidden) :
 		self.dependencies = _bckTrk(self.dependencies, self)
 
 	def _setOutputs(self) :
-		
+		"""Initialises the layer by creating the weights and and bias.
+		Creates theano_train/theano_test/theano_propagate functions and calls _setTheanoFunctions to 
+		create user custom theano functions."""
 		Hidden._setOutputs(self)
 
 		# self.outputs = sum([l.outputs for l in self.feededBy.itervalues()])
@@ -215,7 +229,7 @@ class Output(Hidden) :
 		
 		L1 =  self.l1 * ( abs(self.W) + sum( [abs(l.W).sum() for l in self.dependencies.values()] ) )
 		L2 = self.l2 * ( self.W**2 + sum( [(l.W**2).sum() for l in self.dependencies.values()] ) )
-		self.cost = self.costFct(self.y, self.outputs) #+ L1 + L2
+		self.cost = self.costFct(self.y, self.outputs) + L1 + L2
 
 		self.updates = []
 		for param in self.params :
@@ -229,14 +243,14 @@ class Output(Hidden) :
 		self.theano_test = theano.function(inputs = [self.inputLayer.outputs, self.y], outputs = [self.cost, self.outputs])
 		self.theano_propagate = theano.function(inputs = [self.inputLayer.outputs], outputs = self.outputs)
 		
-		self._setTheanoFunction()
+		self._setTheanoFunctions()
 	
-	def _initThenoFunctions(self) :
-		for k, v in self.__dict__ :
-			if k.find("theano") == 0 :
-				self.__dict__[k] = TheanoFct(v)
+	# def _initThenoFunctions(self) :
+	# 	for k, v in self.__dict__ :
+	# 		if k.find("theano") == 0 :
+	# 			self.__dict__[k] = TheanoFct(v)
 
-	def _setTheanoFunction(self) :
+	def _setTheanoFunctions(self) :
 		"This is where you should put the definitions of your custom theano functions"
 		pass
 
@@ -252,17 +266,15 @@ class ClassifierABC(Output):
 		def __init__(self, nbOutputs, activation, costFct, lr = 0.1, l1 = 0, l2 = 0, momentum = 0, name = None) :
 			Output.__init__(self, nbOutputs, activation,  costFct, lr, l1, l2, momentum , name)
 
-		def _setTheanoFunction(self) :
-			self.theano_predict = None
-
-		def predict(self) :
-			if self.theano_predict is None :
-				raise NotImplemented("theano predict must be defined in child's _setTheanoFunction()")
+		def _setTheanoFunctions(self) :
+			"""Classifiers must define a classify function that returns the result of the classification"""
+			raise NotImplemented("theano classify must be defined in child's _setTheanoFunctions()")				
 
 class SoftmaxClassifier(ClassifierABC) :
-
+	"""A softmax Classifier"""
 	def __init__(self, nbOutputs, lr = 0.1, l1 = 0, l2 = 0, momentum = 0, name = None) :
 		ClassifierABC.__init__(self, nbOutputs, activation = tt.nnet.softmax, costFct = MC.negativeLogLikelihood, lr = lr, l1 = l1, l2 = l2, momentum = momentum, name = name)
 
-	def _setTheanoFunction(self) :
-		self.theano_predict = theano.function(inputs = [self.inputLayer.outputs], outputs = tt.argmax(self.outputs, axis = 1))
+	def _setTheanoFunctions(self) :
+		"""defined theano_classify, that returns the argmax of the output"""
+		self.theano_classify = theano.function(inputs = [self.inputLayer.outputs], outputs = tt.argmax(self.outputs, axis = 1))

@@ -1,7 +1,10 @@
 from collections import OrderedDict
 
 class OutputMap(object):
-	"""Applies a function such as theano_train to a set outputs"""
+	"""
+	Encapsulates outputs as well as their theano functions.
+	The role of an output map object is to applies a function such as theano_train to the set outputs that have it
+	"""
 	def __init__(self, name):
 		self.name = name
 		self.outputFcts = []
@@ -26,7 +29,9 @@ class OutputMap(object):
 		return "<%s for output: %s>" % (self.name, os)
 
 class Network(object) :
-
+	"""All theano_x functions of the outputs are accessible through the network interface network.x().
+	Here x is called a model function. Ex: if an output layer has a theano function named theano_classify(),
+	calling net.classify(), will apply out.theano_classify(). The result will be a dictionary of { "output name" => result of the theano function}"""	
 	def __init__(self, entryLayer, inputLayer = None) :
 		self.entryLayer = entryLayer
 		self.inputLayer = inputLayer
@@ -40,9 +45,11 @@ class Network(object) :
 		self.outputMaps = {}
 
 	def addParams(self, params) :
+		"""Add parameters to the network"""
 		self.params.extend(params)
 
 	def addEdge(self, layer1, layer2) :
+		"""Add a connection between two layers to the network"""
 		self.layers[layer1.name] = layer1
 		self.layers[layer2.name] = layer2
 		self.edges.add( (layer1.name, layer2.name))
@@ -52,6 +59,8 @@ class Network(object) :
 		self.outputs[o.name] = o
 
 	def merge(self, conLayer, network) :
+		"""Merges two layer together. There can be only one input to a network, if self ans network both have an input layer
+		this function will raise a ValueError."""
 		if network.inputLayer is not None and network.inputLayer is not self.inputLayer :
 			raise ValueError("Can't merge, the network already has an input layer")
 
@@ -64,6 +73,7 @@ class Network(object) :
 		self.edges = self.edges.union(network.edges)
 
 	def _init(self) :
+		"Initialiases the network by itialising every layer"
 		if self._mustInit :
 			self.entryLayer._init()
 			self._mustInit = False
@@ -78,6 +88,7 @@ class Network(object) :
 			print self.outputMaps
 
 	def __getattribute__(self, k) :
+		"""All theano_x functions are accessible through the network interface network.x(). Here x is called a model function"""
 		try :
 			return object.__getattribute__(self, k)
 		except AttributeError as e :
@@ -97,34 +108,6 @@ class Network(object) :
 		os = '\n\t'.join(os)
 		
 		print "Available model functions:\n" % os
-
-	# def train(self, x, y) :
-	# 	self._init()
-	# 	ret = {}
-	# 	for o in self.outputs.itervalues() :
-	# 		ret[o.name] = o.theano_train(x, y)
-	# 	return ret
-
-	# def test(self, x, y) :
-	# 	self._init()
-	# 	ret = {}
-	# 	for o in self.outputs.itervalues() :
-	# 		ret[o.name] = o.theano_test(x, y)
-	# 	return ret
-
-	# def propagate(self, x) :
-	# 	self._init()
-	# 	ret = {}
-	# 	for o in self.outputs.itervalues() :
-	# 		ret[o.name] = o.theano_propagate(x)
-	# 	return ret
-
-	# def predict(self, x) :
-	# 	self._init()
-	# 	ret = {}
-	# 	for o in self.outputs.itervalues() :
-	# 		ret[o.name] = o.theano_predict(x)
-	# 	return ret
 
 	def save(self, filename) :
 		"save the model into filename.mariana.pkl"
