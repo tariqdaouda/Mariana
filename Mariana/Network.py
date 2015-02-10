@@ -52,7 +52,7 @@ class Network(object) :
 		"""Add a connection between two layers to the network"""
 		self.layers[layer1.name] = layer1
 		self.layers[layer2.name] = layer2
-		self.edges.add( (layer1.name, layer2.name))
+		self.edges.add( (layer1, layer2))
 
 	def addOutput(self, o) :
 		"""adds an output o to the network"""
@@ -72,8 +72,8 @@ class Network(object) :
 		self.layers.update(network.layers)
 		self.edges = self.edges.union(network.edges)
 
-	def _init(self) :
-		"Initialiases the network by initialising every layer"
+	def init(self) :
+		"Initialiases the network by initialising every layer."
 		if self._mustInit :
 			self.entryLayer._init()
 			self._mustInit = False
@@ -93,8 +93,8 @@ class Network(object) :
 			return object.__getattribute__(self, k)
 		except AttributeError as e :
 			maps = object.__getattribute__(self, 'outputMaps')
-			_init = object.__getattribute__(self, '_init')
-			_init()
+			init = object.__getattribute__(self, 'init')
+			init()
 			try :
 				return maps[k]
 			except KeyError :
@@ -114,6 +114,39 @@ class Network(object) :
 		import cPickle
 		f = open(filename + '.mariana.pkl', 'wb')
 		cPickle.dump(self, f, -1)
+		f.close()
+
+	def toDOT(self, name, forceInit = True) :
+		"""returns a string representing the network in the DOT language.
+		If forceInit, the network will first try to initialize each layer
+		before constructing the graph"""
+
+		import time
+
+		if forceInit :
+			self.init()
+
+		com = "//Mariana network generated on %s" % time.ctime()
+		s = "#COM#\ndigraph %s{\n#HEAD#;\n\n#GRAPH#;\n}" % name
+		
+		headers = []
+		for l in self.layers.itervalues() :
+			headers.append("\t" + l._dot_representation())
+
+		g = []
+		for e in self.edges :
+			g.append("\t%s -> %s" % (e[0].name, e[1].name))
+	
+		s = s.replace("#COM#", com)
+		s = s.replace("#HEAD#", ';\n'.join(headers))
+		s = s.replace("#GRAPH#", ';\n'.join(g))
+
+		return s
+
+	def saveDOT(self, name, forceInit = True) :
+		"saves the current network as a graph in the DOT format into the file name.mariana.dot"
+		f = open(name + '.mariana.dot', 'wb')
+		f.write(self.toDOT(name, forceInit))
 		f.close()
 
 	def __repr__(self) :

@@ -77,7 +77,6 @@ class LayerABC(object) :
 					l.inputs = self.outputs
 				else :
 					l.inputs += self.outputs
-				# print "----", self.name, l
 				l._setNbInputs(self)
 				l._registerInput(self)
 				l._init()
@@ -126,6 +125,10 @@ class LayerABC(object) :
 	def __repr__(self) :
 		return "(Mariana %s '%s': %sx%s )" % (self.__class__.__name__, self.name, self.nbInputs, self.nbOutputs)
 
+	def _dot_representation(self) :
+		"returns the representation of the node in the graph DOT format"
+		return '%s [label="%s: %sx%s"]' % (self.name, self.name, self.nbInputs, self.nbOutputs)
+
 class Input(LayerABC) :
 	"An input layer"
 	def __init__(self, nbInputs, name = None) :
@@ -136,6 +139,9 @@ class Input(LayerABC) :
 	def _setOutputs(self) :
 		"initialises the ouput to be the same as the inputs"
 		self.outputs = tt.matrix(name = self.name + "_X")
+
+	def _dot_representation(self) :
+		return '%s [label="%s: %s" shape=invtriangle]' % (self.name, self.name, self.nbOutputs)
 
 class Composite(LayerABC):
 	"""A Composite layer is a layer that brings together the ourputs of several other layers
@@ -154,16 +160,13 @@ class Composite(LayerABC):
 		if self.nbInputs is None :
 			self.nbInputs = 0
 		self.nbInputs += layer.nbOutputs
-		# print layer, self.nbInputs
-
+	
 	def _setOutputs(self) :
-		# print "tramnabjha", self.feedsInto
 		self.nbOutputs = self.nbInputs
-		# print tt.concatenate([l.outputs for l in self.feededBy.itervalues()])
 		self.outputs = tt.concatenate( [l.outputs for l in self.feededBy.itervalues()], axis = 1 )
 
-	def __repr__(self) :
-		return "(Mariana Composite %s: %s)" % (self.name, self.feededBy)
+	def _dot_representation(self) :
+		return '%s [label="%s: %s" shape=box]' % (self.name, self.name, self.nbOutputs)
 		
 class Hidden(LayerABC) :
 	"A basic hidden layer"
@@ -282,9 +285,7 @@ class Output(Hidden) :
 		self.theano_propagate = theano.function(inputs = [self.inputLayer.outputs], outputs = self.outputs)
 		
 		self._setTheanoFunctions()
-		# theano.printing.debugprint(self.theano_train)
-		# theano.printing.pydotprint_variables(self.theano_train)
-		# print theano.pp(self.theano_train)#self, self.inputs.ndim, self.outputs.ndim
+
 
 	def _setTheanoFunctions(self) :
 		"This is where you should put the definitions of your custom theano functions"
@@ -296,6 +297,9 @@ class Output(Hidden) :
 		h.W = self.W
 		h.b = self.b
 		return h
+
+	def _dot_representation(self) :
+		return '%s [label="%s: %sx%s" shape=invtriangle]' % (self.name, self.name, self.nbInputs, self.nbOutputs)
 
 class ClassifierABC(Output):
 		"An abstract Classifier"
