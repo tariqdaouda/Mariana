@@ -77,6 +77,8 @@ class LayerABC(object) :
 					l.inputs = self.outputs
 				else :
 					l.inputs += self.outputs
+				# print "----", self.name, l
+				l._setNbInputs(self)
 				l._registerInput(self)
 				l._init()
 
@@ -94,7 +96,6 @@ class LayerABC(object) :
 	def connect(self, layerOrList) :
 		"""Connect the layer to list of layers or to a single layer"""
 		def _connectLayer(me, layer) :
-			layer._setNbInputs(me)
 			me.feedsInto[layer.name] = layer
 			layer.feededBy[me.name] = me
 
@@ -123,8 +124,47 @@ class LayerABC(object) :
 		return self.connect(pathOrLayer)
 
 	def __repr__(self) :
-		return "(Mariana Layer %s: %sx%s )" % (self.name, self.nbInputs, self.nbOutputs)
+		return "(Mariana %s '%s': %sx%s )" % (self.__class__.__name__, self.name, self.nbInputs, self.nbOutputs)
 
+class Input(LayerABC) :
+	"An input layer"
+	def __init__(self, nbInputs, name = None) :
+		LayerABC.__init__(self, nbInputs, name = name)
+		self.nbInputs = nbInputs
+		self.network = Network(self, self)
+
+	def _setOutputs(self) :
+		"initialises the ouput to be the same as the inputs"
+		self.outputs = tt.matrix(name = self.name + "_X")
+
+class Composite(LayerABC):
+	"""A Composite layer is a layer that brings together the ourputs of several other layers
+	for example is we have::
+		
+		c = Composite()
+		layer1 > c
+		layer2 > c
+
+	The output of c will be single vector: [layer1.output, layer2.output]
+	"""
+	def __init__(self, name = None):
+		LayerABC.__init__(self, nbOutputs = None, name = name)
+
+	def _setNbInputs(self, layer) :
+		if self.nbInputs is None :
+			self.nbInputs = 0
+		self.nbInputs += layer.nbOutputs
+		# print layer, self.nbInputs
+
+	def _setOutputs(self) :
+		# print "tramnabjha", self.feedsInto
+		self.nbOutputs = self.nbInputs
+		# print tt.concatenate([l.outputs for l in self.feededBy.itervalues()])
+		self.outputs = tt.concatenate( [l.outputs for l in self.feededBy.itervalues()], axis = 1 )
+
+	def __repr__(self) :
+		return "(Mariana Composite %s: %s)" % (self.name, self.feededBy)
+		
 class Hidden(LayerABC) :
 	"A basic hidden layer"
 	def __init__(self, nbOutputs, activation = tt.tanh, name = None, sparsity = 0) :
@@ -144,6 +184,7 @@ class Hidden(LayerABC) :
 					size = (self.nbInputs, self.nbOutputs)
 				)
 			else :
+				# print "---->", self.inputs, self, (self.nbInputs, self.nbOutputs)
 				initWeights = numpy.random.random((self.nbInputs, self.nbOutputs))
 				initWeights = initWeights/sum(initWeights)
 
@@ -174,20 +215,6 @@ class Hidden(LayerABC) :
 		else :
 			# self.outputs = theano.printing.Print('this is a very important value for %s' % self.name)(self.activation(tt.dot(self.inputs, self.W) + self.b))
 			self.outputs = self.activation(tt.dot(self.inputs, self.W) + self.b)
-
-class Input(Hidden) :
-	"An input layer"
-	def __init__(self, nbInputs, name = None) :
-		LayerABC.__init__(self, nbInputs, name = name)
-		self.nbInputs = nbInputs
-		self.network = Network(self, self)
-
-	def _setOutputs(self) :
-		"initialises the ouput to be the same as the inputs"
-		self.outputs = tt.matrix(name = self.name + "_X")
-
-	def __repr__(self) :
-		return "(Mariana input %s: %s)" % (self.name, self.nbInputs)
 
 class Output(Hidden) :
 	"""An output layer"""
@@ -227,8 +254,19 @@ class Output(Hidden) :
 
 		self.inputLayer = self.network.entryLayer
 		
-		L1 =  self.l1 * ( abs(self.W) + sum( [abs(l.W).sum() for l in self.dependencies.values()] ) )
-		L2 = self.l2 * ( self.W**2 + sum( [(l.W**2).sum() for l in self.dependencies.values()] ) )
+		# l1Fct = lambda w: abs(w).sum 
+		# l2Fct = lambda w: (w**2).sum 
+		s1 = 0
+		for l in self.dependencies.itervalues() :
+			if l.W is not None :
+				s1 += abs(l.W).sum()
+		L1 = self.l1 * ( abs(self.W).sum() + s1 )
+
+		s2 = 0
+		for l in self.dependencies.itervalues() :
+			if l.W is not None :
+				s2 += (l.W**2).sum()
+		L2 = self.l2 * ( (self.W**2).sum() + s2 )
 		self.cost = self.costFct(self.y, self.outputs) + L1 + L2
 
 		self.updates = []
@@ -244,11 +282,9 @@ class Output(Hidden) :
 		self.theano_propagate = theano.function(inputs = [self.inputLayer.outputs], outputs = self.outputs)
 		
 		self._setTheanoFunctions()
-	
-	# def _initThenoFunctions(self) :
-	# 	for k, v in self.__dict__ :
-	# 		if k.find("theano") == 0 :
-	# 			self.__dict__[k] = TheanoFct(v)
+		# theano.printing.debugprint(self.theano_train)
+		# theano.printing.pydotprint_variables(self.theano_train)
+		# print theano.pp(self.theano_train)#self, self.inputs.ndim, self.outputs.ndim
 
 	def _setTheanoFunctions(self) :
 		"This is where you should put the definitions of your custom theano functions"

@@ -73,7 +73,7 @@ class Network(object) :
 		self.edges = self.edges.union(network.edges)
 
 	def _init(self) :
-		"Initialiases the network by itialising every layer"
+		"Initialiases the network by initialising every layer"
 		if self._mustInit :
 			self.entryLayer._init()
 			self._mustInit = False
@@ -85,7 +85,7 @@ class Network(object) :
 						if name not in self.outputMaps :
 							self.outputMaps[name] = OutputMap(name)
 						self.outputMaps[name].addOutput(o, v)
-			print self.outputMaps
+			# print self.outputMaps, self.outputs.values()
 
 	def __getattribute__(self, k) :
 		"""All theano_x functions are accessible through the network interface network.x(). Here x is called a model function"""
