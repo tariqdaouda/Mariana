@@ -272,8 +272,8 @@ class Output(Hidden) :
 			self.updates.append((param, param - self.lr * momentum_param))
 			# self.updates.append((param, param - self.lr * gparam))
 
-		self.train = TheanoFunction(self, [self.cost, self.outputs], [self.y], updates = self.updates)
-		self.test = TheanoFunction(self, [self.cost, self.outputs], [self.y])
+		self.train = TheanoFunction(self, [self.cost, self.outputs], { "target" : self.y }, updates = self.updates)
+		self.test = TheanoFunction(self, [self.cost, self.outputs], { "target" : self.y })
 		self.propagate = TheanoFunction(self, [self.outputs])
 	
 		self._setTheanoFunctions()

@@ -13,11 +13,11 @@ class OutputMap(object):
 	def addOutput(self, output, fct) :
 		self.outputFcts[output.name] = fct
 
-	def map(self, outputLayerName, *args) :
-		return self.outputFcts[outputLayerName](*args)
+	def map(self, outputLayerName, **kwargs) :
+		return self.outputFcts[outputLayerName](**kwargs)
 
-	def __call__(self, outputLayerName, *args) :
-		return self.map(outputLayerName, *args)
+	def __call__(self, outputLayerName, **kwargs) :
+		return self.map(outputLayerName, **kwargs)
 
 	def __repr__(self) :
 		os = []
