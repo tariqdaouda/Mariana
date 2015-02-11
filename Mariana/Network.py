@@ -62,8 +62,8 @@ class Network(object) :
 	def merge(self, fromLayer, toLayer) :
 		"""Merges two layer together. There can be only one input to a network, if self ans network both have an input layer
 		this function will raise a ValueError."""
-		# if fromLayer.name not in self.layers :
-		# 	raise ValueError("from layer '%s' is not part of this network" % fromLayer.name)
+		if fromLayer.name not in self.layers :
+			raise ValueError("from layer '%s' is not part of this network" % fromLayer.name)
 
 		for inp in toLayer.network.inputs.itervalues() :
 			self.addInput(inp)
