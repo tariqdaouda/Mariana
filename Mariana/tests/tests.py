@@ -67,9 +67,7 @@ class MLPTests(unittest.TestCase):
 		inp > h1 > c
 		inp > h2 > c
 		mlp = c > o
-		# print mlp.outputMaps
-		
-		print mlp.toDOT("mlp")
+	
 		self.xor_ins = N.array(self.xor_ins)
 		self.xor_outs = N.array(self.xor_outs)
 		for i in xrange(1000) :
