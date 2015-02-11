@@ -1,4 +1,5 @@
 from abc import ABCMeta#, abstractmethod
+from collections import OrderedDict
 
 from types import *
 import cPickle
@@ -6,26 +7,8 @@ import cPickle
 import theano, numpy, time
 import theano.tensor as tt
 import Mariana.costs as MC
-from Network import *
-
-class TheanoFct(object) :
-	"This class encapsulates a Theano function"
-
-	def __init__(self, name, theano_fct) :
-		self.theano_fct = theano_fct
-		self.name = name
-
-	def run(self, *args) :
-		return self.theano_fct(*args)
-	
-	def __call__(self, *args) :
-		return self.run(*args)
-
-	def __repr__(self) :
-		return "<Mariana Theano Fct '%s'>" % self.name
-
-	def __str__(self) :
-		return "<Mariana Theano Fct '%s': %s>" % (self.name, self.theano_fct)
+from Network import Network
+from wrappers import TheanoFunction
 
 class LayerABC(object) :
 	"the abstract layer class"
@@ -54,6 +37,8 @@ class LayerABC(object) :
 		self.W = None
 		self.b = None
 		
+		self._mustInit = True
+
 	def clone(self) :
 		"""Returns a free layer with the same weights and bias"""
 		res = self.__class__(self.nbOutputs)
@@ -62,12 +47,12 @@ class LayerABC(object) :
 		return res
 
 	def _registerInput(self, inputLayer) :
-		"Registers an input to the layer. This function is called inputLayer"
+		"Registers an input to the layer. This function is meant to be called by inputLayer"
 		self._inputRegistrations.add(inputLayer.name)
 
 	def _init(self) :
 		"Initialise the layer making it ready for training. This function is automatically called before train/test etc..."
-		if len(self._inputRegistrations) == len(self.feededBy) :
+		if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.feededBy) ) :
 			self._setOutputs()
 			if self.outputs == None :
 				raise ValueError("Invalid network, layer '%s' has no defined outputs" % self.name)
@@ -80,7 +65,8 @@ class LayerABC(object) :
 				l._setNbInputs(self)
 				l._registerInput(self)
 				l._init()
-
+			self._mustInit = False
+	
 	#theano hates abstract methods defined with a decorator
 	def _setOutputs(self) :
 		"""Sets the output of the layer. This function is called by _init() ans should be initialised in child"""
@@ -91,30 +77,35 @@ class LayerABC(object) :
 		if self.nbInputs is not None :
 			raise ValueError("A layer can only have one single input")
 		self.nbInputs = layer.nbOutputs
-	
+
 	def connect(self, layerOrList) :
 		"""Connect the layer to list of layers or to a single layer"""
 		def _connectLayer(me, layer) :
 			me.feedsInto[layer.name] = layer
 			layer.feededBy[me.name] = me
+			me.network.addEdge(me, layer)
+			if layer.network is not None :
+				me.network.merge(me, layer)
+			layer.network = me.network
 
 		if self.network is None :
 			self.network = Network(self)
 
 		if type(layerOrList) is ListType :
-			for p in layerOrList :
-				layer = p[1].entryLayer
-				_connectLayer(self, layer)
-				self.network.merge(self, p[1])
-				layer.network = self.network
+			raise NotImplemented("List as argument is deprecated")
+			# for p in layerOrList :
+			# 	layer = p[1].entryLayer
+			# 	_connectLayer(self, layer)
+			# 	self.network.merge(self, p[1])
+			# 	layer.network = self.network
 		else :
 			layer = layerOrList
+			if isinstance(layer, Input) :
+				raise ValueError("Nothing can be connected to an input layer")
+
 			if isinstance(layer, Output) or issubclass(layer.__class__, Output) :
 				self.network.addOutput(layer)
-
 			_connectLayer(self, layer)
-			self.network.addEdge(self, layer)
-			layer.network = self.network
 			
 		return self.network
 
@@ -134,7 +125,8 @@ class Input(LayerABC) :
 	def __init__(self, nbInputs, name = None) :
 		LayerABC.__init__(self, nbInputs, name = name)
 		self.nbInputs = nbInputs
-		self.network = Network(self)#y, self)
+		self.network = Network()#y, self)
+		self.network.addInput(self)
 
 	def _setOutputs(self) :
 		"initialises the ouput to be the same as the inputs"
@@ -255,7 +247,7 @@ class Output(Hidden) :
 		for l in self.dependencies.itervalues() :
 			self.params.extend(l.params)
 
-		self.inputLayer = self.network.entryLayer
+		# self.inputLayer = self.network.entryLayer
 		
 		# l1Fct = lambda w: abs(w).sum 
 		# l2Fct = lambda w: (w**2).sum 
@@ -280,10 +272,10 @@ class Output(Hidden) :
 			self.updates.append((param, param - self.lr * momentum_param))
 			# self.updates.append((param, param - self.lr * gparam))
 
-		self.theano_train = theano.function(inputs = [self.inputLayer.outputs, self.y], outputs = [self.cost, self.outputs], updates = self.updates)#,  mode='DebugMode')
-		self.theano_test = theano.function(inputs = [self.inputLayer.outputs, self.y], outputs = [self.cost, self.outputs])
-		self.theano_propagate = theano.function(inputs = [self.inputLayer.outputs], outputs = self.outputs)
-		
+		self.train = TheanoFunction(self, [self.cost, self.outputs], [self.y], updates = self.updates)
+		self.test = TheanoFunction(self, [self.cost, self.outputs], [self.y])
+		self.propagate = TheanoFunction(self, [self.outputs])
+	
 		self._setTheanoFunctions()
 
 
@@ -307,7 +299,7 @@ class ClassifierABC(Output):
 			Output.__init__(self, nbOutputs, activation,  costFct, lr, l1, l2, momentum , name)
 
 		def _setTheanoFunctions(self) :
-			"""Classifiers must define a classify function that returns the result of the classification"""
+			"""Classifiers must define a 'classify' function that returns the result of the classification"""
 			raise NotImplemented("theano classify must be defined in child's _setTheanoFunctions()")				
 
 class SoftmaxClassifier(ClassifierABC) :
@@ -317,4 +309,5 @@ class SoftmaxClassifier(ClassifierABC) :
 
 	def _setTheanoFunctions(self) :
 		"""defined theano_classify, that returns the argmax of the output"""
-		self.theano_classify = theano.function(inputs = [self.inputLayer.outputs], outputs = tt.argmax(self.outputs, axis = 1))
+		self.classify = TheanoFunction(self, [ tt.argmax(self.outputs) ])
+	

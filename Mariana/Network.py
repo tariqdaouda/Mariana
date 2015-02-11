@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from wrappers import TheanoFunction
 
 class OutputMap(object):
 	"""
@@ -7,19 +8,16 @@ class OutputMap(object):
 	"""
 	def __init__(self, name):
 		self.name = name
-		self.outputFcts = []
+		self.outputFcts = {}
 
 	def addOutput(self, output, fct) :
-		self.outputFcts.append((output, fct))
+		self.outputFcts[output.name] = fct
 
-	def map(self, *args) :
-		res = {}
-		for o, v in self.outputFcts :
-			res[o.name] = v(*args)
-		return res
+	def map(self, outputLayerName, *args) :
+		return self.outputFcts[outputLayerName](*args)
 
-	def __call__(self, *args) :
-		return self.map(*args)
+	def __call__(self, outputLayerName, *args) :
+		return self.map(outputLayerName, *args)
 
 	def __repr__(self) :
 		os = []
@@ -32,9 +30,8 @@ class Network(object) :
 	"""All theano_x functions of the outputs are accessible through the network interface network.x().
 	Here x is called a model function. Ex: if an output layer has a theano function named theano_classify(),
 	calling net.classify(), will apply out.theano_classify(). The result will be a dictionary of { "output name" => result of the theano function}"""	
-	def __init__(self, entryLayer) :
-		self.entryLayer = entryLayer
-		self.inputLayers = OrderedDict()
+	def __init__(self) :
+		self.inputs = OrderedDict()
 		self.layers = OrderedDict()
 		self.outputs = OrderedDict()
 		self.edges = set()
@@ -62,36 +59,37 @@ class Network(object) :
 		"""adds an output o to the network"""
 		self.outputs[o.name] = o
 
-	def merge(self, conLayer, network) :
+	def merge(self, fromLayer, toLayer) :
 		"""Merges two layer together. There can be only one input to a network, if self ans network both have an input layer
 		this function will raise a ValueError."""
-		# if network.inputLayer is not None and network.inputLayer is not self.inputLayer :
-			# raise ValueError("Can't merge, the network already has an input layer")
+		# if fromLayer.name not in self.layers :
+		# 	raise ValueError("from layer '%s' is not part of this network" % fromLayer.name)
 
-		for inp in network.inputLayers :
+		for inp in toLayer.network.inputs.itervalues() :
 			self.addInput(inp)
 	
-		self.addEdge(conLaOrderedDict()yer, network.entryLayer)
+		self.addEdge(fromLayer, toLayer)
 		
-		network.entryLayer = self.entryLayer
-		for o in network,outputs :
+		for o in toLayer.network.outputs.itervalues() :
 			self.addOutput(o)
-		self.layers.update(network.layers)
-		self.edges = self.edges.union(network.edges)
+	
+		self.layers.update(toLayer.network.layers)
+		self.edges = self.edges.union(toLayer.network.edges)
 
 	def init(self) :
 		"Initialiases the network by initialising every layer."
 		if self._mustInit :
-			self.entryLayer._init()
+			for inp in self.inputs.itervalues() :
+				inp._init()
+
 			self._mustInit = False
 
 			for o in self.outputs.itervalues() :
 				for k, v in o.__dict__.iteritems() :
-					if k.find("theano") == 0 :
-						name = k.replace("theano_", "")# + "_model"
-						if name not in self.outputMaps :
-							self.outputMaps[name] = OutputMap(name)
-						self.outputMaps[name].addOutput(o, v)
+					if ( v.__class__ is TheanoFunction ) or issubclass(v.__class__, TheanoFunction) :
+						if k not in self.outputMaps :
+							self.outputMaps[k] = OutputMap(k)
+						self.outputMaps[k].addOutput(o, v)
 			# print self.outputMaps, self.outputs.values()
 
 	def __getattribute__(self, k) :
@@ -133,7 +131,7 @@ class Network(object) :
 		if forceInit :
 			self.init()
 
-		com = "//Mariana network generated on %s" % time.ctime()
+		com = "//Mariana network DOT representation generated on %s" % time.ctime()
 		s = "#COM#\ndigraph %s{\n#HEAD#;\n\n#GRAPH#;\n}" % name
 		
 		headers = []

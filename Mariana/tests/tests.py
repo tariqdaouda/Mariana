@@ -30,17 +30,17 @@ class MLPTests(unittest.TestCase):
 		self.xor_outs = N.array(self.xor_outs)
 		for i in xrange(1000) :
 			ii = i%len(self.xor_ins)
-			mlp.train([ self.xor_ins[ ii ] ], [ self.xor_outs[ ii ] ])
+			mlp.train("out", [ self.xor_ins[ ii ] ], [ self.xor_outs[ ii ] ])
 		
 		return mlp
 
 	# @unittest.skip("demonstrating skipping")
 	def test_xor(self) :
 		mlp = self.trainMLP_xor()
-		self.assertEqual(mlp.classify( [ self.xor_ins[0] ] )["out"][0], 0 )
-		self.assertEqual(mlp.classify( [ self.xor_ins[1] ] )["out"][0], 1 )
-		self.assertEqual(mlp.classify( [ self.xor_ins[2] ] )["out"][0], 1 )
-		self.assertEqual(mlp.classify( [ self.xor_ins[3] ] )["out"][0], 0 )
+		self.assertEqual(mlp.classify( "out", [ self.xor_ins[0] ] )[0], 0 )
+		self.assertEqual(mlp.classify( "out", [ self.xor_ins[1] ] )[0], 1 )
+		self.assertEqual(mlp.classify( "out", [ self.xor_ins[2] ] )[0], 1 )
+		self.assertEqual(mlp.classify( "out", [ self.xor_ins[3] ] )[0], 0 )
 
 	# @unittest.skip("demonstrating skipping")
 	def test_save_load(self) :
@@ -50,13 +50,14 @@ class MLPTests(unittest.TestCase):
 		mlp.save("test_save")
 		mlp2 = cPickle.load(open('test_save.mariana.pkl'))
 
-		self.assertEqual(mlp2.classify( [ self.xor_ins[0] ] )["out"][0], 0 )
-		self.assertEqual(mlp2.classify( [ self.xor_ins[1] ] )["out"][0], 1 )
-		self.assertEqual(mlp2.classify( [ self.xor_ins[2] ] )["out"][0], 1 )
-		self.assertEqual(mlp2.classify( [ self.xor_ins[3] ] )["out"][0], 0 )
+		self.assertEqual(mlp2.classify( "out", [ self.xor_ins[0] ] )[0], 0 )
+		self.assertEqual(mlp2.classify( "out", [ self.xor_ins[1] ] )[0], 1 )
+		self.assertEqual(mlp2.classify( "out", [ self.xor_ins[2] ] )[0], 1 )
+		self.assertEqual(mlp2.classify( "out", [ self.xor_ins[3] ] )[0], 0 )
 		
 		os.remove('test_save.mariana.pkl')
 
+	# @unittest.skip("demonstrating skipping")
 	def test_composite(self) :
 		inp = Input(2, 'inp')
 		h1 = Hidden(2, activation = tt.tanh, name = "h1")
@@ -72,12 +73,12 @@ class MLPTests(unittest.TestCase):
 		self.xor_outs = N.array(self.xor_outs)
 		for i in xrange(1000) :
 			ii = i%len(self.xor_ins)
-			mlp.train([ self.xor_ins[ ii ] ], [ self.xor_outs[ ii ] ])
+			mlp.train("out", [ self.xor_ins[ ii ] ], [ self.xor_outs[ ii ] ])
 		
-		self.assertEqual(mlp.classify( [ self.xor_ins[0] ] )["out"][0], 0 )
-		self.assertEqual(mlp.classify( [ self.xor_ins[1] ] )["out"][0], 1 )
-		self.assertEqual(mlp.classify( [ self.xor_ins[2] ] )["out"][0], 1 )
-		self.assertEqual(mlp.classify( [ self.xor_ins[3] ] )["out"][0], 0 )
+		self.assertEqual(mlp.classify( "out", [ self.xor_ins[0] ] )[0], 0 )
+		self.assertEqual(mlp.classify( "out", [ self.xor_ins[1] ] )[0], 1 )
+		self.assertEqual(mlp.classify( "out", [ self.xor_ins[2] ] )[0], 1 )
+		self.assertEqual(mlp.classify( "out", [ self.xor_ins[3] ] )[0], 0 )
 
 
 if __name__ == '__main__' :
