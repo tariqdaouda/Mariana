@@ -88,8 +88,8 @@ class LayerABC(object) :
 
 	def _setNbInputs(self, layer) :
 		"""Sets the size of input that the layer receives"""
-		if self.nbInputs is not None and self.nbInputs != layer.nbOutputs :
-			raise ValueError("There's already a layer of '%d' outputs feeding into %s', can't connect '%s' of '%d' outputs" % (self.nbInputs, self.name, layer.name, layer.nbOutputs))
+		if self.nbInputs is not None :
+			raise ValueError("A layer can only have one single input")
 		self.nbInputs = layer.nbOutputs
 	
 	def connect(self, layerOrList) :
@@ -134,7 +134,7 @@ class Input(LayerABC) :
 	def __init__(self, nbInputs, name = None) :
 		LayerABC.__init__(self, nbInputs, name = name)
 		self.nbInputs = nbInputs
-		self.network = Network(self, self)
+		self.network = Network(self)#y, self)
 
 	def _setOutputs(self) :
 		"initialises the ouput to be the same as the inputs"

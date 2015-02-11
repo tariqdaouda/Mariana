@@ -32,9 +32,9 @@ class Network(object) :
 	"""All theano_x functions of the outputs are accessible through the network interface network.x().
 	Here x is called a model function. Ex: if an output layer has a theano function named theano_classify(),
 	calling net.classify(), will apply out.theano_classify(). The result will be a dictionary of { "output name" => result of the theano function}"""	
-	def __init__(self, entryLayer, inputLayer = None) :
+	def __init__(self, entryLayer) :
 		self.entryLayer = entryLayer
-		self.inputLayer = inputLayer
+		self.inputLayers = OrderedDict()
 		self.layers = OrderedDict()
 		self.outputs = OrderedDict()
 		self.edges = set()
@@ -54,6 +54,10 @@ class Network(object) :
 		self.layers[layer2.name] = layer2
 		self.edges.add( (layer1, layer2))
 
+	def addInput(self, i) :
+		"""adds an input to the layer"""
+		self.inputs[i.name] = i
+
 	def addOutput(self, o) :
 		"""adds an output o to the network"""
 		self.outputs[o.name] = o
@@ -61,10 +65,13 @@ class Network(object) :
 	def merge(self, conLayer, network) :
 		"""Merges two layer together. There can be only one input to a network, if self ans network both have an input layer
 		this function will raise a ValueError."""
-		if network.inputLayer is not None and network.inputLayer is not self.inputLayer :
-			raise ValueError("Can't merge, the network already has an input layer")
+		# if network.inputLayer is not None and network.inputLayer is not self.inputLayer :
+			# raise ValueError("Can't merge, the network already has an input layer")
 
-		self.addEdge(conLayer, network.entryLayer)
+		for inp in network.inputLayers :
+			self.addInput(inp)
+	
+		self.addEdge(conLaOrderedDict()yer, network.entryLayer)
 		
 		network.entryLayer = self.entryLayer
 		for o in network,outputs :
