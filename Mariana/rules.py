@@ -1,0 +1,90 @@
+import Mariana.layers as layers
+import Mariana.costs as MC
+import theano
+import theano.tensor as tt
+
+class LearningScenario_ABC(object):
+ 	"""This class allow to specify specific learning scenarios for layers independetly"""
+	def __init__(self, *args, **kwargs):
+		pass
+
+	def getUpdates(self, layer, cost) :
+		"""return the updates for the parameters of layer. Must be implemented in child"""
+		raise NotImplemented("Must be implemented in child")
+
+	# def update(self) :
+	# 	"""this function is called automatically called before each train() call.
+	# 	By default it does nothing, but you can it to define crazy learning rules
+	# 	such as decreasing the learning rate while exponentially increasing the momentum
+	# 	because it's monday"""
+	# 	pass
+
+class DefaultScenario(LearningScenario_ABC):
+	"The default scenarios has a fixed learning rate and a fixed momentum"
+ 	def __init__(self, lr, momentum, *args, **kwargs):
+ 		# super(LearningRules, self).__init__()
+ 		self.lr = lr
+ 		self.momentum = momentum
+
+ 	def getUpdates(self, layer, cost) :
+ 		updates = []
+ 		for param in layer.params :
+	 		gparam = tt.grad(self.cost, param)
+	 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
+			updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
+			updates.append((param, param - self.lr * momentum_param))	 		
+
+		return updates
+
+	def update(self, *args, **kwargs) :
+		pass
+
+class Cost_ABC(object) :
+	"""This allows to create custom costs by adding stuff such as regularizations"""
+
+	def __init__(self, *args, **kwargs) :
+		pass
+
+	@classmethod
+	def getL1(cls, l1, outputLayer) :
+		"""returns the l1 regularization cost taking into acocunt all the depencies of outputLayer"""
+		s1 = 0
+		for l in outputLayer.itervalues() :
+			if l.W is not None :
+				s1 += abs(l.W).sum()
+		return l1 * ( abs(self.W).sum() + s1 )
+
+	@classmethod
+	def getL2(cls, l2, outputLayer) :
+		"""returns the l2 regularization cost taking into acocunt all the depencies of outputLayer"""
+		s2 = 0
+		for l in outputLayer.itervalues() :
+			if l.W is not None :
+				s2 += (l.W**2).sum()
+		return l2 * ( (self.W**2).sum() + s2 )
+
+	def getCost(self, layer, cost) :
+		"""returns the cost function. Must be implemented in child"""
+		raise NotImplemented("Must be implemented in child")
+
+	# def update(self) :
+	# 	"""this function is called automatically called before each train() call.
+	# 	It works the same as for scenarii, the default version does nothing, and yes
+	# 	you can modify your regularization parameters as the learning goes"""
+	# 	pass
+
+class NegativeLogLikelihood(Cost_ABC) :
+	def __init__(self, l1, l2) :
+		self.l1 = l1
+		self.l2 = l2
+		self.costFct = MC.negativeLogLikelihood
+
+	def getCost(self, outputLayer) :
+		if (outputLayer.__class__ is not layers.Output) or not issubclass(outputLayer.__class__, layers.Output) :
+			raise ValueError("outputLayer must be a layer of class 'Output', or a class inheriting from it")
+	
+		L1 = Cost_ABC.L1(self.l1, outputLayer)		
+		L2 = Cost_ABC.L1(self.l2, outputLayer)		
+		return self.costFct(outputLayer.target, outputLayer.outputs) + L1 + L2
+
+

@@ -7,7 +7,7 @@ import cPickle
 import theano, numpy, time
 import theano.tensor as tt
 import Mariana.costs as MC
-from Network import Network
+from network import Network
 from wrappers import TheanoFunction
 
 class LayerABC(object) :
@@ -213,7 +213,7 @@ class Hidden(LayerABC) :
 
 class Output(Hidden) :
 	"""An output layer"""
-	def __init__(self, nbOutputs, activation, costFct, lr = 0.1, l1 = 0, l2 = 0, momentum = 0, name = None) :
+	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None) :
 		"""The output layer defines the learning rate (lr), as well as any other parameters related to the learning"""
 
 		Hidden.__init__(self, nbOutputs, activation = activation, name = name)
@@ -222,8 +222,10 @@ class Output(Hidden) :
 		self.l1 = l1
 		self.l2 = l2
 		self.momentum = momentum	
-		self.y = tt.ivector(name = self.name + "_Y")
+		self.target = tt.ivector(name = self.name + "_Target")
 		self.dependencies = OrderedDict()
+		self.costObject = costObject
+		self.learningScenario = learningScenario
 
 	def _backTrckDependencies(self) :
 		"""Finds all the layers the ouput layer is connected to"""
@@ -242,38 +244,18 @@ class Output(Hidden) :
 		create user custom theano functions."""
 		Hidden._setOutputs(self)
 
-		# self.outputs = sum([l.outputs for l in self.feededBy.itervalues()])
 		self._backTrckDependencies()
-		for l in self.dependencies.itervalues() :
-			self.params.extend(l.params)
+		cost = self.costObject.getCost(self)
+		updates = self.learningScenario.getUpdates(self, cost)
 
-		# self.inputLayer = self.network.entryLayer
-		
-		# l1Fct = lambda w: abs(w).sum 
-		# l2Fct = lambda w: (w**2).sum 
-		s1 = 0
-		for l in self.dependencies.itervalues() :
-			if l.W is not None :
-				s1 += abs(l.W).sum()
-		L1 = self.l1 * ( abs(self.W).sum() + s1 )
+		for l in self.dependencies :
+			try :
+				updates.extend(l.learningScenario.getUpdates(self, cost))
+			except AttributeError :
+				updates.extend(self.learningScenario.getUpdates(self, cost))
 
-		s2 = 0
-		for l in self.dependencies.itervalues() :
-			if l.W is not None :
-				s2 += (l.W**2).sum()
-		L2 = self.l2 * ( (self.W**2).sum() + s2 )
-		self.cost = self.costFct(self.y, self.outputs) + L1 + L2
-
-		self.updates = []
-		for param in self.params :
-			gparam = tt.grad(self.cost, param)
-			momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
-			self.updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
-			self.updates.append((param, param - self.lr * momentum_param))
-			# self.updates.append((param, param - self.lr * gparam))
-
-		self.train = TheanoFunction("train", self, [self.cost, self.outputs], { "target" : self.y }, updates = self.updates)
-		self.test = TheanoFunction("test", self, [self.cost, self.outputs], { "target" : self.y })
+		self.train = TheanoFunction("train", self, [self.cost, self.outputs], { "target" : self.target }, updates = self.updates)
+		self.test = TheanoFunction("test", self, [self.cost, self.outputs], { "target" : self.target })
 		self.propagate = TheanoFunction("propagate", self, [self.outputs])
 	
 		self._setTheanoFunctions()
