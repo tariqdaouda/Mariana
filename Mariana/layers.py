@@ -75,7 +75,7 @@ class LayerABC(object) :
 	def _setNbInputs(self, layer) :
 		"""Sets the size of input that the layer receives"""
 		if self.nbInputs is not None :
-			raise ValueError("A layer can only have one single input")
+			raise ValueError("A computation layer can only have one single input")
 		self.nbInputs = layer.nbOutputs
 
 	def connect(self, layerOrList) :
@@ -118,7 +118,7 @@ class LayerABC(object) :
 
 	def _dot_representation(self) :
 		"returns the representation of the node in the graph DOT format"
-		return '%s [label="%s: %sx%s"]' % (self.name, self.name, self.nbInputs, self.nbOutputs)
+		return '[label="%s: %sx%s"]' % (self.name, self.nbInputs, self.nbOutputs)
 
 class Input(LayerABC) :
 	"An input layer"
@@ -133,7 +133,7 @@ class Input(LayerABC) :
 		self.outputs = tt.matrix(name = self.name + "_X")
 
 	def _dot_representation(self) :
-		return '%s [label="%s: %s" shape=invtriangle]' % (self.name, self.name, self.nbOutputs)
+		return '[label="%s: %s" shape=invtriangle]' % (self.name, self.nbOutputs)
 
 class Composite(LayerABC):
 	"""A Composite layer is a layer that brings together the ourputs of several other layers
@@ -158,7 +158,7 @@ class Composite(LayerABC):
 		self.outputs = tt.concatenate( [l.outputs for l in self.feededBy.itervalues()], axis = 1 )
 
 	def _dot_representation(self) :
-		return '%s [label="%s: %s" shape=box]' % (self.name, self.name, self.nbOutputs)
+		return '[label="%s: %s" shape=box]' % (self.name, self.nbOutputs)
 		
 class Hidden(LayerABC) :
 	"A basic hidden layer"
@@ -272,9 +272,9 @@ class Output(Hidden) :
 			self.updates.append((param, param - self.lr * momentum_param))
 			# self.updates.append((param, param - self.lr * gparam))
 
-		self.train = TheanoFunction(self, [self.cost, self.outputs], { "target" : self.y }, updates = self.updates)
-		self.test = TheanoFunction(self, [self.cost, self.outputs], { "target" : self.y })
-		self.propagate = TheanoFunction(self, [self.outputs])
+		self.train = TheanoFunction("train", self, [self.cost, self.outputs], { "target" : self.y }, updates = self.updates)
+		self.test = TheanoFunction("test", self, [self.cost, self.outputs], { "target" : self.y })
+		self.propagate = TheanoFunction("propagate", self, [self.outputs])
 	
 		self._setTheanoFunctions()
 
@@ -291,7 +291,7 @@ class Output(Hidden) :
 		return h
 
 	def _dot_representation(self) :
-		return '%s [label="%s: %sx%s" shape=invtriangle]' % (self.name, self.name, self.nbInputs, self.nbOutputs)
+		return '[label="%s: %sx%s" shape=invtriangle]' % (self.name, self.nbInputs, self.nbOutputs)
 
 class ClassifierABC(Output):
 		"An abstract Classifier"
@@ -309,5 +309,5 @@ class SoftmaxClassifier(ClassifierABC) :
 
 	def _setTheanoFunctions(self) :
 		"""defined theano_classify, that returns the argmax of the output"""
-		self.classify = TheanoFunction(self, [ tt.argmax(self.outputs) ])
+		self.classify = TheanoFunction("classify", self, [ tt.argmax(self.outputs) ])
 	

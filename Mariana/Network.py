@@ -21,10 +21,10 @@ class OutputMap(object):
 
 	def __repr__(self) :
 		os = []
-		for o, v in self.outputFcts :
-			os.append(o.name)
+		for o, v in self.outputFcts.iteritems() :
+			os.append(o)
 		os = ', '.join(os)
-		return "<%s for output: %s>" % (self.name, os)
+		return "<'%s' for outputs: %s>" % (self.name, os)
 
 class Network(object) :
 	"""All theano_x functions of the outputs are accessible through the network interface network.x().
@@ -92,19 +92,6 @@ class Network(object) :
 						self.outputMaps[k].addOutput(o, v)
 			# print self.outputMaps, self.outputs.values()
 
-	def __getattribute__(self, k) :
-		"""All theano_x functions are accessible through the network interface network.x(). Here x is called a model function"""
-		try :
-			return object.__getattribute__(self, k)
-		except AttributeError as e :
-			maps = object.__getattribute__(self, 'outputMaps')
-			init = object.__getattribute__(self, 'init')
-			init()
-			try :
-				return maps[k]
-			except KeyError :
-				raise e
-
 	def help(self) :
 		"""prints the list of available model functions, such as train, test,..."""
 		os = []
@@ -135,12 +122,16 @@ class Network(object) :
 		s = "#COM#\ndigraph %s{\n#HEAD#;\n\n#GRAPH#;\n}" % name
 		
 		headers = []
+		aidi = 0
+		aidis = {}
 		for l in self.layers.itervalues() :
-			headers.append("\t" + l._dot_representation())
+			aidis[l.name] = "layer%s" % aidi
+			headers.append("\t" + aidis[l.name] + l._dot_representation())
+			aidi += 1
 
 		g = []
 		for e in self.edges :
-			g.append("\t%s -> %s" % (e[0].name, e[1].name))
+			g.append("\t%s -> %s" % (aidis[e[0].name], aidis[e[1].name]))
 	
 		s = s.replace("#COM#", com)
 		s = s.replace("#HEAD#", ';\n'.join(headers))
@@ -156,12 +147,18 @@ class Network(object) :
 
 	def __repr__(self) :
 		s = []
-		for o in self.outputs :
-			s.append(o)
+		
+		return "<Net (%s layers): %s > ... > [%s]>" % (len(self.layers), self.inputs.keys(), self.outputs.keys())
 
-		if self.inputLayer is None :
-			inp = None
-		else :
-			inp = self.inputLayer.name
-
-		return "<Net (%s layers): %s > ... > [%s]>" % (len(self.layers), inp, ', '.join(s))
+	def __getattribute__(self, k) :
+		"""All theano functions are accessible through the network interface network.x(). Here x is called a model function"""
+		try :
+			return object.__getattribute__(self, k)
+		except AttributeError as e :
+			maps = object.__getattribute__(self, 'outputMaps')
+			init = object.__getattribute__(self, 'init')
+			init()
+			try :
+				return maps[k]
+			except KeyError :
+				raise e
