@@ -248,7 +248,7 @@ class Output(Hidden) :
 			try :
 				updates.extend(l.learningScenario.getUpdates(l, cost))
 			except AttributeError :
-				print "----", l
+				# print "----", l
 				updates.extend(self.learningScenario.getUpdates(l, cost))
 
 		self.train = TheanoFunction("train", self, [cost, self.outputs], { "target" : self.target }, updates = updates)

@@ -29,7 +29,7 @@ class DefaultScenario(LearningScenario_ABC):
  	def getUpdates(self, layer, cost) :
  		updates = []
  		for param in layer.params :
- 			print "\top", layer, param
+ 			# print "\top", layer, param, self.lr
  			gparam = tt.grad(cost, param)
 	 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
 			updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
@@ -75,7 +75,7 @@ class Cost_ABC(object) :
 	# 	pass
 
 class NegativeLogLikelihood(Cost_ABC) :
-	def __init__(self, l1, l2) :
+	def __init__(self, l1 = 0, l2 = 0) :
 		self.l1 = l1
 		self.l2 = l2
 		self.costFct = MC.negativeLogLikelihood

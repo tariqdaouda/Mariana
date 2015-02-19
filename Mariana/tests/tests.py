@@ -23,7 +23,7 @@ class MLPTests(unittest.TestCase):
 
 	def trainMLP_xor(self) :
 		ls = DefaultScenario(lr = 0.1, momentum = 0)
-		cost = NegativeLogLikelihood(l1 = 0.01, l2 = 0)
+		cost = NegativeLogLikelihood(l1 = 0, l2 = 0)
 
 		i = Input(2, 'inp')
 		h = Hidden(4, activation = tt.tanh)
@@ -47,7 +47,7 @@ class MLPTests(unittest.TestCase):
 		self.assertEqual(mlp.classify( "out", inp = [ self.xor_ins[2] ] )[0], 1 )
 		self.assertEqual(mlp.classify( "out", inp = [ self.xor_ins[3] ] )[0], 0 )
 
-	@unittest.skip("skipping")
+	# @unittest.skip("skipping")
 	def test_save_load(self) :
 		import cPickle, os
 
@@ -62,12 +62,15 @@ class MLPTests(unittest.TestCase):
 		
 		os.remove('test_save.mariana.pkl')
 
-	@unittest.skip("skipping")
+	# @unittest.skip("skipping")
 	def test_composite(self) :
+		ls = DefaultScenario(lr = 0.1, momentum = 0)
+		cost = NegativeLogLikelihood(l1 = 0, l2 = 0)
+
 		inp = Input(2, 'inp')
 		h1 = Hidden(2, activation = tt.tanh, name = "h1")
 		h2 = Hidden(2, activation = tt.tanh, name = "h2")
-		o = SoftmaxClassifier(2, lr = 0.1, name = "out")
+		o = SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
 		c = Composite(name = "Comp")
 		
 		inp > h1 > c
