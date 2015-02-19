@@ -29,7 +29,8 @@ class DefaultScenario(LearningScenario_ABC):
  	def getUpdates(self, layer, cost) :
  		updates = []
  		for param in layer.params :
-	 		gparam = tt.grad(self.cost, param)
+ 			print "\top", layer, param
+ 			gparam = tt.grad(cost, param)
 	 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
 			updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
 			updates.append((param, param - self.lr * momentum_param))	 		
@@ -49,19 +50,19 @@ class Cost_ABC(object) :
 	def getL1(cls, l1, outputLayer) :
 		"""returns the l1 regularization cost taking into acocunt all the depencies of outputLayer"""
 		s1 = 0
-		for l in outputLayer.itervalues() :
+		for l in outputLayer.dependencies.itervalues() :
 			if l.W is not None :
 				s1 += abs(l.W).sum()
-		return l1 * ( abs(self.W).sum() + s1 )
+		return l1 * ( abs(outputLayer.W).sum() + s1 )
 
 	@classmethod
 	def getL2(cls, l2, outputLayer) :
 		"""returns the l2 regularization cost taking into acocunt all the depencies of outputLayer"""
 		s2 = 0
-		for l in outputLayer.itervalues() :
+		for l in outputLayer.dependencies.itervalues() :
 			if l.W is not None :
 				s2 += (l.W**2).sum()
-		return l2 * ( (self.W**2).sum() + s2 )
+		return l2 * ( (outputLayer.W**2).sum() + s2 )
 
 	def getCost(self, layer, cost) :
 		"""returns the cost function. Must be implemented in child"""
@@ -80,11 +81,11 @@ class NegativeLogLikelihood(Cost_ABC) :
 		self.costFct = MC.negativeLogLikelihood
 
 	def getCost(self, outputLayer) :
-		if (outputLayer.__class__ is not layers.Output) or not issubclass(outputLayer.__class__, layers.Output) :
-			raise ValueError("outputLayer must be a layer of class 'Output', or a class inheriting from it")
+		# if (outputLayer.__class__ is not layers.Output) or not issubclass(outputLayer.__class__, layers.Output) :
+		# 	raise ValueError("outputLayer must be a layer of class 'Output', or a class inheriting from it")
 	
-		L1 = Cost_ABC.L1(self.l1, outputLayer)		
-		L2 = Cost_ABC.L1(self.l2, outputLayer)		
+		L1 = Cost_ABC.getL1(self.l1, outputLayer)		
+		L2 = Cost_ABC.getL2(self.l2, outputLayer)		
 		return self.costFct(outputLayer.target, outputLayer.outputs) + L1 + L2
 
 

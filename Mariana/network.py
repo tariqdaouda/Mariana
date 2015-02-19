@@ -146,8 +146,6 @@ class Network(object) :
 		f.close()
 
 	def __repr__(self) :
-		s = []
-		
 		return "<Net (%s layers): %s > ... > [%s]>" % (len(self.layers), self.inputs.keys(), self.outputs.keys())
 
 	def __getattribute__(self, k) :

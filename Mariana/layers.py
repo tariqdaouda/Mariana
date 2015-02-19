@@ -162,10 +162,11 @@ class Composite(LayerABC):
 		
 class Hidden(LayerABC) :
 	"A basic hidden layer"
-	def __init__(self, nbOutputs, activation = tt.tanh, name = None, sparsity = 0) :
+	def __init__(self, nbOutputs, activation = tt.tanh, learningScenario = None, name = None, sparsity = 0) :
 		LayerABC.__init__(self, nbOutputs, name = name)
 		self.activation = activation
 		self.sparsity = sparsity
+		self.learningScenario = learningScenario
 
 	def _setOutputs(self) :
 		"""initialises weights and bias, If the activation fct in tanh, weights will be initialised using Glorot[10],
@@ -217,11 +218,6 @@ class Output(Hidden) :
 		"""The output layer defines the learning rate (lr), as well as any other parameters related to the learning"""
 
 		Hidden.__init__(self, nbOutputs, activation = activation, name = name)
-		self.costFct = costFct
-		self.lr = lr
-		self.l1 = l1
-		self.l2 = l2
-		self.momentum = momentum	
 		self.target = tt.ivector(name = self.name + "_Target")
 		self.dependencies = OrderedDict()
 		self.costObject = costObject
@@ -248,18 +244,18 @@ class Output(Hidden) :
 		cost = self.costObject.getCost(self)
 		updates = self.learningScenario.getUpdates(self, cost)
 
-		for l in self.dependencies :
+		for l in self.dependencies.itervalues() :
 			try :
-				updates.extend(l.learningScenario.getUpdates(self, cost))
+				updates.extend(l.learningScenario.getUpdates(l, cost))
 			except AttributeError :
-				updates.extend(self.learningScenario.getUpdates(self, cost))
+				print "----", l
+				updates.extend(self.learningScenario.getUpdates(l, cost))
 
-		self.train = TheanoFunction("train", self, [self.cost, self.outputs], { "target" : self.target }, updates = self.updates)
-		self.test = TheanoFunction("test", self, [self.cost, self.outputs], { "target" : self.target })
+		self.train = TheanoFunction("train", self, [cost, self.outputs], { "target" : self.target }, updates = updates)
+		self.test = TheanoFunction("test", self, [cost, self.outputs], { "target" : self.target })
 		self.propagate = TheanoFunction("propagate", self, [self.outputs])
 	
 		self._setTheanoFunctions()
-
 
 	def _setTheanoFunctions(self) :
 		"This is where you should put the definitions of your custom theano functions"
@@ -277,8 +273,8 @@ class Output(Hidden) :
 
 class ClassifierABC(Output):
 		"An abstract Classifier"
-		def __init__(self, nbOutputs, activation, costFct, lr = 0.1, l1 = 0, l2 = 0, momentum = 0, name = None) :
-			Output.__init__(self, nbOutputs, activation,  costFct, lr, l1, l2, momentum , name)
+		def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None) :
+			Output.__init__(self, nbOutputs, activation, learningScenario, costObject, name)
 
 		def _setTheanoFunctions(self) :
 			"""Classifiers must define a 'classify' function that returns the result of the classification"""
@@ -286,8 +282,8 @@ class ClassifierABC(Output):
 
 class SoftmaxClassifier(ClassifierABC) :
 	"""A softmax Classifier"""
-	def __init__(self, nbOutputs, lr = 0.1, l1 = 0, l2 = 0, momentum = 0, name = None) :
-		ClassifierABC.__init__(self, nbOutputs, activation = tt.nnet.softmax, costFct = MC.negativeLogLikelihood, lr = lr, l1 = l1, l2 = l2, momentum = momentum, name = name)
+	def __init__(self, nbOutputs, learningScenario, costObject, name = None) :
+		ClassifierABC.__init__(self, nbOutputs, activation = tt.nnet.softmax, learningScenario = learningScenario, costObject = costObject, name = name)
 
 	def _setTheanoFunctions(self) :
 		"""defined theano_classify, that returns the argmax of the output"""
