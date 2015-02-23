@@ -42,4 +42,4 @@ Example
   #Mariana networks can have several inputs/outputs. "target" is simply the target 
   mlp.train("out", inp = [ self.xor_ins[ ii ] ], target = [ self.xor_outs[ ii ] ] )
   
-You can also call mlp.test, mlp.propagate, mlp.classify. For more examples please have look at the tests.
+You can also call mlp.test, mlp.propagate, mlp.classify. For more examples please have a look at the tests.
