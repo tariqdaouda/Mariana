@@ -65,7 +65,7 @@ Loading is a simple unpickling:
 Visualizing graphs
 ==================
 
-To get a DOT format representation of your code:
+To get a DOT format representation of your network:
 
 .. code:: python
   
