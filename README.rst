@@ -43,3 +43,42 @@ Example
   mlp.train("out", inp = [ self.xor_ins[ ii ] ], target = [ self.xor_outs[ ii ] ] )
   
 You can also call mlp.test, mlp.propagate, mlp.classify. For more examples please have a look at the tests.
+
+Saving and resuming training
+============================
+
+Models can be saved using the **save()** function:
+
+.. code:: python
+
+  mlp.save("myMLP")
+
+Loading is a simple unpickling:
+
+.. code:: python
+
+  import cPickle
+  
+  mlp2 = cPickle.load(open("myMLP.mariana.pkl"))
+
+
+Visualizing graphs
+==================
+
+To get a DOT format representation of your code:
+
+.. code:: python
+  
+  #to simply print it
+  print mlp.toDOT()
+
+  #to save it
+  mlp.saveDOT("myMLP.dot")
+
+You can then visualize your graph with any DOT visualizer such a graphviz.
+
+Exentendable
+============
+
+Mariana allows you to define new types of layers, learning scenarios and costs by inheriting from the provided base
+classes.
