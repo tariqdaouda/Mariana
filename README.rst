@@ -72,7 +72,20 @@ Loading is a simple unpickling:
   
   mlp = cPickle.load(open("myMLP.mariana.pkl"))
 
+Cloning layers
+==============
 
+Mariana allows you to clone layers so you can train a model, extract one of it's layers, and use in an other model.
+
+.. code::python
+
+  h2 = h.clone()
+
+You can also transform an output layer into a hidden layer, that you can include afterwards in an other model.
+
+.. code::python
+
+  h3 = o.toHidden()
 
 Visualizing graphs
 ==================
