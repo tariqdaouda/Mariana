@@ -5,11 +5,21 @@ Mariana(Aplha)
 Named after the deepest place on earth (Mariana trench), Mariana is a machine learning framework on top of theano.
 Mariana is still in active developement, but please feel free to play with it.
 
-Flexibility
-==============
+Why is it cool?
+=========================
 
-Mariana networks are graphs of layers and that allows for 
-the craziest deepest architectures you can think of.
+Most neural networks frameworks are way too complicated and cryptic. That really shouldn't be the case because whether your are building a Percetron an MLP or a Deep Auto-Encoder, your are basically doing the same thing: connecting layers and training them using backprob.
+
+Mariana networks are graphs of independent layers and that allows for the craziest deepest architectures you can think of, and a very light and clear interface.
+There's no need for an MLP or a Perceptron or an Auto-Encoder class, because if you know what these things are, you can turn one into the other in a few seconds.
+
+Mariana is also completely agnostic regarding your datasets of the way you load your hyper-parameters. It's business is models and that's it.
+
+So in short:
+  
+  * no YAML
+  * no requirements concerning the formats of the datasets
+  * free you imagination and experiment
 
 Can it run on GPU?
 ==================
@@ -36,6 +46,7 @@ Example
   
   #this is our network ">" serves to connect layers together
   mlp = i > h > o
+  preceptron = i > o
   
   #then it's simply a metter of calling
   #here "out" is the name of the output layer and "inp" the name of the input layer
@@ -59,7 +70,8 @@ Loading is a simple unpickling:
 
   import cPickle
   
-  mlp2 = cPickle.load(open("myMLP.mariana.pkl"))
+  mlp = cPickle.load(open("myMLP.mariana.pkl"))
+
 
 
 Visualizing graphs
