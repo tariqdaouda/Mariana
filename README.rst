@@ -18,7 +18,7 @@ Mariana is also completely agnostic regarding your datasets of the way you load 
 So in short:
   
   * no YAML
-  * no requirements concerning the formats of the datasets
+  * no requirements concerning the format of the datasets
   * free you imagination and experiment
 
 Can it run on GPU?
