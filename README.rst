@@ -71,11 +71,12 @@ Loading is a simple unpickling:
   import cPickle
   
   mlp = cPickle.load(open("myMLP.mariana.pkl"))
-
+  mlp.train(...)
+  
 Cloning layers
 ==============
 
-Mariana allows you to clone layers so you can train a model, extract one of it's layers, and use in an other model.
+Mariana allows you to clone layers so you can train a model, extract one of it's layers, and use it in another model.
 
 .. code:: python
 
