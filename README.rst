@@ -102,7 +102,7 @@ To get a DOT format representation of your network:
 
 You can then visualize your graph with any DOT visualizer such a graphviz.
 
-Exentendable
+Extendable
 ============
 
 Mariana allows you to define new types of layers, learning scenarios and costs by inheriting from the provided base
