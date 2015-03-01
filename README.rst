@@ -19,7 +19,7 @@ So in short:
   
   * no YAML
   * no requirements concerning the format of the datasets
-  * free you imagination and experiment
+  * free your imagination and experiment
 
 Can it run on GPU?
 ==================
