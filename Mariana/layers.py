@@ -251,7 +251,7 @@ class Output(Hidden) :
 				# print "----", l
 				updates.extend(self.learningScenario.getUpdates(l, cost))
 
-		self.train = TheanoFunction("train", self, [cost, self.outputs], { "target" : self.target }, updates = updates)
+		self.train = TheanoFunction("train", self, [cost, self.outputs, self.network.layers["inp"].outputs], { "target" : self.target }, updates = updates, mode="DebugMode")
 		self.test = TheanoFunction("test", self, [cost, self.outputs], { "target" : self.target })
 		self.propagate = TheanoFunction("propagate", self, [self.outputs])
 	
@@ -288,4 +288,15 @@ class SoftmaxClassifier(ClassifierABC) :
 	def _setTheanoFunctions(self) :
 		"""defined theano_classify, that returns the argmax of the output"""
 		self.classify = TheanoFunction("classify", self, [ tt.argmax(self.outputs) ])
+
+class LogisticClassifier(ClassifierABC) :
+	"""A logistic Classifier for two classes"""
+	def __init__(self, learningScenario, costObject, name = None) :
+		ClassifierABC.__init__(self, 1, activation = tt.nnet.sigmoid, learningScenario = learningScenario, costObject = costObject, name = name)
+
+	def _setTheanoFunctions(self) :
+		pass
 	
+	def classify(self) :
+		"""returns true if the output is > 0.5"""
+		return self.outputs > 0.5

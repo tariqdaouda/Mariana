@@ -1,7 +1,21 @@
 import Mariana.layers as layers
-import Mariana.costs as MC
+# import Mariana.costs as MC
 import theano
 import theano.tensor as tt
+
+def negativeLogLikelihood(targets, outputs) :
+	"""cost fct for softmax"""
+	cost = -tt.mean(tt.log(outputs)[tt.arange(targets.shape[0]), targets])
+	return cost
+
+def crossEntropy(targets, outputs) :
+	cost = -tt.nnet.binary_crossentropy(targets, outputs).mean()
+	return cost
+
+def meanSquaredError(targets, outputs) :
+	"""The all time classic"""
+	cost = -tt.mean( tt.dot(outputs, targets) **2 )
+	return cost
 
 class LearningScenario_ABC(object):
  	"""This class allow to specify specific learning scenarios for layers independetly"""
@@ -78,12 +92,21 @@ class NegativeLogLikelihood(Cost_ABC) :
 	def __init__(self, l1 = 0, l2 = 0) :
 		self.l1 = l1
 		self.l2 = l2
-		self.costFct = MC.negativeLogLikelihood
+		self.costFct = negativeLogLikelihood
 
 	def getCost(self, outputLayer) :
-		# if (outputLayer.__class__ is not layers.Output) or not issubclass(outputLayer.__class__, layers.Output) :
-		# 	raise ValueError("outputLayer must be a layer of class 'Output', or a class inheriting from it")
-	
+		L1 = Cost_ABC.getL1(self.l1, outputLayer)		
+		L2 = Cost_ABC.getL2(self.l2, outputLayer)		
+		return self.costFct(outputLayer.target, outputLayer.outputs) + L1 + L2
+
+
+class CrossEntropy(Cost_ABC) :
+	def __init__(self, l1 = 0, l2 = 0) :
+		self.l1 = l1
+		self.l2 = l2
+		self.costFct = crossEntropy
+
+	def getCost(self, outputLayer) :
 		L1 = Cost_ABC.getL1(self.l1, outputLayer)		
 		L2 = Cost_ABC.getL2(self.l2, outputLayer)		
 		return self.costFct(outputLayer.target, outputLayer.outputs) + L1 + L2
