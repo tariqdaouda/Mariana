@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import theano
+import sys
 
 class TheanoFunction(object) :
 	"This class encapsulates a Theano function"
@@ -26,8 +27,13 @@ class TheanoFunction(object) :
 		for k in kwargs :
 			self.tmpInputs[k] = kwargs[k]
 
-		return self.theano_fct(*self.tmpInputs.values())
-	
+		try :
+			return self.theano_fct(*self.tmpInputs.values())
+		except Exception as e :
+			sys.stderr.write("!!=> Error in function '%s' for layer '%s':\n" % (self.name, self.outputLayer.name))
+			sys.stderr.write("\t!!=> the arguments were:\n %s" % (kwargs))
+			raise e
+
 	def __call__(self, **kwargs) :
 		return self.run(**kwargs)
 

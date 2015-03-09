@@ -251,7 +251,7 @@ class Output(Hidden) :
 				# print "----", l
 				updates.extend(self.learningScenario.getUpdates(l, cost))
 
-		self.train = TheanoFunction("train", self, [cost, self.outputs, self.network.layers["inp"].outputs], { "target" : self.target }, updates = updates, mode="DebugMode")
+		self.train = TheanoFunction("train", self, [cost, self.outputs, self.network.layers["inp"].outputs], { "target" : self.target }, updates = updates)
 		self.test = TheanoFunction("test", self, [cost, self.outputs], { "target" : self.target })
 		self.propagate = TheanoFunction("propagate", self, [self.outputs])
 	
