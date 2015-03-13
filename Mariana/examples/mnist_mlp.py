@@ -4,7 +4,6 @@ import gzip
 from Mariana.layers import *
 from Mariana.rules import *
 from Mariana.trainers import *
-import theano.tensor as tt
 
 """
 This is the equivalent the theano MLP from here: http://deeplearning.net/tutorial/mlp.html
