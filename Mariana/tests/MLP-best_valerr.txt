@@ -1,4 +1,0 @@
-date: Mon Mar  9 03:25:17 2015
-best validation err: 0.098700614831
-test err:0.0933127954766
-train err:0.0544502840913

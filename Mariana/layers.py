@@ -22,6 +22,8 @@ class LayerABC(object) :
 		else :
 			self.name = "%s_%s" %(self.__class__.__name__, numpy.random.random())
 
+		self.type = "no-type-defined"
+
 		self.nbInputs = None
 		self.inputs = None
 		self.nbOutputs = nbOutputs
@@ -124,6 +126,7 @@ class Input(LayerABC) :
 	"An input layer"
 	def __init__(self, nbInputs, name = None) :
 		LayerABC.__init__(self, nbInputs, name = name)
+		self.type = "input"
 		self.nbInputs = nbInputs
 		self.network = Network()#y, self)
 		self.network.addInput(self)
@@ -164,6 +167,7 @@ class Hidden(LayerABC) :
 	"A basic hidden layer"
 	def __init__(self, nbOutputs, activation = tt.tanh, learningScenario = None, name = None, sparsity = 0) :
 		LayerABC.__init__(self, nbOutputs, name = name)
+		self.type = "hidden"
 		self.activation = activation
 		self.sparsity = sparsity
 		self.learningScenario = learningScenario
@@ -218,6 +222,7 @@ class Output(Hidden) :
 		"""The output layer defines the learning rate (lr), as well as any other parameters related to the learning"""
 
 		Hidden.__init__(self, nbOutputs, activation = activation, name = name)
+		self.type = "output"
 		self.target = tt.ivector(name = self.name + "_Target")
 		self.dependencies = OrderedDict()
 		self.costObject = costObject
