@@ -88,6 +88,8 @@ class MLPTests(unittest.TestCase):
 		self.assertEqual(mlp.classify( "out", inp = [ self.xor_ins[2] ] )[0], 1 )
 		self.assertEqual(mlp.classify( "out", inp = [ self.xor_ins[3] ] )[0], 0 )
 
-
+	def test_mnist(self) :
+		pass
+		
 if __name__ == '__main__' :
 	unittest.main()
