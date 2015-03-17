@@ -19,6 +19,8 @@ So in short:
   
   * no YAML
   * no requirements concerning the format of the datasets
+  * save your models and resume training
+  * export your models to DOT format to obtain clean and easy to communicate graphs
   * free your imagination and experiment
 
 Can it run on GPU?
