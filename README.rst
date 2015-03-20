@@ -135,7 +135,7 @@ neural network with one input and one output.*
 	testMaps.addOutput("the output", sets["set2"]["classes"])
 
 	#We instanciate a trainer
-	trainer = NoEarlyStopping()
+	trainer = tra.NoEarlyStopping()
 	
 	#and pass it the model as well as the maps.
 	#nbEpochs = -1 means that the process will run forever until someone kills it
