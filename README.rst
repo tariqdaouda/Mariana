@@ -138,8 +138,14 @@ neural network with one input and one output.*
 	#We instanciate a trainer
 	trainer = NoEarlyStopping()
 	
-	#and pass it the model as well as the maps. nbEpochs = -1 means that the process will run forever until someone kills it
-	trainer.run("Awesome MLP", mlp, trainMaps = trainMaps, testMaps = testMaps, nbEpochs = -1, miniBatchSize = 20)
+	#and pass it the model as well as the maps.
+	#nbEpochs = -1 means that the process will run forever until someone kills it
+	trainer.run("Awesome MLP", 
+		mlp, 
+		trainMaps = trainMaps, 
+		testMaps = testMaps, 
+		nbEpochs = -1, 
+		miniBatchSize = 20)
 	
 Saving and resuming training
 ============================
