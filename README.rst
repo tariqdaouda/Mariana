@@ -8,8 +8,6 @@ Mariana is still in active developement, but please feel free to play with it.
 Why is it cool?
 =========================
 
-Most neural networks frameworks are way too complicated and cryptic. That really shouldn't be the case because whether you are building a Percetron an MLP or a Deep Auto-Encoder, you are basically doing the same thing: connecting layers and training them using backprob.
-
 Mariana networks are graphs of independent layers and that allows for the craziest deepest architectures you can think of, and a very light and clear interface.
 There's no need for an MLP or a Perceptron or an Auto-Encoder class, because if you know what these things are, you can turn one into the other in a few seconds.
 
