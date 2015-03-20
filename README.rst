@@ -68,7 +68,7 @@ Trainers
 Trainers are objects that take care of the whole training process. If any exception occurs during training the trainer will also automatically save the last
 version of the model as well as logs explaining what happened.
 
-For now Mariana ships with only one trainer: **NoEarlyStopping**. This trainers takes a *test set* and a *train set* and will either run forever (nbEpochs = -1) or for a given numbers of epochs.
+For now Mariana ships with only one trainer: **NoEarlyStopping**. This trainers takes a *test set* and a *train set* and will either run forever (nbEpochs = -1) or for a given number of epochs.
 
 It will:
 
@@ -117,9 +117,10 @@ Now let's assume that our sets are in python a dictionary such as:
 				}
 			}
 
-Using *DatasetMappers* we can now specify wich sets to use for training and testing for each input and each output of our model.
-
-*Mariana networks can have multiple inputs and outputs, but here we only have a neural network with one input and one output.*
+Using *DatasetMappers* we can now specify wich sets to use for training 
+and testing for each input and each output of our model.
+*Mariana networks can have multiple inputs and outputs, but here we only have a 
+neural network with one input and one output.*
 
 .. code:: python
 
