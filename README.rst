@@ -69,12 +69,12 @@ Trainers are objects that take care of the whole training process. If any except
 version of the model as well as logs explaining what happened.
 
 For now Mariana ships with only one trainer: **NoEarlyStopping**. This trainers takes a *test set* and a *train set* and will either run forever (nbEpochs = -1) or for a given numbers of epochs.
+
 It will:
 
 	* Output the training results for each epoch, highliting every time a new best test error is achieved
 	* Automatically save the model each time a new best test error is achieved
-	* Create and update a csv file that contains the whole historic of the training as well as information such as the hyperparameters,
-	so you can later compile several of those files, and plot for example the test error with respect to the number of hidden units
+	* Create and update a *CSV file* that contains the whole historic of the training as well as information such as the hyperparameters. You can later compile several of those files, and plot for example the test error with respect to the number of hidden units
 
 The **trainers.py** module has a Trainer_ABC class that you can extend
 to create custom trainers.
@@ -85,6 +85,7 @@ Dataset maps
 Mariana is dataset format agnostic. In order to use your dataset you will need to define maps for the differents sets that you need.
 
 First let's create our model
+
 .. code:: python
 
 	import Mariana.layers as lay
@@ -102,6 +103,7 @@ First let's create our model
 	mlp = i > h > o
 
 Now let's assume that our sets are in python a dictionary such as:
+
 .. code:: python
 
 	sets =  {
@@ -116,6 +118,7 @@ Now let's assume that our sets are in python a dictionary such as:
 			}
 
 Using *DatasetMappers* we can now specify wich sets to use for training and testing for each input and each output of our model.
+
 *Mariana networks can have multiple inputs and outputs, but here we only have a neural network with one input and one output.*
 
 .. code:: python
