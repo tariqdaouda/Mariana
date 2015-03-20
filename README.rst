@@ -100,7 +100,7 @@ First let's create our model
 
 	mlp = i > h > o
 
-Now let's assume that our sets are in python a dictionary such as:
+Now let's assume that our sets are in a python dictionary such as:
 
 .. code:: python
 
