@@ -7,9 +7,9 @@ from Mariana.trainers import *
 
 """
 This is the equivalent the theano MLP from here: http://deeplearning.net/tutorial/mlp.html
-But Mariana style
-
+But using Mariana
 """
+
 def load_mnist() :
 	"""If i can't find it i will attempt to download it from lisa's place"""
 	import urllib, os
