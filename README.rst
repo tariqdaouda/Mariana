@@ -13,7 +13,7 @@ Most neural networks frameworks are way too complicated and cryptic. That really
 Mariana networks are graphs of independent layers and that allows for the craziest deepest architectures you can think of, and a very light and clear interface.
 There's no need for an MLP or a Perceptron or an Auto-Encoder class, because if you know what these things are, you can turn one into the other in a few seconds.
 
-Mariana is also completely agnostic regarding your datasets of the way you load your hyper-parameters. It's business is models and that's it.
+Mariana is also completely agnostic regarding your datasets or the way you load your hyper-parameters. It's business is models and that's it.
 
 So in short:
   
@@ -44,18 +44,17 @@ Example
   i = Input(2, 'inp')
   h = Hidden(4, activation = tt.tanh)
   o = SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
-  #
   
   #this is our network ">" serves to connect layers together
   mlp = i > h > o
   preceptron = i > o
   
-  #then it's simply a metter of calling
+  #then it's simply a matter of calling
   #here "out" is the name of the output layer and "inp" the name of the input layer
   #Mariana networks can have several inputs/outputs. "target" is simply the target 
   mlp.train("out", inp = [ self.xor_ins[ ii ] ], target = [ self.xor_outs[ ii ] ] )
   
-You can also call mlp.test, mlp.propagate, mlp.classify. For more examples please have a look at the tests.
+You can also call mlp.test, mlp.propagate, mlp.classify. For more examples please have a look at the tests. and
 
 Saving and resuming training
 ============================
