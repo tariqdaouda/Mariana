@@ -24,8 +24,8 @@ So in short:
 Can it run on GPU?
 ==================
 
-At the heart of Mariana are theano functions, so the answer is yes and the guys behind theano reaaly did an awesome
-job of optimisation, so it should be pretty fast.
+At the heart of Mariana are theano functions, so the answer is yes. The guys behind theano really did an awesome
+job of optimisation, so it should be pretty fast, wether you're running on CPU or GPU.
 
 Example
 =======
