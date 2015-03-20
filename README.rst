@@ -75,7 +75,7 @@ It will:
 	* Create and update a *CSV file* that contains the whole historic of the training as well as information such as the hyperparameters. You can later compile several of those files, and plot for example the test error with respect to the number of hidden units
 
 The **trainers.py** module has a *Trainer* class that you can extend
-to create custom trainers.
+to create custom trainers. Baically it's just a matter of writing a custom *run(...)* function.
 
 Dataset maps
 ------------
