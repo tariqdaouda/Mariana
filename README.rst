@@ -57,8 +57,8 @@ Example
   
 You can also call mlp.test, mlp.propagate, mlp.classify. For more examples please have a look at the *tests* and *examples* folders.
 
-Trainers and loading you dataset
-================================
+Using Trainers and loading datasets
+========================================
 
 Trainers
 --------
