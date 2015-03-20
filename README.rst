@@ -74,7 +74,7 @@ It will:
 	* Automatically save the model each time a new best test error is achieved
 	* Create and update a *CSV file* that contains the whole historic of the training as well as information such as the hyperparameters. You can later compile several of those files, and plot for example the test error with respect to the number of hidden units
 
-The **trainers.py** module has a Trainer_ABC class that you can extend
+The **trainers.py** module has a *Trainer* class that you can extend
 to create custom trainers.
 
 Dataset maps
