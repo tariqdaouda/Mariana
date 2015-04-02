@@ -10,6 +10,10 @@ class OutputMap(object):
 		self.name = name
 		self.outputFcts = {}
 
+	def printGraph(self, outputName) :
+		"""Print the theano graph of the function associated with a given output"""
+		self.outputFcts[outputName].printGraph()
+	
 	def addOutput(self, output, fct) :
 		self.outputFcts[output.name] = fct
 

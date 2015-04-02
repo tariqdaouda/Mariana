@@ -23,6 +23,10 @@ class TheanoFunction(object) :
 		self.updates = updates
 		self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs, updates = self.updates, **kwargs)
 
+	def printGraph(self) :
+		"""Print the theano graph of the function"""
+		theano.printing.debugprint(self.theano_fct)
+
 	def run(self, **kwargs) :
 		for k in kwargs :
 			self.tmpInputs[k] = kwargs[k]

@@ -1,4 +1,3 @@
-import Mariana.layers as layers
 # import Mariana.costs as MC
 import theano
 import theano.tensor as tt
@@ -9,18 +8,19 @@ def negativeLogLikelihood(targets, outputs) :
 	return cost
 
 def crossEntropy(targets, outputs) :
+	"""Use this one for binary data"""
 	cost = -tt.nnet.binary_crossentropy(targets, outputs).mean()
 	return cost
 
 def meanSquaredError(targets, outputs) :
 	"""The all time classic"""
-	cost = -tt.mean( tt.dot(outputs, targets) **2 )
+	cost = tt.mean((outputs - targets) ** 2)
 	return cost
 
 class LearningScenario_ABC(object):
  	"""This class allow to specify specific learning scenarios for layers independetly"""
 	def __init__(self, *args, **kwargs):
-		pass
+		self.name = self.__class__.__name__
 
 	def getUpdates(self, layer, cost) :
 		"""return the updates for the parameters of layer. Must be implemented in child"""
@@ -36,9 +36,10 @@ class LearningScenario_ABC(object):
 class DefaultScenario(LearningScenario_ABC):
 	"The default scenarios has a fixed learning rate and a fixed momentum"
  	def __init__(self, lr, momentum, *args, **kwargs):
- 		# super(LearningRules, self).__init__()
+ 		super(LearningScenario_ABC, self).__init__()
  		self.lr = lr
  		self.momentum = momentum
+ 		self.hyperParameters = ["lr", "momentum"]
 
  	def getUpdates(self, layer, cost) :
  		updates = []
@@ -51,14 +52,14 @@ class DefaultScenario(LearningScenario_ABC):
 
 		return updates
 
-	def update(self, *args, **kwargs) :
-		pass
+	# def update(self, *args, **kwargs) :
+	# 	pass
 
 class Cost_ABC(object) :
 	"""This allows to create custom costs by adding stuff such as regularizations"""
 
 	def __init__(self, *args, **kwargs) :
-		pass
+		self.name = self.__class__.__name__
 
 	@classmethod
 	def getL1(cls, l1, outputLayer) :
@@ -88,27 +89,38 @@ class Cost_ABC(object) :
 	# 	you can modify your regularization parameters as the learning goes"""
 	# 	pass
 
+class Null(Cost_ABC) :
+	def __init__(self) :
+		Cost_ABC.__init__(self)
+		self.hyperParameters = []
+
+	def getCost(self, outputLayer) :
+		return 0
+
 class NegativeLogLikelihood(Cost_ABC) :
 	def __init__(self, l1 = 0, l2 = 0) :
+		Cost_ABC.__init__(self)
 		self.l1 = l1
 		self.l2 = l2
 		self.costFct = negativeLogLikelihood
+		self.hyperParameters = ["l1", "l2"]
 
 	def getCost(self, outputLayer) :
-		L1 = Cost_ABC.getL1(self.l1, outputLayer)		
-		L2 = Cost_ABC.getL2(self.l2, outputLayer)		
+		L1 = Cost_ABC.getL1(self.l1, outputLayer)
+		L2 = Cost_ABC.getL2(self.l2, outputLayer)
 		return self.costFct(outputLayer.target, outputLayer.outputs) + L1 + L2
 
 
-class CrossEntropy(Cost_ABC) :
+class MeanSquaredError(Cost_ABC) :
 	def __init__(self, l1 = 0, l2 = 0) :
 		self.l1 = l1
 		self.l2 = l2
-		self.costFct = crossEntropy
+		self.costFct = meanSquaredError
+		self.hyperParameters = ["l1", "l2"]
 
 	def getCost(self, outputLayer) :
-		L1 = Cost_ABC.getL1(self.l1, outputLayer)		
-		L2 = Cost_ABC.getL2(self.l2, outputLayer)		
+		L1 = Cost_ABC.getL1(self.l1, outputLayer)
+		L2 = Cost_ABC.getL2(self.l2, outputLayer)
 		return self.costFct(outputLayer.target, outputLayer.outputs) + L1 + L2
 
 

@@ -6,7 +6,8 @@ import cPickle
 
 import theano, numpy, time
 import theano.tensor as tt
-import Mariana.costs as MC
+import Mariana.rules as MR
+import Mariana.activations as MA
 from network import Network
 from wrappers import TheanoFunction
 
@@ -15,7 +16,7 @@ class LayerABC(object) :
 
 	__metaclass__ = ABCMeta
 
-	def __init__(self, nbOutputs, name = None) :
+	def __init__(self, nbOutputs, decorators = [], name = None) :
 		
 		if name is not None :
 			self.name = name
@@ -30,6 +31,8 @@ class LayerABC(object) :
 		self.outputs = None
 		self.params = []
 
+		self.decorators = decorators
+
 		self.feedsInto = OrderedDict()
 		self.feededBy = OrderedDict()
 
@@ -40,6 +43,9 @@ class LayerABC(object) :
 		self.b = None
 		
 		self._mustInit = True
+
+	def addDecorator(self, decorator) :
+		self.decorators.append(decorator)
 
 	def clone(self) :
 		"""Returns a free layer with the same weights and bias"""
@@ -67,12 +73,18 @@ class LayerABC(object) :
 				l._setNbInputs(self)
 				l._registerInput(self)
 				l._init()
+				l._decorate()
 			self._mustInit = False
 	
 	#theano hates abstract methods defined with a decorator
 	def _setOutputs(self) :
 		"""Sets the output of the layer. This function is called by _init() ans should be initialised in child"""
 		raise NotImplemented("Should be implemented in child")
+	
+	def _decorate(self) :
+		"""applies decorators"""
+		for d in self.decorators :
+			d.decorate(self)
 
 	def _setNbInputs(self, layer) :
 		"""Sets the size of input that the layer receives"""
@@ -105,7 +117,7 @@ class LayerABC(object) :
 			if isinstance(layer, Input) :
 				raise ValueError("Nothing can be connected to an input layer")
 
-			if isinstance(layer, Output) or issubclass(layer.__class__, Output) :
+			if isinstance(layer, OutputABC) or issubclass(layer.__class__, OutputABC) :
 				self.network.addOutput(layer)
 			_connectLayer(self, layer)
 			
@@ -121,6 +133,9 @@ class LayerABC(object) :
 	def _dot_representation(self) :
 		"returns the representation of the node in the graph DOT format"
 		return '[label="%s: %sx%s"]' % (self.name, self.nbInputs, self.nbOutputs)
+
+	def __len__(self) :
+		return self.nbOutputs
 
 class Input(LayerABC) :
 	"An input layer"
@@ -139,7 +154,7 @@ class Input(LayerABC) :
 		return '[label="%s: %s" shape=invtriangle]' % (self.name, self.nbOutputs)
 
 class Composite(LayerABC):
-	"""A Composite layer is a layer that brings together the ourputs of several other layers
+	"""A Composite layer is a layer that brings together the outputs of several other layers
 	for example is we have::
 		
 		c = Composite()
@@ -165,35 +180,20 @@ class Composite(LayerABC):
 		
 class Hidden(LayerABC) :
 	"A basic hidden layer"
-	def __init__(self, nbOutputs, activation = tt.tanh, learningScenario = None, name = None, sparsity = 0) :
-		LayerABC.__init__(self, nbOutputs, name = name)
+	def __init__(self, nbOutputs, activation = getattr(MA, "tanh"), learningScenario = None, name = None, **kwargs) :
+		LayerABC.__init__(self, nbOutputs, name = name, **kwargs)
 		self.type = "hidden"
 		self.activation = activation
-		self.sparsity = sparsity
 		self.learningScenario = learningScenario
 
 	def _setOutputs(self) :
-		"""initialises weights and bias, If the activation fct in tanh, weights will be initialised using Glorot[10],
-		if it is something else wight will simply have small values."""
-		if self.W is None :
-			rng = numpy.random.RandomState(int(time.time()))
-			if self.activation is tt.tanh :
-				initWeights = rng.uniform(
-					low = -numpy.sqrt(6. / (self.nbInputs + self.nbOutputs)),
-					high = numpy.sqrt(6. / (self.nbInputs + self.nbOutputs)),
-					size = (self.nbInputs, self.nbOutputs)
-				)
-			else :
-				# print "---->", self.inputs, self, (self.nbInputs, self.nbOutputs)
-				initWeights = numpy.random.random((self.nbInputs, self.nbOutputs))
-				initWeights = initWeights/sum(initWeights)
+		"""initialises weights and bias. By default weights are setup to random low values, use mariana decorators
+		to change this behaviour."""
 
+		if self.W is None :
+			initWeights = numpy.random.random((self.nbInputs, self.nbOutputs))
+			initWeights = initWeights/sum(initWeights)
 			initWeights = numpy.asarray(initWeights, dtype=theano.config.floatX)
-		
-			for i in xrange(initWeights.shape[0]) :
-				for j in xrange(initWeights.shape[1]) :
-					if numpy.random.random() < self.sparsity :
-						initWeights[i, j] = 0
 
 			self.W = theano.shared(value = initWeights, name = self.name + "_W")
 		else :
@@ -215,15 +215,22 @@ class Hidden(LayerABC) :
 		else :
 			# self.outputs = theano.printing.Print('this is a very important value for %s' % self.name)(self.activation(tt.dot(self.inputs, self.W) + self.b))
 			self.outputs = self.activation(tt.dot(self.inputs, self.W) + self.b)
+	
+	def toOutput(self, outputType, **kwargs) :
+		"returns an output layer with the same activation function, weights and bias"
+		o = outputType(self.nbOutputs, activation = self.activation, name = self.name + '_toOutput', **kwargs)
+		o.W = self.W
+		o.b = self.b
+		return o
 
-class Output(Hidden) :
+class OutputABC(Hidden) :
 	"""An output layer"""
-	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None) :
+	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
 		"""The output layer defines the learning rate (lr), as well as any other parameters related to the learning"""
 
-		Hidden.__init__(self, nbOutputs, activation = activation, name = name)
+		Hidden.__init__(self, nbOutputs, activation = activation, name = name, **kwargs)
 		self.type = "output"
-		self.target = tt.ivector(name = self.name + "_Target")
+		self.target = None
 		self.dependencies = OrderedDict()
 		self.costObject = costObject
 		self.learningScenario = learningScenario
@@ -253,10 +260,9 @@ class Output(Hidden) :
 			try :
 				updates.extend(l.learningScenario.getUpdates(l, cost))
 			except AttributeError :
-				# print "----", l
 				updates.extend(self.learningScenario.getUpdates(l, cost))
 
-		self.train = TheanoFunction("train", self, [cost, self.outputs, self.network.layers["inp"].outputs], { "target" : self.target }, updates = updates)
+		self.train = TheanoFunction("train", self, [cost, self.outputs], { "target" : self.target }, updates = updates)
 		self.test = TheanoFunction("test", self, [cost, self.outputs], { "target" : self.target })
 		self.propagate = TheanoFunction("propagate", self, [self.outputs])
 	
@@ -266,9 +272,9 @@ class Output(Hidden) :
 		"This is where you should put the definitions of your custom theano functions"
 		pass
 
-	def toHidden(self) :
+	def toHidden(self, **kwargs) :
 		"returns a hidden layer with the same activation function, weights and bias"
-		h = Hidden(self.nbOutputs, activation = self.activation, name = self.name, sparsity = 0)
+		h = Hidden(self.nbOutputs, activation = self.activation, name = self.name + "_toHidden", **kwargs)
 		h.W = self.W
 		h.b = self.b
 		return h
@@ -276,10 +282,10 @@ class Output(Hidden) :
 	def _dot_representation(self) :
 		return '[label="%s: %sx%s" shape=invtriangle]' % (self.name, self.nbInputs, self.nbOutputs)
 
-class ClassifierABC(Output):
+class ClassifierABC(OutputABC):
 		"An abstract Classifier"
 		def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None) :
-			Output.__init__(self, nbOutputs, activation, learningScenario, costObject, name)
+			OutputABC.__init__(self, nbOutputs, activation, learningScenario, costObject, name)
 
 		def _setTheanoFunctions(self) :
 			"""Classifiers must define a 'classify' function that returns the result of the classification"""
@@ -287,21 +293,16 @@ class ClassifierABC(Output):
 
 class SoftmaxClassifier(ClassifierABC) :
 	"""A softmax Classifier"""
-	def __init__(self, nbOutputs, learningScenario, costObject, name = None) :
-		ClassifierABC.__init__(self, nbOutputs, activation = tt.nnet.softmax, learningScenario = learningScenario, costObject = costObject, name = name)
+	def __init__(self, nbOutputs, learningScenario, costObject, name = None, **kwargs) :
+		ClassifierABC.__init__(self, nbOutputs, activation = MA.softmax, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
+		self.target = tt.ivector(name = self.name + "_Target")
 
 	def _setTheanoFunctions(self) :
 		"""defined theano_classify, that returns the argmax of the output"""
 		self.classify = TheanoFunction("classify", self, [ tt.argmax(self.outputs) ])
 
-class LogisticClassifier(ClassifierABC) :
-	"""A logistic Classifier for two classes"""
-	def __init__(self, learningScenario, costObject, name = None) :
-		ClassifierABC.__init__(self, 1, activation = tt.nnet.sigmoid, learningScenario = learningScenario, costObject = costObject, name = name)
-
-	def _setTheanoFunctions(self) :
-		pass
-	
-	def classify(self) :
-		"""returns true if the output is > 0.5"""
-		return self.outputs > 0.5
+class Regression(OutputABC) :
+	"""For regressions"""
+	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
+		OutputABC.__init__(self, nbOutputs, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
+		self.target = tt.matrix(name = self.name + "_Target")

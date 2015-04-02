@@ -1,3 +1,5 @@
+#Planned
+
 class Convolution2D(Hidden) :
 
 	def __init__(self, minibatchSize, nbMaps, height, width) :

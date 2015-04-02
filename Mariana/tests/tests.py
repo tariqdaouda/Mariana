@@ -2,7 +2,9 @@ import unittest
 
 from Mariana.layers import *
 from Mariana.rules import *
+import Mariana.decorators as dec
 import Mariana.costs as MC
+import Mariana.activations as MA
 import theano.tensor as tt
 import numpy as N
 
@@ -26,7 +28,7 @@ class MLPTests(unittest.TestCase):
 		cost = NegativeLogLikelihood(l1 = 0, l2 = 0)
 
 		i = Input(2, 'inp')
-		h = Hidden(4, activation = tt.tanh)
+		h = Hidden(4, activation = MA.tanh, decorators = [dec.GlorotTanhInit()])
 		o = SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
 
 		mlp = i > h > o
