@@ -7,6 +7,10 @@ from pyGeno.tools.parsers.CSVTools import CSVFile
 from Mariana.layers import *
 import theano.tensor as tt
 
+class EndOfTraining(Exception) :
+	"""Exception raised when a training criteria is met"""
+	pass
+
 class DatasetMapper(object):
  	"""This class is here to map inputs of a network to datasets, or outputs to target sets.
  	If forceSameLengths all sets must have the same length."""
@@ -104,13 +108,40 @@ class DatasetMapper(object):
  	def __str__(self) :
  		return str(self.inputs).replace(" : ", " => ")  + "\n" + str(self.outputs).replace(" : ", " => ") 
 
+class StopCriterion_ABC(object) :
+
+	def __init__(self, *args, **kwrags) :
+		self.name = self.__class__.__name__
+
+	def check(self) :
+		"""The actual function that is called by start, and the one that must be implemented in children"""
+		raise NotImplemented("Must be implemented in child")
+
+class EpochWall(StopCriterion_ABC) :
+	"""Stops training when maxEpochs is reached"""
+	def __init__(self, maxEpochs) :
+		StopCriterion_ABC.__init__(self)
+		self.maxEpochs = maxEpochs
+
+	def check(self, trainer) :
+		if trainer.currentEpoch >= self.maxEpochs :
+			return True
+		return False
+
 class Trainer(object):
 	"""All Trainers must inherit from me"""
 	def __init__(self, cliffEpochs = 0, saveOnException = True) :
 		self.cliffEpochs = cliffEpochs
 		self.saveOnException = saveOnException
+		
+		self.bestTrainingErr = numpy.inf
 		self.bestValidationErr = numpy.inf
 		self.bestTestErr = numpy.inf
+
+		self.currentEpoch = 0
+		self.currentTrainingErr = numpy.inf
+		self.currentValidationErr = numpy.inf
+		self.currentTestErr = numpy.inf
 
 	def start(self, name, model, *args, **kwargs) :
 		"""Starts the training. If anything bad and unespected happens during training, the Trainer
@@ -140,20 +171,25 @@ class Trainer(object):
 		else :
 			try :
 				return self.run(name, model, *args, **kwargs)
+			except EndOfTraining as e :
+				print e.message
+				death_time = time.ctime().replace(' ', '_')
+				filename = "finished_" + model.name +  "_" + death_time
+				model.save(filename)
 			except KeyboardInterrupt, Exception :
 				_dieGracefully()
 				raise
 
-	def run(self, name, model, *args, **kwargs) :
-		"""The actual function that is called by start, and the one that must be implemented in children"""
-		raise NotImplemented("Must be implemented in child")
+	# def run(self, name, model, *args, **kwargs) :
+	# 	"""The actual function that is called by start, and the one that must be implemented in children"""
+	# 	raise NotImplemented("Must be implemented in child")
 
-class NoEarlyStopping(Trainer) :
-	"""This trainner simply never stops until you kill it. It will create a CSV file <model-name>-evolution.csv
-	to log the errors for test and train sets for each epoch, and will save the current model each time a better test 
-	error is achieved. If datasetName is provided it will be added to the evolution CSV file"""
+	# class NoEarlyStopping(Trainer) :
+	# """This trainner simply never stops until you kill it. It will create a CSV file <model-name>-evolution.csv
+	# to log the errors for test and train sets for each epoch, and will save the current model each time a better test 
+	# error is achieved. If datasetName is provided it will be added to the evolution CSV file"""
 
-	def run(self, name, model, trainMaps, testMaps, nbEpochs, miniBatchSize, shuffleMinibatches = True, datasetName = "") :
+	def run(self, name, model, trainMaps, testMaps, validationMaps, miniBatchSize, stopCriteria, shuffleMinibatches = True, datasetName = "") :
 		def appendEvolution(csvEvolution, **kwargs) :			
 			line = csvEvolution.newLine()
 			for k, v in kwargs.iteritems() :		
@@ -203,6 +239,10 @@ class NoEarlyStopping(Trainer) :
 		print "learning..."
 		epoch = 0
 		while (nbEpochs < 0) or (epoch < nbEpochs):
+			for crit in self.stopCriteria :
+				if crit(self) :
+					raise EndOfTraining("Training stopped because of %s" % crit.name)
+
 			meanTrain = []
 			meanTest = []
 			

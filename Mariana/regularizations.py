@@ -3,6 +3,7 @@ class SingleLayerRegularizer(object) :
 	def __init__(self, factor, *args, **kwargs) :
 		self.name = self.__class__.__name__
 		self.factor = factor
+		self.hyperparameters = ["factor"]
 
 	def getFormula(self, layer) :
 		"""This function. Must be implemented in child"""

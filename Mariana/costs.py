@@ -10,7 +10,7 @@ class Cost_ABC(object) :
 
 	def __init__(self, *args, **kwargs) :
 		self.name = self.__class__.__name__
-		# self.hyperParameters = []
+		self.hyperParameters = []
 
 	def _costFct(self, targets, outputs) :
 		"""The cost function. Must be implemented in child"""
