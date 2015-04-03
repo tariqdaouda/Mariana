@@ -113,7 +113,7 @@ class StopCriterion_ABC(object) :
 	def __init__(self, *args, **kwrags) :
 		self.name = self.__class__.__name__
 
-	def check(self) :
+	def stop(self) :
 		"""The actual function that is called by start, and the one that must be implemented in children"""
 		raise NotImplemented("Must be implemented in child")
 
@@ -123,14 +123,35 @@ class EpochWall(StopCriterion_ABC) :
 		StopCriterion_ABC.__init__(self)
 		self.maxEpochs = maxEpochs
 
-	def check(self, trainer) :
+	def stop(self, trainer) :
 		if trainer.currentEpoch >= self.maxEpochs :
 			return True
 		return False
 
+class GeometricEarlyStopping(StopCriterion_ABC) :
+	"""Stops training when maxEpochs is reached"""
+	def __init__(self, patience, significantImprovement) :
+		StopCriterion_ABC.__init__(self)
+		self.patienceIncrease = patience
+		self.patience = patience
+		self.significantImprovement = significantImprovement
+
+	def stop(self, trainer) :
+		if self.patience <= 0 :
+			return True
+
+		if trainer.currentValidationErr < (trainer.bestValidationErr * self.significantImprovement) :
+			self.patience += self.patienceIncrease
+		self.patience -= 1	
+		return False
+	
 class Trainer(object):
 	"""All Trainers must inherit from me"""
-	def __init__(self, cliffEpochs = 0, saveOnException = True) :
+	def __init__(self, testFrequency = 1, validationFrequency = 1, cliffEpochs = 0, saveOnException = True) :
+		
+		self.testFrequency = testFrequency
+		self.validationFrequency = validationFrequency
+
 		self.cliffEpochs = cliffEpochs
 		self.saveOnException = saveOnException
 		
@@ -144,7 +165,7 @@ class Trainer(object):
 		self.currentTestErr = numpy.inf
 
 	def start(self, name, model, *args, **kwargs) :
-		"""Starts the training. If anything bad and unespected happens during training, the Trainer
+		"""Starts the training. If anything bad and unexpcted happens during training, the Trainer
 		will attempt to save the model and logs."""
 
 		def _dieGracefully() :
@@ -237,14 +258,15 @@ class Trainer(object):
 		csvEvolution.streamToFile("%s-evolution.csv" % name)
 
 		print "learning..."
-		epoch = 0
-		while (nbEpochs < 0) or (epoch < nbEpochs):
-			for crit in self.stopCriteria :
-				if crit(self) :
+		self.currentEpoch = 0
+		while True :
+			for crit in stopCriteria :
+				if crit.stop(self) :
 					raise EndOfTraining("Training stopped because of %s" % crit.name)
 
 			meanTrain = []
 			meanTest = []
+			meanValidation = []
 			
 			for i in xrange(0, len(trainMaps), miniBatchSize) :
 				if shuffleMinibatches :
@@ -255,55 +277,84 @@ class Trainer(object):
 					res = model.train(outputName, **kwargs)
 					meanTrain.append(res[0])
 
-			mt = numpy.mean(meanTrain)
+			self.currentTrainingErr = numpy.mean(meanTrain)
 			
-			if len(testMaps) > 0 :	
+			if len(testMaps) > 0 and (self.currentEpoch % self.testFrequency == 0) :
 				kwargs = testMaps.getInputBatches(0, size = "all")
 				for outputName in testMaps.outputs.iterkeys() :
 					kwargs.update({ "target" : testMaps.getOutputLayerBatch(outputName, 0, size = "all")} )
 					res = model.test(outputName, **kwargs)
 					meanTest.append(res[0])
 
-				mte = numpy.mean(meanTest)
+				self.currentTestErr = numpy.mean(meanTest)
 			else :
-				mte = -1
+				self.currentTestErr = -1
 			
+			if len(validationMaps) > 0 and (self.currentEpoch % self.validationFrequency == 0) :
+				kwargs = validationMaps.getInputBatches(0, size = "all")
+				for outputName in validationMaps.outputs.iterkeys() :
+					kwargs.update({ "target" : validationMaps.getOutputLayerBatch(outputName, 0, size = "all")} )
+					res = model.test(outputName, **kwargs)
+					meanValidation.append(res[0])
+
+				self.currentValidationErr = numpy.mean(meanValidation)
+			else :
+				self.currentValidationErr = -1
+
 			runtime = int(time.time() - startTime)
 			
-			if nbEpochs > 0 :
-				print "epoch %s/%s (%.2f%%), mean train err %s, test err %s" %(epoch, nbEpochs, float(epoch)/nbEpochs*100, mt, mte)
-			else :
-				print "epoch %s/%s, mean train err %s, test err %s" %(epoch, nbEpochs, mt, mte)
+			print "epoch %s, mean err (train: %s, test: %s, validation: %s)" %(self.currentEpoch, self.currentTrainingErr, self.currentTestErr, self.currentValidationErr)
 			
-			if mte < self.bestTestErr :
-				filename = "%s-best_Testerr" % (name)
-				print "\t>%s: new best test score %s -> %s" % (name, self.bestTestErr, mte)
-				self.bestTestErr = mte
-				if epoch > self.cliffEpochs :
+			if self.currentTestErr < self.bestTestErr :
+				filename = "%s-best_Test_err" % (name)
+				print "\t===>%s: new best test score %s -> %s" % (name, self.bestTestErr, self.currentTestErr)
+				self.bestTestErr = self.currentTestErr
+				if self.currentEpoch > self.cliffEpochs :
 					print "saving model to %s..." % (filename)
 					model.save(filename)
 					f = open(filename + ".txt", 'w')
-					f.write("date: %s\nruntime: %s\nepoch: %s\nbest test err: %s\ntrain err: %s" % (time.ctime(), runtime, epoch, mte, mt))
+					f.write("date: %s\nruntime: %s\nepoch: %s\nbest Test err: %s\ntrain err: %s" % (time.ctime(), runtime, self.currentEpoch, self.currentTestErr, self.currentTrainingErr))
+					f.flush()
+					f.close()
+
+			if self.currentValidationErr < self.bestValidationErr :
+				filename = "%s-best_Validation_err" % (name)
+				print "\txxx>%s: new best Validation score %s -> %s" % (name, self.bestValidationErr, self.currentValidationErr)
+				self.bestValidationErr = self.currentValidationErr
+				if self.currentEpoch > self.cliffEpochs :
+					print "saving model to %s..." % (filename)
+					model.save(filename)
+					f = open(filename + ".txt", 'w')
+					f.write("date: %s\nruntime: %s\nepoch: %s\nbest Validation err: %s\ntrain err: %s" % (time.ctime(), runtime, self.currentEpoch, self.currentValidationErr, self.currentTrainingErr))
 					f.flush()
 					f.close()
 
 			appendEvolution(csvEvolution, 
 				name = name,
-				epoch = epoch,
+				epoch = self.currentEpoch,
 				runtime = runtime,
 				set = "Train(%d)" % len(trainMaps),
-				score = mt,
+				score = self.currentTrainingErr,
 				dataset_name = datasetName,
 				**layersForLegend)
 
 			appendEvolution(csvEvolution,
 				name = name,
-				epoch = epoch,
+				epoch = self.currentEpoch,
 				runtime = runtime,
 				set = "Test(%d)" % len(testMaps),
-				score = mte,
+				score = self.currentTestErr,
+				dataset_name = datasetName,
+				**layersForLegend)
+
+			appendEvolution(csvEvolution,
+				name = name,
+				epoch = self.currentEpoch,
+				runtime = runtime,
+				set = "Validation(%d)" % len(testMaps),
+				score = self.currentValidationErr,
 				dataset_name = datasetName,
 				**layersForLegend)
 
 			sys.stdout.flush()
-			epoch += 1
+			self.currentEpoch += 1

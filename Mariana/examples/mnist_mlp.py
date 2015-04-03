@@ -1,13 +1,12 @@
 import cPickle
 import gzip
 
-# from Mariana.layers import *
-# from Mariana.rules import *
-# from Mariana.trainers import *
 import Mariana.activations as MA
 import Mariana.decorators as MD
 import Mariana.layers as ML
-import Mariana.rules as MR
+import Mariana.costs as MC
+import Mariana.regularizations as MR
+import Mariana.scenari as MS
 import Mariana.trainers as MT
 
 """
@@ -35,12 +34,12 @@ if __name__ == "__main__" :
 	nbEpochs = -1
 
 	#Let's define the network
-	ls = MR.DefaultScenario(lr = 0.01, momentum = 0)
-	cost = MR.NegativeLogLikelihood(l1 = 0, l2 = 0.0001)
+	ls = MS.DefaultScenario(lr = 0.01, momentum = 0)
+	cost = MC.NegativeLogLikelihood()
 
 	i = ML.Input(28*28, 'inp')
-	h = ML.Hidden(500, activation = MA.tanh, decorators = [MD.GlorotTanhInit()])
-	o = ML.SoftmaxClassifier(10, learningScenario = ls, costObject = cost, name = "out")
+	h = ML.Hidden(500, activation = MA.tanh, decorators = [MD.GlorotTanhInit()], regularizations = [ MR.L1(0), MR.L2(0.0001) ] )
+	o = ML.SoftmaxClassifier(10, learningScenario = ls, costObject = cost, name = "out", regularizations = [ MR.L1(0), MR.L2(0.0001) ] )
 
 	mlp = i > h > o
 
@@ -55,6 +54,10 @@ if __name__ == "__main__" :
 	testMaps.addInput("inp", test_set[0])
 	testMaps.addOutput("out", test_set[1].astype('int32'))
 
+	validationMaps = MT.DatasetMapper()
+	validationMaps.addInput("inp", validation_set[0])
+	validationMaps.addOutput("out", validation_set[1].astype('int32'))
+
 	#and train
-	trainer = MT.NoEarlyStopping()
-	trainer.run("MLP", mlp, trainMaps = trainMaps, testMaps = testMaps, nbEpochs = nbEpochs, miniBatchSize = miniBatchSize)
+	trainer = MT.Trainer()
+	trainer.start("MLP", mlp, trainMaps = trainMaps, testMaps = testMaps, validationMaps = validationMaps, stopCriteria = [], miniBatchSize = miniBatchSize)
