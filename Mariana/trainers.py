@@ -128,6 +128,17 @@ class EpochWall(StopCriterion_ABC) :
 			return True
 		return False
 
+class TestScorehWall(StopCriterion_ABC) :
+	"""Stops training when maxEpochs is reached"""
+	def __init__(self, wallValue) :
+		StopCriterion_ABC.__init__(self)
+		self.wallValue = wallValue
+
+	def stop(self, trainer) :
+		if trainer.currentTestErr <= self.wallValue :
+			return True
+		return False
+
 class GeometricEarlyStopping(StopCriterion_ABC) :
 	"""Stops training when maxEpochs is reached"""
 	def __init__(self, patience, significantImprovement) :
@@ -155,14 +166,14 @@ class Trainer(object):
 		self.cliffEpochs = cliffEpochs
 		self.saveOnException = saveOnException
 		
-		self.bestTrainingErr = numpy.inf
-		self.bestValidationErr = numpy.inf
-		self.bestTestErr = numpy.inf
+		self.bestTrainingScore = numpy.inf
+		self.bestValidationScore = numpy.inf
+		self.bestTestScore = numpy.inf
 
 		self.currentEpoch = 0
-		self.currentTrainingErr = numpy.inf
-		self.currentValidationErr = numpy.inf
-		self.currentTestErr = numpy.inf
+		self.currentTrainingScore = numpy.inf
+		self.currentValidationScore = numpy.inf
+		self.currentTestScore = numpy.inf
 
 	def start(self, name, model, *args, **kwargs) :
 		"""Starts the training. If anything bad and unexpcted happens during training, the Trainer
@@ -277,7 +288,7 @@ class Trainer(object):
 					res = model.train(outputName, **kwargs)
 					meanTrain.append(res[0])
 
-			self.currentTrainingErr = numpy.mean(meanTrain)
+			self.currentTrainingScore = numpy.mean(meanTrain)
 			
 			if len(testMaps) > 0 and (self.currentEpoch % self.testFrequency == 0) :
 				kwargs = testMaps.getInputBatches(0, size = "all")
@@ -286,9 +297,9 @@ class Trainer(object):
 					res = model.test(outputName, **kwargs)
 					meanTest.append(res[0])
 
-				self.currentTestErr = numpy.mean(meanTest)
+				self.currentTestScore = numpy.mean(meanTest)
 			else :
-				self.currentTestErr = -1
+				self.currentTestScore = -1
 			
 			if len(validationMaps) > 0 and (self.currentEpoch % self.validationFrequency == 0) :
 				kwargs = validationMaps.getInputBatches(0, size = "all")
@@ -297,35 +308,35 @@ class Trainer(object):
 					res = model.test(outputName, **kwargs)
 					meanValidation.append(res[0])
 
-				self.currentValidationErr = numpy.mean(meanValidation)
+				self.currentValidationScore = numpy.mean(meanValidation)
 			else :
-				self.currentValidationErr = -1
+				self.currentValidationScore = -1
 
 			runtime = int(time.time() - startTime)
 			
-			print "epoch %s, mean err (train: %s, test: %s, validation: %s)" %(self.currentEpoch, self.currentTrainingErr, self.currentTestErr, self.currentValidationErr)
+			print "epoch %s, mean Score (train: %s, test: %s, validation: %s)" %(self.currentEpoch, self.currentTrainingScore, self.currentTestScore, self.currentValidationScore)
 			
-			if self.currentTestErr < self.bestTestErr :
-				filename = "%s-best_Test_err" % (name)
-				print "\t===>%s: new best test score %s -> %s" % (name, self.bestTestErr, self.currentTestErr)
-				self.bestTestErr = self.currentTestErr
+			if self.currentTestScore < self.bestTestScore :
+				filename = "%s-best_Test_Score" % (name)
+				print "\t===>%s: new best test score %s -> %s" % (name, self.bestTestScore, self.currentTestScore)
+				self.bestTestScore = self.currentTestScore
 				if self.currentEpoch > self.cliffEpochs :
 					print "saving model to %s..." % (filename)
 					model.save(filename)
 					f = open(filename + ".txt", 'w')
-					f.write("date: %s\nruntime: %s\nepoch: %s\nbest Test err: %s\ntrain err: %s" % (time.ctime(), runtime, self.currentEpoch, self.currentTestErr, self.currentTrainingErr))
+					f.write("date: %s\nruntime: %s\nepoch: %s\nbest Test Score: %s\ntrain Score: %s" % (time.ctime(), runtime, self.currentEpoch, self.currentTestScore, self.currentTrainingScore))
 					f.flush()
 					f.close()
 
-			if self.currentValidationErr < self.bestValidationErr :
-				filename = "%s-best_Validation_err" % (name)
-				print "\txxx>%s: new best Validation score %s -> %s" % (name, self.bestValidationErr, self.currentValidationErr)
-				self.bestValidationErr = self.currentValidationErr
+			if self.currentValidationScore < self.bestValidationScore :
+				filename = "%s-best_Validation_Score" % (name)
+				print "\txxx>%s: new best Validation score %s -> %s" % (name, self.bestValidationScore, self.currentValidationScore)
+				self.bestValidationScore = self.currentValidationScore
 				if self.currentEpoch > self.cliffEpochs :
 					print "saving model to %s..." % (filename)
 					model.save(filename)
 					f = open(filename + ".txt", 'w')
-					f.write("date: %s\nruntime: %s\nepoch: %s\nbest Validation err: %s\ntrain err: %s" % (time.ctime(), runtime, self.currentEpoch, self.currentValidationErr, self.currentTrainingErr))
+					f.write("date: %s\nruntime: %s\nepoch: %s\nbest Validation Score: %s\ntrain Score: %s" % (time.ctime(), runtime, self.currentEpoch, self.currentValidationScore, self.currentTrainingScore))
 					f.flush()
 					f.close()
 
@@ -334,7 +345,7 @@ class Trainer(object):
 				epoch = self.currentEpoch,
 				runtime = runtime,
 				set = "Train(%d)" % len(trainMaps),
-				score = self.currentTrainingErr,
+				score = self.currentTrainingScore,
 				dataset_name = datasetName,
 				**layersForLegend)
 
@@ -343,7 +354,7 @@ class Trainer(object):
 				epoch = self.currentEpoch,
 				runtime = runtime,
 				set = "Test(%d)" % len(testMaps),
-				score = self.currentTestErr,
+				score = self.currentTestScore,
 				dataset_name = datasetName,
 				**layersForLegend)
 
@@ -352,7 +363,7 @@ class Trainer(object):
 				epoch = self.currentEpoch,
 				runtime = runtime,
 				set = "Validation(%d)" % len(testMaps),
-				score = self.currentValidationErr,
+				score = self.currentValidationScore,
 				dataset_name = datasetName,
 				**layersForLegend)
 
