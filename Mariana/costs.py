@@ -1,3 +1,5 @@
+import theano.tensor as tt
+
 # def crossEntropy(targets, outputs) :
 # 	"""Use this one for binary data"""
 # 	cost = -tt.nnet.binary_crossentropy(targets, outputs).mean()

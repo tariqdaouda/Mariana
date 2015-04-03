@@ -11,7 +11,7 @@ import Mariana.activations as MA
 from network import Network
 from wrappers import TheanoFunction
 
-class LayerABC(object) :
+class Layer_ABC(object) :
 	"the abstract layer class"
 
 	__metaclass__ = ABCMeta
@@ -38,9 +38,6 @@ class LayerABC(object) :
 
 		self.network = None
 		self._inputRegistrations = set()
-	
-		self.W = None
-		self.b = None
 		
 		self._mustInit = True
 
@@ -117,7 +114,7 @@ class LayerABC(object) :
 			if isinstance(layer, Input) :
 				raise ValueError("Nothing can be connected to an input layer")
 
-			if isinstance(layer, OutputABC) or issubclass(layer.__class__, OutputABC) :
+			if isinstance(layer, Output_ABC) or issubclass(layer.__class__, Output_ABC) :
 				self.network.addOutput(layer)
 			_connectLayer(self, layer)
 			
@@ -137,10 +134,10 @@ class LayerABC(object) :
 	def __len__(self) :
 		return self.nbOutputs
 
-class Input(LayerABC) :
+class Input(Layer_ABC) :
 	"An input layer"
 	def __init__(self, nbInputs, name = None) :
-		LayerABC.__init__(self, nbInputs, name = name)
+		Layer_ABC.__init__(self, nbInputs, name = name)
 		self.type = "input"
 		self.nbInputs = nbInputs
 		self.network = Network()#y, self)
@@ -153,7 +150,7 @@ class Input(LayerABC) :
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=invtriangle]' % (self.name, self.nbOutputs)
 
-class Composite(LayerABC):
+class Composite(Layer_ABC):
 	"""A Composite layer is a layer that brings together the outputs of several other layers
 	for example is we have::
 		
@@ -164,7 +161,7 @@ class Composite(LayerABC):
 	The output of c will be single vector: [layer1.output, layer2.output]
 	"""
 	def __init__(self, name = None):
-		LayerABC.__init__(self, nbOutputs = None, name = name)
+		Layer_ABC.__init__(self, nbOutputs = None, name = name)
 
 	def _setNbInputs(self, layer) :
 		if self.nbInputs is None :
@@ -178,13 +175,19 @@ class Composite(LayerABC):
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=box]' % (self.name, self.nbOutputs)
 		
-class Hidden(LayerABC) :
+class Hidden(Layer_ABC) :
 	"A basic hidden layer"
-	def __init__(self, nbOutputs, activation = getattr(MA, "tanh"), learningScenario = None, name = None, **kwargs) :
-		LayerABC.__init__(self, nbOutputs, name = name, **kwargs)
+	def __init__(self, nbOutputs, activation = getattr(MA, "tanh"), learningScenario = None, name = None, regularizations = [], **kwargs) :
+		Layer_ABC.__init__(self, nbOutputs, name = name, **kwargs)
+		self.W = None
+		self.b = None
+
 		self.type = "hidden"
 		self.activation = activation
 		self.learningScenario = learningScenario
+		
+		self.regularizationObjects = regularizations
+		self.regularizations = []
 
 	def _setOutputs(self) :
 		"""initialises weights and bias. By default weights are setup to random low values, use mariana decorators
@@ -216,6 +219,9 @@ class Hidden(LayerABC) :
 			# self.outputs = theano.printing.Print('this is a very important value for %s' % self.name)(self.activation(tt.dot(self.inputs, self.W) + self.b))
 			self.outputs = self.activation(tt.dot(self.inputs, self.W) + self.b)
 	
+		for reg in self.regularizationObjects :
+			self.regularizations.append(reg.getFormula(self))
+
 	def toOutput(self, outputType, **kwargs) :
 		"returns an output layer with the same activation function, weights and bias"
 		o = outputType(self.nbOutputs, activation = self.activation, name = self.name + '_toOutput', **kwargs)
@@ -223,7 +229,7 @@ class Hidden(LayerABC) :
 		o.b = self.b
 		return o
 
-class OutputABC(Hidden) :
+class Output_ABC(Hidden) :
 	"""An output layer"""
 	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
 		"""The output layer defines the learning rate (lr), as well as any other parameters related to the learning"""
@@ -236,7 +242,7 @@ class OutputABC(Hidden) :
 		self.learningScenario = learningScenario
 
 	def _backTrckDependencies(self) :
-		"""Finds all the layers the ouput layer is connected to"""
+		"""Finds all the hidden layers the ouput layer is influenced by"""
 		def _bckTrk(deps, layer) :		
 			for l in layer.feededBy.itervalues() :
 				if l.__class__ is not Input :
@@ -254,6 +260,12 @@ class OutputABC(Hidden) :
 
 		self._backTrckDependencies()
 		cost = self.costObject.getCost(self)
+	
+		for l in self.dependencies.itervalues() :
+			if l.__class__  is not Composite :
+				for reg in l.regularizations :
+					cost += reg
+
 		updates = self.learningScenario.getUpdates(self, cost)
 
 		for l in self.dependencies.itervalues() :
@@ -282,27 +294,27 @@ class OutputABC(Hidden) :
 	def _dot_representation(self) :
 		return '[label="%s: %sx%s" shape=invtriangle]' % (self.name, self.nbInputs, self.nbOutputs)
 
-class ClassifierABC(OutputABC):
+class Classifier_ABC(Output_ABC):
 		"An abstract Classifier"
-		def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None) :
-			OutputABC.__init__(self, nbOutputs, activation, learningScenario, costObject, name)
+		def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
+			Output_ABC.__init__(self, nbOutputs, activation, learningScenario, costObject, name, **kwargs)
 
 		def _setTheanoFunctions(self) :
 			"""Classifiers must define a 'classify' function that returns the result of the classification"""
 			raise NotImplemented("theano classify must be defined in child's _setTheanoFunctions()")				
 
-class SoftmaxClassifier(ClassifierABC) :
+class SoftmaxClassifier(Classifier_ABC) :
 	"""A softmax Classifier"""
 	def __init__(self, nbOutputs, learningScenario, costObject, name = None, **kwargs) :
-		ClassifierABC.__init__(self, nbOutputs, activation = MA.softmax, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
+		Classifier_ABC.__init__(self, nbOutputs, activation = MA.softmax, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.target = tt.ivector(name = self.name + "_Target")
 
 	def _setTheanoFunctions(self) :
 		"""defined theano_classify, that returns the argmax of the output"""
 		self.classify = TheanoFunction("classify", self, [ tt.argmax(self.outputs) ])
 
-class Regression(OutputABC) :
+class Regression(Output_ABC) :
 	"""For regressions"""
 	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
-		OutputABC.__init__(self, nbOutputs, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
+		Output_ABC.__init__(self, nbOutputs, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.target = tt.matrix(name = self.name + "_Target")

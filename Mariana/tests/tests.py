@@ -4,7 +4,10 @@ from Mariana.layers import *
 from Mariana.rules import *
 import Mariana.decorators as dec
 import Mariana.costs as MC
+import Mariana.regularizations as MR
+import Mariana.scenari as MS
 import Mariana.activations as MA
+
 import theano.tensor as tt
 import numpy as N
 
@@ -24,11 +27,11 @@ class MLPTests(unittest.TestCase):
 		pass
 
 	def trainMLP_xor(self) :
-		ls = DefaultScenario(lr = 0.1, momentum = 0)
-		cost = NegativeLogLikelihood(l1 = 0, l2 = 0)
+		ls = MS.DefaultScenario(lr = 0.1, momentum = 0)
+		cost = MC.NegativeLogLikelihood()
 
 		i = Input(2, 'inp')
-		h = Hidden(4, activation = MA.tanh, decorators = [dec.GlorotTanhInit()])
+		h = Hidden(4, activation = MA.tanh, decorators = [dec.GlorotTanhInit()], regularizations = [MR.L1(0), MR.L2(0)])
 		o = SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
 
 		mlp = i > h > o
@@ -66,12 +69,12 @@ class MLPTests(unittest.TestCase):
 
 	# @unittest.skip("skipping")
 	def test_composite(self) :
-		ls = DefaultScenario(lr = 0.1, momentum = 0)
-		cost = NegativeLogLikelihood(l1 = 0, l2 = 0)
+		ls = MS.DefaultScenario(lr = 0.1, momentum = 0)
+		cost = MC.NegativeLogLikelihood()
 
 		inp = Input(2, 'inp')
-		h1 = Hidden(2, activation = tt.tanh, name = "h1")
-		h2 = Hidden(2, activation = tt.tanh, name = "h2")
+		h1 = Hidden(2, activation = MA.tanh, name = "h1")
+		h2 = Hidden(2, activation = MA.tanh, name = "h2")
 		o = SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
 		c = Composite(name = "Comp")
 		
@@ -89,9 +92,6 @@ class MLPTests(unittest.TestCase):
 		self.assertEqual(mlp.classify( "out", inp = [ self.xor_ins[1] ] )[0], 1 )
 		self.assertEqual(mlp.classify( "out", inp = [ self.xor_ins[2] ] )[0], 1 )
 		self.assertEqual(mlp.classify( "out", inp = [ self.xor_ins[3] ] )[0], 0 )
-
-	def test_mnist(self) :
-		pass
 		
 if __name__ == '__main__' :
 	unittest.main()

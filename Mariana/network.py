@@ -38,6 +38,7 @@ class Network(object) :
 		self.inputs = OrderedDict()
 		self.layers = OrderedDict()
 		self.outputs = OrderedDict()
+		self.regularizations = OrderedDict()
 		self.edges = set()
 
 		self.params = []
@@ -94,6 +95,7 @@ class Network(object) :
 						if k not in self.outputMaps :
 							self.outputMaps[k] = OutputMap(k)
 						self.outputMaps[k].addOutput(o, v)
+			
 			# print self.outputMaps, self.outputs.values()
 
 	def help(self) :
