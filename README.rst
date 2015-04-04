@@ -31,44 +31,16 @@ job of optimisation, so it should be pretty fast, wether you're running on CPU o
 Example
 =======
 
-.. code:: python
-  
-  import Mariana.layers as lay
-  import Mariana.rules as rul
-	
-  #we define a learning scenario
-  #you can have a per layer scenario, but if a hidden layer has no defined
-  #scenario it inherits the scenario of the output
-  ls = rul.DefaultScenario(lr = 0.1, momentum = 0)
-  #a cost
-  cost = rul.NegativeLogLikelihood(l1 = 0, l2 = 0)
-  
-  #we create our layers
-  i = lay.Input(2, 'inp')
-  h = lay.Hidden(4, activation = tt.tanh)
-  o = lay.SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
-  
-  #this is our network ">" serves to connect layers together
-  mlp = i > h > o
-  preceptron = i > o
-  
-  #then it's simply a matter of calling
-  #here "out" is the name of the output layer and "inp" the name of the input layer
-  #Mariana networks can have several inputs/outputs. "target" is simply the target 
-  mlp.train("out", inp = [ self.xor_ins[ ii ] ], target = [ self.xor_outs[ ii ] ] )
-  
-You can also call mlp.test, mlp.propagate, mlp.classify. For more examples please have a look at the *tests* and *examples* folders.
+Please have a look mnist_mlp.py in the examples folder. It illustrates most of what this quickstart guide adresses.
 
-Using Trainers and loading datasets
+Using the trainer and loading datasets
 ========================================
 
-Trainers
+Trainer
 --------
 
-Trainers are objects that take care of the whole training process. If any exception occurs during training the trainer will also automatically save the last
-version of the model as well as logs explaining what happened.
-
-For now Mariana ships with only one trainer: **NoEarlyStopping**. This trainers takes a *test set* and a *train set* and will either run forever (nbEpochs = -1) or for a given number of epochs.
+The trainer takes care of the whole training process. If any exception occurs during training it will also automatically save the last
+version of the model as well as logs explaining what happened. The trainer can also take as argument a list of stopCriterias.
 
 It will:
 
@@ -76,33 +48,12 @@ It will:
 	* Automatically save the model each time a new best test error is achieved
 	* Create and update a *CSV file* that contains the whole historic of the training as well as information such as the hyperparameters. You can later compile several of those files, and plot for example the test error with respect to the number of hidden units
 
-The **trainers.py** module has a *Trainer* class that you can extend
-to create custom trainers. Basically it's just a matter of writing a custom *run(...)* function.
-
 Dataset maps
 ------------
 
 Mariana is dataset format agnostic. In order to use your dataset you will need to define maps for the differents sets that you need.
 
-First let's create our model
-
-.. code:: python
-
-	import Mariana.layers as lay
-	import Mariana.rules as rul
-	import Mariana.trainers as tra
-
-	#Let's define the network
-	ls = rul.DefaultScenario(lr = 0.01, momentum = 0)
-	cost = rul.NegativeLogLikelihood(l1 = 0, l2 = 0.0001)
-
-	i = lay.Input(28*28, 'the input')
-	h = lay.Hidden(500, activation = tt.tanh)
-	o = lay.SoftmaxClassifier(10, learningScenario = ls, costObject = cost, name = "the output")
-
-	mlp = i > h > o
-
-Now let's assume that our sets are in a python dictionary such as:
+Let's assume that our sets are in a python dictionary such as:
 
 .. code:: python
 
@@ -135,18 +86,17 @@ neural network with one input and one output.*
 	testMaps.addInput("the input", sets["set2"]["images"])
 	testMaps.addOutput("the output", sets["set2"]["classes"])
 
-	#We instanciate a trainer
-	trainer = tra.NoEarlyStopping()
-	
-	#and pass it the model as well as the maps.
-	#nbEpochs = -1 means that the process will run forever until someone kills it
-	trainer.run("Awesome MLP", 
-		mlp, 
-		trainMaps = trainMaps, 
-		testMaps = testMaps, 
-		nbEpochs = -1, 
-		miniBatchSize = 20)
-	
+Decorators
+==========
+
+Mariana layers can take decarators as arguments that modify the layer's behaviour. Decorators can be used for example, to mask parts of the output to the next layers (ex: for dropout or denoising auto-encoders),
+or to specify custom weight initialisations.
+
+Costs and regularizations
+=========================
+
+Each output layers can have its own cost. Regularizations are also specified on per layer basis, so you can for example enforce a L1 regularisation on a single layer of the model.
+
 Saving and resuming training
 ============================
 
@@ -165,8 +115,8 @@ Loading is a simple unpickling:
   mlp = cPickle.load(open("myMLP.mariana.pkl"))
   mlp.train(...)
   
-Cloning layers
-==============
+Cloning layers and resusing layers
+===================================
 
 Mariana allows you to clone layers so you can train a model, extract one of it's layers, and use it for another model.
 
@@ -180,8 +130,14 @@ You can also transform an output layer into a hidden layer, that you can include
 
   h3 = o.toHidden()
 
-Visualizing graphs
-==================
+And a hidden layer to an output layer using:
+
+.. code:: python
+
+  o = h.toOutput(ML.Regression, costObject = cost, learningScenario = ls)
+
+Visualizing networks
+====================
 
 To get a DOT format representation of your network:
 
