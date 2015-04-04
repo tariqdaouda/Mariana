@@ -144,16 +144,16 @@ class GeometricEarlyStopping(StopCriterion_ABC) :
 	def __init__(self, patience, significantImprovement) :
 		StopCriterion_ABC.__init__(self)
 		self.patienceIncrease = patience
-		self.patience = patience
+		self.wall = patience
 		self.significantImprovement = significantImprovement
 
 	def stop(self, trainer) :
-		if self.patience <= 0 :
+		if self.wall <= 0 :
 			return True
 
 		if trainer.currentValidationErr < (trainer.bestValidationErr * self.significantImprovement) :
-			self.patience += self.patienceIncrease
-		self.patience -= 1	
+			self.wall += (trainer.currentEpoch * self.patienceIncrease)
+		self.wall -= 1	
 		return False
 	
 class Trainer(object):

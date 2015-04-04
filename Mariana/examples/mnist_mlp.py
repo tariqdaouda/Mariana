@@ -11,7 +11,7 @@ import Mariana.trainers as MT
 
 """
 This is the equivalent the theano MLP from here: http://deeplearning.net/tutorial/mlp.html
-But Mariana style
+But using Mariana
 """
 
 def load_mnist() :
@@ -59,5 +59,10 @@ if __name__ == "__main__" :
 	validationMaps.addOutput("out", validation_set[1].astype('int32'))
 
 	#and train
+<<<<<<< HEAD
 	trainer = MT.Trainer()
 	trainer.start("MLP", mlp, trainMaps = trainMaps, testMaps = testMaps, validationMaps = validationMaps, stopCriteria = [], miniBatchSize = miniBatchSize)
+=======
+	trainer = NoEarlyStopping()
+	trainer.run("MLP", mlp, trainMaps = trainMaps, testMaps = testMaps, nbEpochs = nbEpochs, miniBatchSize = miniBatchSize)
+>>>>>>> 430b7f05b04e8597c7ab04be8ac0aee481920e88
