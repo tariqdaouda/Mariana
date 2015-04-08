@@ -9,8 +9,9 @@ import theano.tensor as tt
 
 class EndOfTraining(Exception) :
 	"""Exception raised when a training criteria is met"""
-	def __init__(self, message) :
-		self.message = message
+	def __init__(self, stopCriterion) :
+		self.stopCriterion = stopCriterion
+		self.message = "End of training: %s" % stopCriterion.endMessage()
 
 class DatasetMapper(object):
  	"""This class is here to map inputs of a network to datasets, or outputs to target sets.
@@ -118,6 +119,10 @@ class StopCriterion_ABC(object) :
 		"""The actual function that is called by start, and the one that must be implemented in children"""
 		raise NotImplemented("Must be implemented in child")
 
+	def endMessage(self) :
+		"""returns information about the reason why the training stopped"""
+		return self.name
+
 class EpochWall(StopCriterion_ABC) :
 	"""Stops training when maxEpochs is reached"""
 	def __init__(self, maxEpochs) :
@@ -129,6 +134,10 @@ class EpochWall(StopCriterion_ABC) :
 			return True
 		return False
 
+	def endMessage(self) :
+		"""returns information about the reason why the training stopped"""
+		return "Reached epoch wall %s" % self.maxEpochs
+
 class TestScoreWall(StopCriterion_ABC) :
 	"""Stops training when maxEpochs is reached"""
 	def __init__(self, wallValue) :
@@ -139,6 +148,10 @@ class TestScoreWall(StopCriterion_ABC) :
 		if trainer.currentTestScore <= self.wallValue :
 			return True
 		return False
+
+	def endMessage(self) :
+		"""returns information about the reason why the training stopped"""
+		return "Reached test score wall %s" % self.wallValue
 
 class GeometricEarlyStopping(StopCriterion_ABC) :
 	"""Stops training when maxEpochs is reached"""
@@ -157,6 +170,10 @@ class GeometricEarlyStopping(StopCriterion_ABC) :
 		self.wall -= 1	
 		return False
 	
+	def endMessage(self) :
+		"""returns information about the reason why the training stopped"""
+		return "Early stopping, no patience left"
+
 class Trainer(object):
 	"""All Trainers must inherit from me"""
 	def __init__(self, testFrequency = 1, validationFrequency = 1, cliffEpochs = 0, saveOnException = True) :
@@ -197,6 +214,7 @@ class Trainer(object):
 			f.write("\nTraceback\n---------\n")
 
 			f.write(str(traceback.extract_tb(tb)).replace("), (", "),\n(").replace("[(","[\n(").replace(")]",")\n]"))
+			f.flush()
 			f.close()
 
 		if not self.saveOnException :
@@ -207,7 +225,13 @@ class Trainer(object):
 			except EndOfTraining as e :
 				print e.message
 				death_time = time.ctime().replace(' ', '_')
-				filename = "finished_" + model.name +  "_" + death_time
+				filename = "finished_" + name +  "_" + death_time
+				f = open(filename +  ".stopreason.txt", 'w')
+				f.write("Time of death: %s\n" % death_time)
+				f.write("Stopped by: %s\n" % e.stopCriterion.name)
+				f.write("Reason: %s\n" % e.message)
+				f.flush()
+				f.close()
 				model.save(filename)
 			except KeyboardInterrupt, Exception :
 				_dieGracefully()
@@ -265,7 +289,7 @@ class Trainer(object):
 		while True :
 			for crit in stopCriteria :
 				if crit.stop(self) :
-					raise EndOfTraining("Training stopped because of %s" % crit.name)
+					raise EndOfTraining(crit)
 
 			meanTrain = []
 			meanTest = []
