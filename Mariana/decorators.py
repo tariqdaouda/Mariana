@@ -33,7 +33,7 @@ class GlorotTanhInit(Decorator) :
 
 class StochasticTurnOff(Decorator):
 	"""Applies StochasticTurnOff with a given ratio to a layer. Use it to make things such as denoising autoencoders and dropout layers"""
-	def __init__(self, ratio):
+	def __init__(self, ratio, *args, **kwargs):
 		# super(StochasticTurnOff, self).__init__()
 		Decorator.__init__(self, *args, **kwargs)
 

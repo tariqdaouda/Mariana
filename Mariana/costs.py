@@ -1,10 +1,5 @@
 import theano.tensor as tt
 
-# def crossEntropy(targets, outputs) :
-# 	"""Use this one for binary data"""
-# 	cost = -tt.nnet.binary_crossentropy(targets, outputs).mean()
-# 	return cost
-
 class Cost_ABC(object) :
 	"""This allows to create custom costs by adding stuff such as regularizations"""
 
@@ -33,4 +28,10 @@ class MeanSquaredError(Cost_ABC) :
 	"""The all time classic"""
 	def _costFct(self, targets, outputs) :
 		cost = tt.mean((outputs - targets) ** 2)
+		return cost
+
+class CrossEntropy(Cost_ABC) :
+	"""Use this one for binary data"""
+	def _costFct(self, targets, outputs) :
+		cost = tt.nnet.binary_crossentropy(outputs, targets).sum()
 		return cost

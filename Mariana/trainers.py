@@ -9,7 +9,8 @@ import theano.tensor as tt
 
 class EndOfTraining(Exception) :
 	"""Exception raised when a training criteria is met"""
-	pass
+	def __init__(self, message) :
+		self.message = message
 
 class DatasetMapper(object):
  	"""This class is here to map inputs of a network to datasets, or outputs to target sets.
@@ -128,14 +129,14 @@ class EpochWall(StopCriterion_ABC) :
 			return True
 		return False
 
-class TestScorehWall(StopCriterion_ABC) :
+class TestScoreWall(StopCriterion_ABC) :
 	"""Stops training when maxEpochs is reached"""
 	def __init__(self, wallValue) :
 		StopCriterion_ABC.__init__(self)
 		self.wallValue = wallValue
 
 	def stop(self, trainer) :
-		if trainer.currentTestErr <= self.wallValue :
+		if trainer.currentTestScore <= self.wallValue :
 			return True
 		return False
 
@@ -151,7 +152,7 @@ class GeometricEarlyStopping(StopCriterion_ABC) :
 		if self.wall <= 0 :
 			return True
 
-		if trainer.currentValidationErr < (trainer.bestValidationErr * self.significantImprovement) :
+		if trainer.currentValidationScore < (trainer.bestValidationScore * self.significantImprovement) :
 			self.wall += (trainer.currentEpoch * self.patienceIncrease)
 		self.wall -= 1	
 		return False
@@ -211,15 +212,6 @@ class Trainer(object):
 			except KeyboardInterrupt, Exception :
 				_dieGracefully()
 				raise
-
-	# def run(self, name, model, *args, **kwargs) :
-	# 	"""The actual function that is called by start, and the one that must be implemented in children"""
-	# 	raise NotImplemented("Must be implemented in child")
-
-	# class NoEarlyStopping(Trainer) :
-	# """This trainner simply never stops until you kill it. It will create a CSV file <model-name>-evolution.csv
-	# to log the errors for test and train sets for each epoch, and will save the current model each time a better test 
-	# error is achieved. If datasetName is provided it will be added to the evolution CSV file"""
 
 	def run(self, name, model, trainMaps, testMaps, validationMaps, miniBatchSize, stopCriteria, shuffleMinibatches = True, datasetName = "") :
 		def appendEvolution(csvEvolution, **kwargs) :			
