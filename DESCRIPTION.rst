@@ -1,4 +1,4 @@
 Mariana:
 =======
 
-A machine learning framework for buildung deep neural networks
+A machine learning framework for building deep neural networks
