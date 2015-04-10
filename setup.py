@@ -11,7 +11,7 @@ with open(path.join(here, 'DESCRIPTION.rst'), encoding='utf-8') as f:
 setup(
     name='Mariana',
 
-    version='1.0.0',
+    version='0.1',
 
     description="Crazy deep architectures",
     long_description=long_description,
