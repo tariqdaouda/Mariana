@@ -9,7 +9,7 @@ Why is it cool?
 =========================
 
 Mariana networks are graphs of independent layers and that allows for the craziest deepest architectures you can think of, 
-as well as for a very light and clear interface.
+as well as for a super light and clear interface.
 There's no need for an MLP or a Perceptron or an Auto-Encoder class, because if you know what these things are, you can turn one into the other in a few seconds.
 
 Mariana is also completely agnostic regarding your datasets or the way you load your hyper-parameters. It's business is models and that's it.
@@ -17,16 +17,62 @@ Mariana is also completely agnostic regarding your datasets or the way you load 
 So in short:
   
   * no YAML
-  * no requirements concerning the format of the datasets
+  * write your models super fast
   * save your models and resume training
   * export your models to DOT format to obtain clean and easy to communicate graphs
   * free your imagination and experiment
+  * no requirements concerning the format of the datasets
+  
+Compeling examples of cuteness
+==============================
+Importations first
+
+.. code:: python
+
+	import Mariana.activations as MA
+	import Mariana.decorators as MD
+	import Mariana.layers as ML
+	import Mariana.costs as MC
+	import Mariana.regularizations as MR
+	import Mariana.scenari as MS
+
+This is an MLP in Mariana with dropout, L1 regularization and ReLUs
+---------------------------------------------------------------------
+
+.. code:: python
+
+	ls = MS.DefaultScenario(lr = 0.01, momentum = 0)
+	cost = MC.NegativeLogLikelihood()
+	
+	i = ML.Input(28*28)
+	h = ML.Hidden(300, activation = MA.reLU, decorators = [MD.StochasticTurnOff(0.2)], regularizations = [ MR.L1(0.0001) ])
+	o = ML.SoftmaxClassifier(9, learningScenario = ls, costObject = cost, regularizations = [ MR.L1(0.0001) ])
+	
+	MLP = i > h > o
+
+This is an autoencoder with tied weights
+----------------------------------------
+
+.. code:: python
+
+	ls = MS.DefaultScenario(lr = 0.001, momentum = 0.009)
+	cost = MC.MeanSquaredError()
+	
+	i = ML.Input(10)
+	h = ML.Hidden(2, activation = MA.tanh, decorators = [ MD.GlorotTanhInit() ])
+	o = ML.Regression(10, activation = MA.tanh, costObject = cost, learningScenario = ls)
+	
+	ae = i > h > o
+	ae.init()
+	
+	#tied weights
+	o.W = h.W.T
 
 Can it run on GPU?
 ==================
 
 At the heart of Mariana are theano functions, so the answer is yes. The guys behind theano really did an awesome
-job of optimisation, so it should be pretty fast, wether you're running on CPU or GPU.
+job of optimization, so it should be pretty fast, wether you're running on CPU or GPU.
 
 Example
 =======
