@@ -8,9 +8,13 @@ Mariana is still in active developement, but please feel free to play with it.
 Why is it cool?
 ===============
 
-Mariana networks are graphs of independent layers and that allows for the craziest deepest architectures you can think of, 
-as well as for a super light and clear interface.
-There's no need for an MLP or a Perceptron or an Auto-Encoder class, because if you know what these things are, you can turn one into the other in a few seconds.
+Mariana networks are graphs of independent layers and that allows for the craziest deepest architectures 
+you can think of, as well as for a super light and clear interface.
+There's no need for an MLP or a Perceptron or an Auto-Encoder class,
+because if you know what these things are, you can turn one into the other in a few seconds.
+
+And that's the main objective behind Mariana, provide an interface so simple and intuitive that writing models
+becomes a breeze.
 
 Mariana is also completely agnostic regarding your datasets or the way you load your hyper-parameters. It's business is models and that's it.
 
