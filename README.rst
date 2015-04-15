@@ -23,8 +23,9 @@ So in short:
   * free your imagination and experiment
   * no requirements concerning the format of the datasets
   
-Compeling examples of cuteness
-==============================
+Short examples
+===============
+
 Importations first
 
 .. code:: python
@@ -36,8 +37,7 @@ Importations first
 	import Mariana.regularizations as MR
 	import Mariana.scenari as MS
 
-This is an MLP in Mariana with dropout, L1 regularization and ReLUs
----------------------------------------------------------------------
+**This is an MLP in Mariana with dropout, L1 regularization and ReLUs**
 
 .. code:: python
 
@@ -50,8 +50,7 @@ This is an MLP in Mariana with dropout, L1 regularization and ReLUs
 	
 	MLP = i > h > o
 
-This is an autoencoder with tied weights
-----------------------------------------
+**This is an autoencoder with tied weights**
 
 .. code:: python
 
