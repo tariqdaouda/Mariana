@@ -77,7 +77,7 @@ job of optimization, so it should be pretty fast, wether you're running on CPU o
 Example
 =======
 
-Please have a look mnist_mlp.py in the examples folder. It illustrates most of what this quickstart guide adresses.
+Please have a look at **mnist_mlp.py** in the examples folder. It illustrates most of what this quickstart guide adresses.
 
 Using the trainer and loading datasets
 ========================================
