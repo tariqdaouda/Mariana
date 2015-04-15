@@ -6,7 +6,7 @@ Named after the deepest place on earth (Mariana trench), Mariana is a machine le
 Mariana is still in active developement, but please feel free to play with it.
 
 Why is it cool?
-=========================
+===============
 
 Mariana networks are graphs of independent layers and that allows for the craziest deepest architectures you can think of, 
 as well as for a super light and clear interface.
@@ -37,7 +37,7 @@ Importations first
 	import Mariana.regularizations as MR
 	import Mariana.scenari as MS
 
-**This is an MLP in Mariana with dropout, L1 regularization and ReLUs**
+**This is an MLP in Mariana, with dropout, L1 regularization and ReLUs**
 
 .. code:: python
 
