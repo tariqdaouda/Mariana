@@ -175,8 +175,15 @@ class GeometricEarlyStopping(StopCriterion_ABC) :
 		return "Early stopping, no patience left"
 
 class Trainer(object):
-	"""All Trainers must inherit from me"""
-	def __init__(self, testFrequency = 1, validationFrequency = 1, cliffEpochs = 0, saveOnException = True) :
+	"""The trainer"""
+	def __init__(self, trainMaps, testMaps, validationMaps, miniBatchSize, stopCriteria, testFrequency = 1, validationFrequency = 1, cliffEpochs = 0, saveOnException = True) :
+		
+		self.trainMaps = trainMaps
+		self.testMaps = testMaps
+		self.validationMaps = validationMaps
+
+		self.miniBatchSize = miniBatchSize
+		self.stopCriteria = stopCriteria
 		
 		self.testFrequency = testFrequency
 		self.validationFrequency = validationFrequency
@@ -184,15 +191,32 @@ class Trainer(object):
 		self.cliffEpochs = cliffEpochs
 		self.saveOnException = saveOnException
 		
+		self.reset()
+
+	def reset(self) :
+		'resets the bests'
+		
 		self.bestTrainingScore = numpy.inf
 		self.bestValidationScore = numpy.inf
 		self.bestTestScore = numpy.inf
+		
+		self.bestTestModelFile = None
+		self.bestValidationModelFile = None
 
-		self.currentEpoch = 0
-		self.currentTrainingScore = numpy.inf
-		self.currentValidationScore = numpy.inf
-		self.currentTestScore = numpy.inf
+	def getBestValidationModel(self) :
+		"""loads the best validation model from disk and returns it"""
+		f = open(self.bestValidationModelFile + ".mariana.pkl")
+		model = cPickle.load(f) 
+		f.close()
+		return model
 
+	def getBestTestModel(self) :
+		"""loads the best Test model from disk and returns it"""
+		f = open(self.bestTestModelFile + ".mariana.pkl")
+		model = cPickle.load(f)
+		f.close()
+		return model
+		
 	def start(self, name, model, *args, **kwargs) :
 		"""Starts the training. If anything bad and unexpcted happens during training, the Trainer
 		will attempt to save the model and logs."""
@@ -217,11 +241,16 @@ class Trainer(object):
 			f.flush()
 			f.close()
 
+		self.currentEpoch = 0
+		self.currentTrainingScore = numpy.inf
+		self.currentValidationScore = numpy.inf
+		self.currentTestScore = numpy.inf
+
 		if not self.saveOnException :
-			return self.run(name, model, *args, **kwargs)
+			return self._run(name, model, *args, **kwargs)
 		else :
 			try :
-				return self.run(name, model, *args, **kwargs)
+				return self._run(name, model, *args, **kwargs)
 			except EndOfTraining as e :
 				print e.message
 				death_time = time.ctime().replace(' ', '_')
@@ -237,7 +266,7 @@ class Trainer(object):
 				_dieGracefully()
 				raise
 
-	def run(self, name, model, trainMaps, testMaps, validationMaps, miniBatchSize, stopCriteria, shuffleMinibatches = True, datasetName = "") :
+	def _run(self, name, model, reset = True, shuffleMinibatches = True, datasetName = "") :
 		def appendEvolution(csvEvolution, **kwargs) :			
 			line = csvEvolution.newLine()
 			for k, v in kwargs.iteritems() :		
@@ -265,6 +294,12 @@ class Trainer(object):
 						for hp in thingObj.hyperParameters :
 							dct["%s_%s" % (l.name, hp)] = getattr(thingObj, hp)
 
+		if reset :
+			self.reset()
+
+		self.bestTestModelFile = "%s-best_Test_Score" % (name)
+		self.bestValidationModelFile = "%s-best_Validation_Score" % (name)
+		
 		startTime = time.time()
 		legend = ["name", "epoch", "runtime", "set", "score", "dataset_name"]
 		layersForLegend = OrderedDict()
@@ -287,7 +322,7 @@ class Trainer(object):
 		print "learning..."
 		self.currentEpoch = 0
 		while True :
-			for crit in stopCriteria :
+			for crit in self.stopCriteria :
 				if crit.stop(self) :
 					raise EndOfTraining(crit)
 
@@ -295,21 +330,21 @@ class Trainer(object):
 			meanTest = []
 			meanValidation = []
 			
-			for i in xrange(0, len(trainMaps), miniBatchSize) :
+			for i in xrange(0, len(self.trainMaps), self.miniBatchSize) :
 				if shuffleMinibatches :
-					trainMaps.shuffle()
-				kwargs = trainMaps.getInputBatches(i, miniBatchSize)
-				for outputName in trainMaps.outputs.iterkeys() :
-					kwargs.update({ "target" : trainMaps.getOutputLayerBatch(outputName, i, miniBatchSize)} )
+					self.trainMaps.shuffle()
+				kwargs = self.trainMaps.getInputBatches(i, self.miniBatchSize)
+				for outputName in self.trainMaps.outputs.iterkeys() :
+					kwargs.update({ "target" : self.trainMaps.getOutputLayerBatch(outputName, i, self.miniBatchSize)} )
 					res = model.train(outputName, **kwargs)
 					meanTrain.append(res[0])
 
 			self.currentTrainingScore = numpy.mean(meanTrain)
 			
-			if len(testMaps) > 0 and (self.currentEpoch % self.testFrequency == 0) :
-				kwargs = testMaps.getInputBatches(0, size = "all")
-				for outputName in testMaps.outputs.iterkeys() :
-					kwargs.update({ "target" : testMaps.getOutputLayerBatch(outputName, 0, size = "all")} )
+			if len(self.testMaps) > 0 and (self.currentEpoch % self.testFrequency == 0) :
+				kwargs = self.testMaps.getInputBatches(0, size = "all")
+				for outputName in self.testMaps.outputs.iterkeys() :
+					kwargs.update({ "target" : self.testMaps.getOutputLayerBatch(outputName, 0, size = "all")} )
 					res = model.test(outputName, **kwargs)
 					meanTest.append(res[0])
 
@@ -317,10 +352,10 @@ class Trainer(object):
 			else :
 				self.currentTestScore = -1
 			
-			if len(validationMaps) > 0 and (self.currentEpoch % self.validationFrequency == 0) :
-				kwargs = validationMaps.getInputBatches(0, size = "all")
-				for outputName in validationMaps.outputs.iterkeys() :
-					kwargs.update({ "target" : validationMaps.getOutputLayerBatch(outputName, 0, size = "all")} )
+			if len(self.validationMaps) > 0 and (self.currentEpoch % self.validationFrequency == 0) :
+				kwargs = self.validationMaps.getInputBatches(0, size = "all")
+				for outputName in self.validationMaps.outputs.iterkeys() :
+					kwargs.update({ "target" : self.validationMaps.getOutputLayerBatch(outputName, 0, size = "all")} )
 					res = model.test(outputName, **kwargs)
 					meanValidation.append(res[0])
 
@@ -328,31 +363,29 @@ class Trainer(object):
 			else :
 				self.currentValidationScore = -1
 
-			runtime = int(time.time() - startTime)
+			runtime = (time.time() - startTime)/60
 			
 			print "epoch %s, mean Score (train: %s, test: %s, validation: %s)" %(self.currentEpoch, self.currentTrainingScore, self.currentTestScore, self.currentValidationScore)
 			
 			if self.currentTestScore < self.bestTestScore :
-				filename = "%s-best_Test_Score" % (name)
 				print "\t===>%s: new best test score %s -> %s" % (name, self.bestTestScore, self.currentTestScore)
 				self.bestTestScore = self.currentTestScore
-				if self.currentEpoch > self.cliffEpochs :
-					print "saving model to %s..." % (filename)
-					model.save(filename)
-					f = open(filename + ".txt", 'w')
-					f.write("date: %s\nruntime: %s\nepoch: %s\nbest Test Score: %s\ntrain Score: %s" % (time.ctime(), runtime, self.currentEpoch, self.currentTestScore, self.currentTrainingScore))
+				if self.currentEpoch >= self.cliffEpochs :
+					print "saving model to %s..." % (self.bestTestModelFile)
+					model.save(self.bestTestModelFile)
+					f = open(self.bestTestModelFile + ".txt", 'w')
+					f.write("date: %s\nruntime: %s min\nepoch: %s\nbest Test Score: %s\ntrain Score: %s" % (time.ctime(), runtime, self.currentEpoch, self.currentTestScore, self.currentTrainingScore))
 					f.flush()
 					f.close()
 
 			if self.currentValidationScore < self.bestValidationScore :
-				filename = "%s-best_Validation_Score" % (name)
 				print "\txxx>%s: new best Validation score %s -> %s" % (name, self.bestValidationScore, self.currentValidationScore)
 				self.bestValidationScore = self.currentValidationScore
-				if self.currentEpoch > self.cliffEpochs :
-					print "saving model to %s..." % (filename)
-					model.save(filename)
-					f = open(filename + ".txt", 'w')
-					f.write("date: %s\nruntime: %s\nepoch: %s\nbest Validation Score: %s\ntrain Score: %s" % (time.ctime(), runtime, self.currentEpoch, self.currentValidationScore, self.currentTrainingScore))
+				if self.currentEpoch >= self.cliffEpochs :
+					print "saving model to %s..." % (self.bestValidationModelFile)
+					model.save(self.bestValidationModelFile)
+					f = open(self.bestValidationModelFile + ".txt", 'w')
+					f.write("date: %s\nruntime: %s min\nepoch: %s\nbest Validation Score: %s\ntrain Score: %s" % (time.ctime(), runtime, self.currentEpoch, self.currentValidationScore, self.currentTrainingScore))
 					f.flush()
 					f.close()
 
@@ -360,7 +393,7 @@ class Trainer(object):
 				name = name,
 				epoch = self.currentEpoch,
 				runtime = runtime,
-				set = "Train(%d)" % len(trainMaps),
+				set = "Train(%d)" % len(self.trainMaps),
 				score = self.currentTrainingScore,
 				dataset_name = datasetName,
 				**layersForLegend)
@@ -369,7 +402,7 @@ class Trainer(object):
 				name = name,
 				epoch = self.currentEpoch,
 				runtime = runtime,
-				set = "Test(%d)" % len(testMaps),
+				set = "Test(%d)" % len(self.testMaps),
 				score = self.currentTestScore,
 				dataset_name = datasetName,
 				**layersForLegend)
@@ -378,7 +411,7 @@ class Trainer(object):
 				name = name,
 				epoch = self.currentEpoch,
 				runtime = runtime,
-				set = "Validation(%d)" % len(testMaps),
+				set = "Validation(%d)" % len(self.validationMaps),
 				score = self.currentValidationScore,
 				dataset_name = datasetName,
 				**layersForLegend)

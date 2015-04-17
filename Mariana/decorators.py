@@ -48,5 +48,47 @@ class StochasticTurnOff(Decorator):
 		#cast to stay in GPU limit
 		mask = tt.cast(mask, theano.config.floatX)
 		layer.outputs = layer.outputs * mask
-		layer.name += "_offratio_%s" % self.ratio
+		layer.name += "_drop_%s" % self.ratio
+
+class WeightSparsity(Decorator):
+	"""Stochatically sets a certain ratio of the weight to 0"""
+	def __init__(self, ratio, *args, **kwargs):
+		# super(StochasticTurnOff, self).__init__()
+		Decorator.__init__(self, *args, **kwargs)
+
+		assert (ratio >= 0 and ratio <= 1) 
+		self.ratio = ratio
+		self.seed = time.time()
+		self.hyperParameters = ["ratio"]
+
+	def decorate(self, layer) :
+		initWeights = layer.W.get_value()
+		for i in xrange(initWeights.shape[0]) :
+			for j in xrange(initWeights.shape[1]) :
+				if numpy.random.rand() < self.ratio :
+					initWeights[i, j] = 0
+		
+		layer.name += "_ws_%s" % self.ratio
+		layer.W = theano.shared(value = initWeights, name = layer.name)
+
+class InputSparsity(Decorator):
+	"""Stochatically sets a certain ratio of the input connections to 0"""
+	def __init__(self, ratio, *args, **kwargs):
+		# super(StochasticTurnOff, self).__init__()
+		Decorator.__init__(self, *args, **kwargs)
+
+		assert (ratio >= 0 and ratio <= 1) 
+		self.ratio = ratio
+		self.seed = time.time()
+		self.hyperParameters = ["ratio"]
+
+	def decorate(self, layer) :
+		initWeights = layer.W.get_value()
+		for i in xrange(initWeights.shape[0]) :
+			if numpy.random.rand() < self.ratio :
+				initWeights[i, : ] = numpy.zeros(initWeights.shape[1])
+		
+		layer.name += "_is_%s" % self.ratio
+		layer.W = theano.shared(value = initWeights, name = layer.name)
+
 		

@@ -49,6 +49,7 @@ class Layer_ABC(object) :
 		res = self.__class__(self.nbOutputs)
 		res.W = self.W
 		res.b = self.b
+		res.name = self.name + "_clone"
 		return res
 
 	def _registerInput(self, inputLayer) :
