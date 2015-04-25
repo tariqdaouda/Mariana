@@ -307,7 +307,7 @@ class Trainer(object):
 				for typ in ["train", "test", "validation"] :
 					scoreName = "%s_%s_score" % (l.name, typ)
 					legend.append( scoreName )
-					outputScores[ scoreName ] = -1
+					outputScores[ scoreName ] = []
 			
 			layersForLegend["%s_size" % l.name] = len(l)
 			try :
@@ -339,6 +339,9 @@ class Trainer(object):
 			meanTest = []
 			meanValidation = []
 			
+			for k in outputScores :
+				outputScores[k] = []
+
 			for i in xrange(0, len(self.trainMaps), self.miniBatchSize) :
 				if shuffleMinibatches :
 					self.trainMaps.shuffle()
@@ -347,7 +350,7 @@ class Trainer(object):
 					kwargs.update({ "target" : self.trainMaps.getOutputLayerBatch(outputName, i, self.miniBatchSize)} )
 					res = model.train(outputName, **kwargs)
 					meanTrain.append(res[0])
-					outputScores["%s_%s_score" % (outputName, "train")] = res[0]
+					outputScores["%s_%s_score" % (outputName, "train")].append(res[0])
 
 			self.currentTrainingScore = numpy.mean(meanTrain)
 			
@@ -357,7 +360,7 @@ class Trainer(object):
 					kwargs.update({ "target" : self.testMaps.getOutputLayerBatch(outputName, 0, size = "all")} )
 					res = model.test(outputName, **kwargs)
 					meanTest.append(res[0])
-					outputScores["%s_%s_score" % (outputName, "test")] = res[0]
+					outputScores["%s_%s_score" % (outputName, "test")].append(res[0])
 
 				self.currentTestScore = numpy.mean(meanTest)
 			else :
@@ -369,7 +372,7 @@ class Trainer(object):
 					kwargs.update({ "target" : self.validationMaps.getOutputLayerBatch(outputName, 0, size = "all")} )
 					res = model.test(outputName, **kwargs)
 					meanValidation.append(res[0])
-					outputScores["%s_%s_score" % (outputName, "validation")] = res[0]
+					outputScores["%s_%s_score" % (outputName, "validation")].append(res[0])
 
 				self.currentValidationScore = numpy.mean(meanValidation)
 			else :
@@ -377,6 +380,9 @@ class Trainer(object):
 
 			runtime = (time.time() - startTime)/60
 			
+			for k in outputScores :
+				outputScores[k] = numpy.mean(outputScores[k])
+
 			print "epoch %s, mean Score (train: %s, test: %s, validation: %s)" %(self.currentEpoch, self.currentTrainingScore, self.currentTestScore, self.currentValidationScore)
 			
 			if self.currentTestScore < self.bestTestScore :
@@ -422,7 +428,7 @@ class Trainer(object):
 			appendEvolution(csvEvolution, **params)
 
 			params["set"] = "Test(%d)" % len(self.testMaps)
-			params["score"] = self.currentTrainingScore
+			params["score"] = self.currentTestScore
 			appendEvolution(csvEvolution, **params)
 
 			params["set"] = "Validation(%d)" % len(self.validationMaps)

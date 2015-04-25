@@ -127,13 +127,13 @@ neural network with one input and one output.*
 	#here we decide that we are going to use "set1" as the training set and we map the input layer
 	#to the "images" list of "set1", and the output layer to the "classes" list of the same set.
 	trainMaps = tra.DatasetMapper()
-	trainMaps.addInput("the input", sets["set1"]["images"])
-	trainMaps.addOutput("the output", sets["set1"]["classes"])
+	trainMaps.addInput(inputLayer, sets["set1"]["images"])
+	trainMaps.addOutput(outputLayer, sets["set1"]["classes"])
 
 	#we do the same with "set2", that we plan to use as our test set
 	testMaps = tra.DatasetMapper()
-	testMaps.addInput("the input", sets["set2"]["images"])
-	testMaps.addOutput("the output", sets["set2"]["classes"])
+	testMaps.addInput(inputLayer, sets["set2"]["images"])
+	testMaps.addOutput(outputLayer, sets["set2"]["classes"])
 
 Decorators
 ==========
