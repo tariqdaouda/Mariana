@@ -45,7 +45,7 @@ class StochasticTurnOff(Decorator):
 	def decorate(self, layer) :
 		rnd = tt.shared_randomstreams.RandomStreams()
 		mask = rnd.binomial(n = 1, p = (1-self.ratio), size = layer.outputs.shape)
-		#cast to stay in GPU limit
+		#cast to stay in GPU float limit
 		mask = tt.cast(mask, theano.config.floatX)
 		layer.outputs = layer.outputs * mask
 		layer.name += "_drop_%s" % self.ratio

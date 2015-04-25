@@ -83,6 +83,7 @@ class Network(object) :
 
 	def init(self) :
 		"Initialiases the network by initialising every layer."
+
 		if self._mustInit :
 			for inp in self.inputs.itervalues() :
 				inp._init()

@@ -6,7 +6,7 @@ import cPickle
 
 import theano, numpy, time
 import theano.tensor as tt
-import Mariana.rules as MR
+#import Mariana.rules as MR
 import Mariana.activations as MA
 from network import Network
 from wrappers import TheanoFunction

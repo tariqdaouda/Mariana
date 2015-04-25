@@ -23,6 +23,11 @@ class TheanoFunction(object) :
 		self.updates = updates
 		self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs, updates = self.updates, **kwargs)
 
+		if any([x.__class__.__name__.lower().find("gpu") for x in self.theano_fct.maker.fgraph.toposort()]):
+			print "Mariana friendly msg: I will use the [-GPU-] to run function '%s' of layer '%s' :)!" % (name, outputLayer.name)
+		else:
+			print "Mariana friendly msg: I will use the [-CPU-] to run function '%s' of layer '%s' ;)" % (name, outputLayer.name)
+
 	def printGraph(self) :
 		"""Print the theano graph of the function"""
 		theano.printing.debugprint(self.theano_fct)
