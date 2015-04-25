@@ -47,16 +47,16 @@ if __name__ == "__main__" :
 	train_set, validation_set, test_set = load_mnist()
 
 	trainMaps = MT.DatasetMapper()
-	trainMaps.addInput("inp", train_set[0])
-	trainMaps.addOutput("out", train_set[1].astype('int32'))
+	trainMaps.addInput(i, train_set[0])
+	trainMaps.addOutput(o, train_set[1].astype('int32'))
 
 	testMaps = MT.DatasetMapper()
-	testMaps.addInput("inp", test_set[0])
-	testMaps.addOutput("out", test_set[1].astype('int32'))
+	testMaps.addInput(i, test_set[0])
+	testMaps.addOutput(o, test_set[1].astype('int32'))
 
 	validationMaps = MT.DatasetMapper()
-	validationMaps.addInput("inp", validation_set[0])
-	validationMaps.addOutput("out", validation_set[1].astype('int32'))
+	validationMaps.addInput(i, validation_set[0])
+	validationMaps.addOutput(o, validation_set[1].astype('int32'))
 
 	trainer = MT.Trainer()
 	trainer.start("MLP", mlp, trainMaps = trainMaps, testMaps = testMaps, validationMaps = validationMaps, stopCriteria = [], miniBatchSize = miniBatchSize)
