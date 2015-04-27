@@ -58,5 +58,5 @@ if __name__ == "__main__" :
 	validationMaps.addInput(i, validation_set[0])
 	validationMaps.addOutput(o, validation_set[1].astype('int32'))
 
-	trainer = MT.Trainer()
-	trainer.start("MLP", mlp, trainMaps = trainMaps, testMaps = testMaps, validationMaps = validationMaps, stopCriteria = [], miniBatchSize = miniBatchSize)
+	trainer = MT.Trainer(trainMaps = trainMaps, testMaps = testMaps, validationMaps = validationMaps, stopCriteria = [], miniBatchSize = miniBatchSize)
+	trainer.start("MLP", mlp)
