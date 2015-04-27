@@ -2,8 +2,6 @@
 import theano
 import theano.tensor as tt
 
-
-
 class LearningScenario_ABC(object):
  	"""This class allow to specify specific learning scenarios for layers independetly"""
 	def __init__(self, *args, **kwargs):
@@ -15,7 +13,7 @@ class LearningScenario_ABC(object):
 
 class DefaultScenario(LearningScenario_ABC):
 	"The default scenarios has a fixed learning rate and a fixed momentum"
- 	def __init__(self, lr, momentum, *args, **kwargs):
+ 	def __init__(self, lr, momentum):
  		super(LearningScenario_ABC, self).__init__()
  		self.lr = lr
  		self.momentum = momentum
@@ -23,11 +21,20 @@ class DefaultScenario(LearningScenario_ABC):
 
  	def getUpdates(self, layer, cost) :
  		updates = []
- 		for param in layer.params :
- 			gparam = tt.grad(cost, param)
-	 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
-			updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
-			updates.append((param, param - self.lr * momentum_param))	 		
+ 		if self.lr > 0 :
+	 		for param in layer.params :
+	 			gparam = tt.grad(cost, param)
+		 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
+				updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
+				updates.append((param, param - self.lr * momentum_param))	 		
 
 		return updates
+
+class Fixed(LearningScenario_ABC):
+	"The default scenarios has a fixed learning rate and a fixed momentum"
+ 	def __init__(self):
+ 		super(LearningScenario_ABC, self).__init__()
+
+ 	def getUpdates(self, layer, cost) :
+		return []
 

@@ -44,12 +44,16 @@ class Layer_ABC(object) :
 	def addDecorator(self, decorator) :
 		self.decorators.append(decorator)
 
-	def clone(self) :
-		"""Returns a free layer with the same weights and bias"""
+	def clone(self, **kwargs) :
+		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
 		res = self.__class__(self.nbOutputs)
 		res.W = self.W
 		res.b = self.b
 		res.name = self.name + "_clone"
+		
+		for k, v in kwargs.iteritems() :
+			setattr(res, k, v)
+
 		return res
 
 	def _registerInput(self, inputLayer) :
