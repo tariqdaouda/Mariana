@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 from pyGeno.tools.parsers.CSVTools import CSVFile
 
-from Mariana.layers import *
+import Mariana.layers as ML
 import theano.tensor as tt
 
 class EndOfTraining(Exception) :
@@ -23,33 +23,33 @@ class DatasetMapper(object):
  		self.randomIds = None
  		self.locked = False
 
- 	def _add(self, dct, layer, aSet) :
+ 	def _add(self, dct, layer, setOrLayer) :
  		"""This function is here because i don't like repeating myself"""
- 		if self.length != 0 and len(aSet) != self.length:
- 			raise ValueError("All sets must have the same number of elements. len(aSet) = %s, but another set has a length of %s" % (len(aSet), self.length))
+ 		if self.length != 0 and len(setOrLayer) != self.length:
+ 			raise ValueError("All sets must have the same number of elements. len(setOrLayer) = %s, but another set has a length of %s" % (len(setOrLayer), self.length))
 
  		if layer.name in self.inputs or layer.name in self.outputs:
  			raise ValueError("There is already a mapped layer by that name")
  		
- 		if len(aSet) > self.length :
-	 		self.length = len(aSet)
- 		dct[layer.name] = aSet
+ 		if len(setOrLayer) > self.length :
+	 		self.length = len(setOrLayer)
+ 		dct[layer.name] = setOrLayer
 
- 	def addInput(self, layer, aSet) :
- 		"""Adds a mapping rule ex: .add("input1", dataset["train"])"""
+ 	def addInput(self, layer, setOrLayer) :
+ 		"""Adds a mapping rule ex: .add(input1, dataset["train"]["examples"])"""
  		if self.locked :
  			raise ValueError("Can't add a map if a batch has already been requested")
- 		self._add(self.inputs, layer, aSet)
+ 		self._add(self.inputs, layer, setOrLayer)
 
- 	def addOutput(self, layer, aSet) :
- 		"""Adds a mapping rule ex: .add("output1", dataset["train"])"""
+ 	def addOutput(self, layer, setOrLayer) :
+ 		"""Adds a mapping rule ex: .add(output1, dataset["train"]["targets"])"""
 		if self.locked :
  			raise ValueError("Can't add a map if a batch has already been requested")
- 		self._add(self.outputs, layer, aSet)
+ 		self._add(self.outputs, layer, setOrLayer)
 
  	def shuffle(self) :
  		"""Shuffles the sets. You should call this function before asking for each minibatch if you want
- 		random minibacthes"""
+ 		random minibatches"""
  		if self.randomIds is None :
 	 		self.randomIds = range(len(self))
  		random.shuffle(self.randomIds)
@@ -58,6 +58,9 @@ class DatasetMapper(object):
  		"""This function is here because i don't like repeating myself"""
  		if not self.locked :
  			self.locked = True				
+
+ 		if issubclass(dct[layerName].__class__, ML.Layer_ABC) :
+ 			return dct[layerName].outputs
 
  		if size == "all" :
  			ssize = len(dct[layerName])
@@ -154,10 +157,17 @@ class TestScoreWall(StopCriterion_ABC) :
 		return "Reached test score wall %s" % self.wallValue
 
 class GeometricEarlyStopping(StopCriterion_ABC) :
-	"""Stops training when maxEpochs is reached"""
-	def __init__(self, patience, significantImprovement) :
+	"""Geometrically increases the patiences with the epochs and stops the training when the patience is over."""
+	def __init__(self, theSet, patience, patienceIncreaseFactor, significantImprovement) :
+		"""theSet must either be 'test' or 'validation'"""
+		
 		StopCriterion_ABC.__init__(self)
-		self.patienceIncrease = patience
+		if theSet.lower() != "test" and theSet.lower() != "validation" :
+			raise KeyError("theSet must either be 'test' or 'validation'")
+
+		self.theSet = theSet.lower()
+		self.patience = patience
+		self.patienceIncreaseFactor = patienceIncreaseFactor
 		self.wall = patience
 		self.significantImprovement = significantImprovement
 
@@ -165,8 +175,13 @@ class GeometricEarlyStopping(StopCriterion_ABC) :
 		if self.wall <= 0 :
 			return True
 
-		if trainer.currentValidationScore < (trainer.bestValidationScore * self.significantImprovement) :
-			self.wall += (trainer.currentEpoch * self.patienceIncrease)
+		if self.theSet == "test" :
+			if trainer.currentTestScore < (trainer.bestTestScore + self.significantImprovement) :
+				self.wall = max(self.patience, trainer.currentEpoch * self.patienceIncreaseFactor)
+		else :
+			if trainer.currentValidationScore < (trainer.bestValidationScore + self.significantImprovement) :
+				self.wall = max(self.patience, trainer.currentEpoch * self.patienceIncreaseFactor)
+		
 		self.wall -= 1	
 		return False
 	
@@ -364,7 +379,7 @@ class Trainer(object):
 
 				self.currentTestScore = numpy.mean(meanTest)
 			else :
-				self.currentTestScore = -1
+				self.currentTestScore = 0
 			
 			if len(self.validationMaps) > 0 and (self.currentEpoch % self.validationFrequency == 0) :
 				kwargs = self.validationMaps.getInputBatches(0, size = "all")
@@ -376,7 +391,7 @@ class Trainer(object):
 
 				self.currentValidationScore = numpy.mean(meanValidation)
 			else :
-				self.currentValidationScore = -1
+				self.currentValidationScore = 0
 
 			runtime = (time.time() - startTime)/60
 			
