@@ -141,8 +141,8 @@ class Layer_ABC(object) :
 
 class Input(Layer_ABC) :
 	"An input layer"
-	def __init__(self, nbInputs, name = None) :
-		Layer_ABC.__init__(self, nbInputs, name = name)
+	def __init__(self, nbInputs, name = None, **kwargs) :
+		Layer_ABC.__init__(self, nbInputs, name = name, **kwargs)
 		self.type = "input"
 		self.nbInputs = nbInputs
 		self.network = Network()#y, self)

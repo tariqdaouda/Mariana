@@ -31,7 +31,13 @@ class MeanSquaredError(Cost_ABC) :
 		return cost
 
 class CrossEntropy(Cost_ABC) :
+	"""Returns the average number of bits needed to identify an event."""
+	def _costFct(self, targets, outputs) :
+		cost = tt.mean( tt.nnet.categorical_crossentropy(outputs, targets) )
+		return cost
+
+class BinaryCrossEntropy(Cost_ABC) :
 	"""Use this one for binary data"""
 	def _costFct(self, targets, outputs) :
-		cost = tt.nnet.binary_crossentropy(outputs, targets).sum()
+		cost = tt.mean( tt.nnet.binary_crossentropy(outputs, targets) )
 		return cost

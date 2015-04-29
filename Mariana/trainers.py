@@ -208,7 +208,7 @@ class Trainer(object):
 		self.reset()
 
 	def reset(self) :
-		'resets the bests'
+		'resets the beast'
 		
 		self.bestTrainingScore = numpy.inf
 		self.bestValidationScore = numpy.inf
@@ -216,6 +216,7 @@ class Trainer(object):
 		
 		self.bestTestModelFile = None
 		self.bestValidationModelFile = None
+		self.currentEpoch = 0
 
 	def getBestValidationModel(self) :
 		"""loads the best validation model from disk and returns it"""
@@ -232,7 +233,7 @@ class Trainer(object):
 		return model
 		
 	def start(self, name, model, *args, **kwargs) :
-		"""Starts the training. If anything bad and unexpcted happens during training, the Trainer
+		"""Starts the training. If anything bad and unexpected happens during training, the Trainer
 		will attempt to save the model and logs."""
 
 		def _dieGracefully() :
@@ -271,6 +272,7 @@ class Trainer(object):
 				filename = "finished_" + name +  "_" + death_time
 				f = open(filename +  ".stopreason.txt", 'w')
 				f.write("Time of death: %s\n" % death_time)
+				f.write("Epoch of death: %s\n" % self.currentEpoch)
 				f.write("Stopped by: %s\n" % e.stopCriterion.name)
 				f.write("Reason: %s\n" % e.message)
 				f.flush()

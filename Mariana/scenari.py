@@ -26,15 +26,36 @@ class DefaultScenario(LearningScenario_ABC):
 	 			gparam = tt.grad(cost, param)
 		 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
 				updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
-				updates.append((param, param - self.lr * momentum_param))	 		
+				updates.append((param, param - self.lr * momentum_param))
 
 		return updates
 
 class Fixed(LearningScenario_ABC):
-	"The default scenarios has a fixed learning rate and a fixed momentum"
+	"No learning, the layer weights stay fixed"
  	def __init__(self):
  		super(LearningScenario_ABC, self).__init__()
 
  	def getUpdates(self, layer, cost) :
 		return []
 
+class GradientFloor(LearningScenario_ABC):
+	"On propagates the garidient of its absolute value is above floor"
+ 	def __init__(self, lr, momentum, floor):
+ 		super(LearningScenario_ABC, self).__init__()
+ 		self.lr = lr
+ 		self.momentum = momentum
+ 		self.floor = floor
+ 		self.hyperParameters = ["lr", "momentum", "floor"]
+
+ 	def getUpdates(self, layer, cost) :
+ 		updates = []
+ 		if self.lr > 0 :
+	 		for param in layer.params :
+	 			g = tt.grad(cost, param)
+	 			gparam = tt.switch( tt.abs_(g) > self.floor, g, 0.)
+
+		 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
+				updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
+				updates.append((param, param - self.lr * momentum_param))
+
+		return updates

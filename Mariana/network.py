@@ -126,7 +126,7 @@ class Network(object) :
 			self.init()
 
 		com = "//Mariana network DOT representation generated on %s" % time.ctime()
-		s = "#COM#\ndigraph %s{\n#HEAD#;\n\n#GRAPH#;\n}" % name
+		s = '#COM#\ndigraph "%s"{\n#HEAD#;\n\n#GRAPH#;\n}' % name
 		
 		headers = []
 		aidi = 0
