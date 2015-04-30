@@ -13,184 +13,62 @@ class EndOfTraining(Exception) :
 		self.stopCriterion = stopCriterion
 		self.message = "End of training: %s" % stopCriterion.endMessage()
 
-class DatasetMapper(object):
- 	"""This class is here to map inputs of a network to datasets, or outputs to target sets.
- 	If forceSameLengths all sets must have the same length."""
- 	def __init__(self):
- 		self.inputs = {}
- 		self.outputs = {}
- 		self.length = 0
- 		self.randomIds = None
- 		self.locked = False
+class TrainingRecorder(object):
+ 	"""docstring for TrainingRecorder"""
+ 	def __init__(self, runName, outputLayerName, csvLegend):
+ 		super(TrainingRecorder, self).__init__()
+ 		self.outputLayerName = outputLayerName
+		self.runName = runName
 
- 	def _add(self, dct, layer, setOrLayer) :
- 		"""This function is here because i don't like repeating myself"""
- 		if self.length != 0 and len(setOrLayer) != self.length:
- 			raise ValueError("All sets must have the same number of elements. len(setOrLayer) = %s, but another set has a length of %s" % (len(setOrLayer), self.length))
+		self.csvFiles = {
+			"test" : CSVFile(legend = csvLegend),
+			"train" : CSVFile(legend = csvLegend),
+			"validation" : CSVFile(legend = csvLegend),
+		}
 
- 		if layer.name in self.inputs or layer.name in self.outputs:
- 			raise ValueError("There is already a mapped layer by that name")
- 		
- 		if len(setOrLayer) > self.length :
-	 		self.length = len(setOrLayer)
- 		dct[layer.name] = setOrLayer
+		for k in self.csvFiles :
+			self.csvFiles.streamToFile("%s-%s-best_%s_score.csv" % (runName, outputLayerName, k) , writeRate = 1)
+			
+		self.csvEvolution = CSVFile(legend = csvLegend)
+		self.csvEvolution.streamToFile("%s-%s-evolution.csv" % (runName, outputLayerName) , writeRate = 1)
 
- 	def addInput(self, layer, setOrLayer) :
- 		"""Adds a mapping rule ex: .add(input1, dataset["train"]["examples"])"""
- 		if self.locked :
- 			raise ValueError("Can't add a map if a batch has already been requested")
- 		self._add(self.inputs, layer, setOrLayer)
-
- 	def addOutput(self, layer, setOrLayer) :
- 		"""Adds a mapping rule ex: .add(output1, dataset["train"]["targets"])"""
-		if self.locked :
- 			raise ValueError("Can't add a map if a batch has already been requested")
- 		self._add(self.outputs, layer, setOrLayer)
-
- 	def shuffle(self) :
- 		"""Shuffles the sets. You should call this function before asking for each minibatch if you want
- 		random minibatches"""
- 		if self.randomIds is None :
-	 		self.randomIds = range(len(self))
- 		random.shuffle(self.randomIds)
-
- 	def _getLayerBatch(self, dct, layerName, i, size) :
- 		"""This function is here because i don't like repeating myself"""
- 		if not self.locked :
- 			self.locked = True				
-
- 		if issubclass(dct[layerName].__class__, ML.Layer_ABC) :
- 			return dct[layerName].outputs
-
- 		if size == "all" :
- 			ssize = len(dct[layerName])
- 		else :
- 			ssize = size
-
- 		if self.randomIds is None :
-	 		return dct[layerName][i:i+ssize]
-	 	else :
-	 		res = []
-	 		for ii in self.randomIds[i:i+ssize] :
-	 			res.append(dct[layerName][ii])
-	 		return res
-
- 	def _getBatches(self, dct, i, size) :
- 		"""This function is here because i don't like repeating myself"""
- 		res = {}
- 		for k in dct :
- 			res[k] = self._getLayerBatch(dct, k, i, size)
-
- 		return res
-
-	def getInputLayerBatch(self, layer, i, size) :
-		"""Returns a batch for a given input layer sarting at position i, and of length size.
- 		If you want  the limit to be length of the whole set
- 		instead of a mini batch you can set size to "all".
- 		"""
- 		return self._getLayerBatch(self.inputs, layer, i, size)
-
- 	def getInputBatches(self, i, size) :
- 		"""Applies getInputLayerBatch iteratively for all layers and returns a dict:
- 		layer name => batch"""
- 		return self._getBatches(self.inputs, i, size)
-
- 	def getOutputLayerBatch(self, layer, i, size) :
-		"""Returns a batch for a given output layer sarting at position i, and of length size.
- 		If you want  the limit to be length of the whole set
- 		instead of a mini batch you can set size to "all".
- 		"""
- 		return self._getLayerBatch(self.outputs, layer, i, size)
- 	
- 	def getOutputBatches(self, i, size) :
-		"""Applies getOutputLayerBatch iteratively for all layers and returns a dict:
- 		layer name => batch"""
- 		return self._getBatches(self.outputs, i, size)
-
- 	def __len__(self) :
- 		return self.length
-
- 	def __str__(self) :
- 		return str(self.inputs).replace(" : ", " => ")  + "\n" + str(self.outputs).replace(" : ", " => ") 
-
-class StopCriterion_ABC(object) :
-
-	def __init__(self, *args, **kwrags) :
-		self.name = self.__class__.__name__
-
-	def stop(self) :
-		"""The actual function that is called by start, and the one that must be implemented in children"""
-		raise NotImplemented("Must be implemented in child")
-
-	def endMessage(self) :
-		"""returns information about the reason why the training stopped"""
-		return self.name
-
-class EpochWall(StopCriterion_ABC) :
-	"""Stops training when maxEpochs is reached"""
-	def __init__(self, maxEpochs) :
-		StopCriterion_ABC.__init__(self)
-		self.maxEpochs = maxEpochs
-
-	def stop(self, trainer) :
-		if trainer.currentEpoch >= self.maxEpochs :
-			return True
-		return False
-
-	def endMessage(self) :
-		"""returns information about the reason why the training stopped"""
-		return "Reached epoch wall %s" % self.maxEpochs
-
-class TestScoreWall(StopCriterion_ABC) :
-	"""Stops training when maxEpochs is reached"""
-	def __init__(self, wallValue) :
-		StopCriterion_ABC.__init__(self)
-		self.wallValue = wallValue
-
-	def stop(self, trainer) :
-		if trainer.currentTestScore <= self.wallValue :
-			return True
-		return False
-
-	def endMessage(self) :
-		"""returns information about the reason why the training stopped"""
-		return "Reached test score wall %s" % self.wallValue
-
-class GeometricEarlyStopping(StopCriterion_ABC) :
-	"""Geometrically increases the patiences with the epochs and stops the training when the patience is over."""
-	def __init__(self, theSet, patience, patienceIncreaseFactor, significantImprovement) :
-		"""theSet must either be 'test' or 'validation'"""
+		self.bestScores = {
+			"test" : None,
+			"train" : None,
+			"validation" : None
+		}
 		
-		StopCriterion_ABC.__init__(self)
-		if theSet.lower() != "test" and theSet.lower() != "validation" :
-			raise KeyError("theSet must either be 'test' or 'validation'")
-
-		self.theSet = theSet.lower()
-		self.patience = patience
-		self.patienceIncreaseFactor = patienceIncreaseFactor
-		self.wall = patience
-		self.significantImprovement = significantImprovement
-
-	def stop(self, trainer) :
-		if self.wall <= 0 :
-			return True
-
-		if self.theSet == "test" :
-			if trainer.currentTestScore < (trainer.bestTestScore + self.significantImprovement) :
-				self.wall = max(self.patience, trainer.currentEpoch * self.patienceIncreaseFactor)
-		else :
-			if trainer.currentValidationScore < (trainer.bestValidationScore + self.significantImprovement) :
-				self.wall = max(self.patience, trainer.currentEpoch * self.patienceIncreaseFactor)
+		self.bestModelFiles = {
+			"test" : None,
+			"train" : None,
+			"validation" : None
+		}
 		
-		self.wall -= 1	
-		return False
-	
-	def endMessage(self) :
-		"""returns information about the reason why the training stopped"""
-		return "Early stopping, no patience left"
+		self.currentScores = {
+			"test" : numpy.inf,
+			"train" : numpy.inf,
+			"validation" : numpy.inf	
+		}
 
-class Trainer(object):
-	"""The trainer"""
+	def _appendEvolution(self, csvEvolution, **kwargs) :
+		line = csvEvolution.newLine()
+		for k, v in kwargs.iteritems() :
+			line[k] = v
+		line.commit()
+
+	def updateEvolution(self, **csvValues) :
+		self._appendEvolution(self.csvEvolution, **csvValues)
+
+	def updateBestScore(self, theSet, score, **csvValues) :
+		self.currentScores[theSet] = score
+		if score < self.bestScores[theSet] :
+			print "\t=x=> new best [-%s-] score for layer '%s' %s -> %s [:-)" % (theSet.upper(), self.outputLayerName, self.bestScores[theSet], score)
+			self.bestScores[theSet] = score
+			self._appendEvolution(self.bestScores[theSet], **csvValues)
+
+
+class DefaultTrainer(object):
+	"""Should serve for most purposes"""
 	def __init__(self, trainMaps, testMaps, validationMaps, miniBatchSize, stopCriteria, testFrequency = 1, validationFrequency = 1, saveOnException = True) :
 		
 		self.trainMaps = trainMaps
@@ -208,14 +86,14 @@ class Trainer(object):
 		self.reset()
 
 	def reset(self) :
-		'resets the beast'
-		
-		self.bestTrainingScore = numpy.inf
-		self.bestValidationScore = numpy.inf
-		self.bestTestScore = numpy.inf
-		
-		self.bestTestModelFile = None
-		self.bestValidationModelFile = None
+		'resets the beast'	
+	
+		self.bestTrainingScores = {}
+		self.bestValidationScores = {}
+		self.bestTestScores = {}
+
+		self.bestTestModelFiles = {}
+		self.bestValidationModelFiles = {}
 		self.currentEpoch = 0
 
 	def getBestValidationModel(self) :
@@ -257,9 +135,9 @@ class Trainer(object):
 			f.close()
 
 		self.currentEpoch = 0
-		self.currentTrainingScore = numpy.inf
-		self.currentValidationScore = numpy.inf
-		self.currentTestScore = numpy.inf
+		# self.currentTrainingScore = numpy.inf
+		# self.currentValidationScore = numpy.inf
+		# self.currentTestScore = numpy.inf
 
 		if not self.saveOnException :
 			return self._run(name, model, *args, **kwargs)
@@ -283,12 +161,6 @@ class Trainer(object):
 				raise
 
 	def _run(self, name, model, reset = True, shuffleMinibatches = True, datasetName = "") :
-				
-		def appendEvolution(csvEvolution, **kwargs) :			
-			line = csvEvolution.newLine()
-			for k, v in kwargs.iteritems() :		
-				line[k] = v
-			line.commit()
 		
 		def setHPs(layer, thing, dct) :
 			try :
@@ -317,9 +189,8 @@ class Trainer(object):
 		startTime = time.time()
 		legend = ["name", "epoch", "runtime", "set", "score", "dataset_name"]
 		layersForLegend = OrderedDict()
-		outputScores = {}
-
-		for l in model.layers.itervalues() :
+		
+		for l in model.outputs.itervalues() :
 			if l.type == "output" :
 				for typ in ["train", "test", "validation"] :
 					scoreName = "%s_%s_score" % (l.name, typ)
@@ -337,13 +208,11 @@ class Trainer(object):
 
 		legend.extend(layersForLegend.keys())
 
-		csvEvolution = CSVFile(legend)
-		csvEvolution.streamToFile("%s-evolution.csv" % name, writeRate = 1)
+		self.recorders = {}
+		for l in model.outputs.itervalues() :
+			self.recorders[l.name] = TrainingRecorder( name, l.name, legend )
 
-		csvBestTestScore = CSVFile(legend)
-		csvBestTestScore.streamToFile("%s-best_Test_Score.csv" % (name), writeRate = 1)
-		csvBestValidationScore = CSVFile(legend)
-		csvBestValidationScore.streamToFile("%s-best_Validation_Score.csv" % (name), writeRate = 1)
+		self.recorders["mean"] = TrainingRecorder( name, "mean", legend )
 
 		print "learning..."
 		self.currentEpoch = 0
@@ -351,6 +220,17 @@ class Trainer(object):
 			for crit in self.stopCriteria :
 				if crit.stop(self) :
 					raise EndOfTraining(crit)
+
+			csvFields = {
+					"name" : name,
+					"epoch" : self.currentEpoch,
+					"runtime" : runtime,
+					"set" : None,
+					"score" : None,
+					"dataset_name" : datasetName,
+				}
+			csvFields.update(layersForLegend)
+			csvFields.update(outputScores)
 
 			meanTrain = []
 			meanTest = []
