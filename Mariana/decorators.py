@@ -31,10 +31,9 @@ class GlorotTanhInit(Decorator) :
 		initWeights = numpy.asarray(initWeights, dtype=theano.config.floatX)
 		layer.W = theano.shared(value = initWeights, name = layer.name + "_Glorot_tanh_W")
 
-class StochasticTurnOff(Decorator):
-	"""Applies StochasticTurnOff with a given ratio to a layer. Use it to make things such as denoising autoencoders and dropout layers"""
+class BinomialTurnOff(Decorator):
+	"""Applies BinomialTurnOff with a given ratio to a layer. Use it to make things such as denoising autoencoders and dropout layers"""
 	def __init__(self, ratio, *args, **kwargs):
-		# super(StochasticTurnOff, self).__init__()
 		Decorator.__init__(self, *args, **kwargs)
 
 		assert (ratio >= 0 and ratio <= 1) 
@@ -53,7 +52,6 @@ class StochasticTurnOff(Decorator):
 class WeightSparsity(Decorator):
 	"""Stochatically sets a certain ratio of the weight to 0"""
 	def __init__(self, ratio, *args, **kwargs):
-		# super(StochasticTurnOff, self).__init__()
 		Decorator.__init__(self, *args, **kwargs)
 
 		assert (ratio >= 0 and ratio <= 1) 
@@ -74,7 +72,6 @@ class WeightSparsity(Decorator):
 class InputSparsity(Decorator):
 	"""Stochatically sets a certain ratio of the input connections to 0"""
 	def __init__(self, ratio, *args, **kwargs):
-		# super(StochasticTurnOff, self).__init__()
 		Decorator.__init__(self, *args, **kwargs)
 
 		assert (ratio >= 0 and ratio <= 1) 

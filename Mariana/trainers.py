@@ -7,6 +7,106 @@ from pyGeno.tools.parsers.CSVTools import CSVFile
 import Mariana.layers as ML
 import theano.tensor as tt
 
+class DatasetMapper(object):
+ 	"""This class is here to map inputs of a network to datasets, or outputs to target sets.
+ 	If forceSameLengths all sets must have the same length."""
+ 	def __init__(self):
+ 		self.inputs = {}
+ 		self.outputs = {}
+ 		self.length = 0
+ 		self.randomIds = None
+ 		self.locked = False
+
+ 	def _add(self, dct, layer, setOrLayer) :
+ 		"""This function is here because i don't like repeating myself"""
+ 		if self.length != 0 and len(setOrLayer) != self.length:
+ 			raise ValueError("All sets must have the same number of elements. len(setOrLayer) = %s, but another set has a length of %s" % (len(setOrLayer), self.length))
+
+ 		if layer.name in self.inputs or layer.name in self.outputs:
+ 			raise ValueError("There is already a mapped layer by that name")
+ 		
+ 		if len(setOrLayer) > self.length :
+	 		self.length = len(setOrLayer)
+ 		dct[layer.name] = setOrLayer
+
+ 	def addInput(self, layer, setOrLayer) :
+ 		"""Adds a mapping rule ex: .add(input1, dataset["train"]["examples"])"""
+ 		if self.locked :
+ 			raise ValueError("Can't add a map if a batch has already been requested")
+ 		self._add(self.inputs, layer, setOrLayer)
+
+ 	def addOutput(self, layer, setOrLayer) :
+ 		"""Adds a mapping rule ex: .add(output1, dataset["train"]["targets"])"""
+		if self.locked :
+ 			raise ValueError("Can't add a map if a batch has already been requested")
+ 		self._add(self.outputs, layer, setOrLayer)
+
+ 	def shuffle(self) :
+ 		"""Shuffles the sets. You should call this function before asking for each minibatch if you want
+ 		random minibatches"""
+ 		if self.randomIds is None :
+	 		self.randomIds = range(len(self))
+ 		random.shuffle(self.randomIds)
+
+ 	def _getLayerBatch(self, dct, layerName, i, size) :
+ 		"""This function is here because i don't like repeating myself"""
+ 		if not self.locked :
+ 			self.locked = True				
+
+ 		if issubclass(dct[layerName].__class__, ML.Layer_ABC) :
+ 			return dct[layerName].outputs
+
+ 		if size == "all" :
+ 			ssize = len(dct[layerName])
+ 		else :
+ 			ssize = size
+
+ 		if self.randomIds is None :
+	 		return dct[layerName][i:i+ssize]
+	 	else :
+	 		res = []
+	 		for ii in self.randomIds[i:i+ssize] :
+	 			res.append(dct[layerName][ii])
+	 		return res
+
+ 	def _getBatches(self, dct, i, size) :
+ 		"""This function is here because i don't like repeating myself"""
+ 		res = {}
+ 		for k in dct :
+ 			res[k] = self._getLayerBatch(dct, k, i, size)
+
+ 		return res
+
+	def getInputLayerBatch(self, layer, i, size) :
+		"""Returns a batch for a given input layer sarting at position i, and of length size.
+ 		If you want  the limit to be length of the whole set
+ 		instead of a mini batch you can set size to "all".
+ 		"""
+ 		return self._getLayerBatch(self.inputs, layer, i, size)
+
+ 	def getInputBatches(self, i, size) :
+ 		"""Applies getInputLayerBatch iteratively for all layers and returns a dict:
+ 		layer name => batch"""
+ 		return self._getBatches(self.inputs, i, size)
+
+ 	def getOutputLayerBatch(self, layer, i, size) :
+		"""Returns a batch for a given output layer sarting at position i, and of length size.
+ 		If you want  the limit to be length of the whole set
+ 		instead of a mini batch you can set size to "all".
+ 		"""
+ 		return self._getLayerBatch(self.outputs, layer, i, size)
+ 	
+ 	def getOutputBatches(self, i, size) :
+		"""Applies getOutputLayerBatch iteratively for all layers and returns a dict:
+ 		layer name => batch"""
+ 		return self._getBatches(self.outputs, i, size)
+
+ 	def __len__(self) :
+ 		return self.length
+
+ 	def __str__(self) :
+ 		return str(self.inputs).replace(" : ", " => ")  + "\n" + str(self.outputs).replace(" : ", " => ") 
+
 class EndOfTraining(Exception) :
 	"""Exception raised when a training criteria is met"""
 	def __init__(self, stopCriterion) :
@@ -14,58 +114,98 @@ class EndOfTraining(Exception) :
 		self.message = "End of training: %s" % stopCriterion.endMessage()
 
 class TrainingRecorder(object):
- 	"""docstring for TrainingRecorder"""
- 	def __init__(self, runName, outputLayerName, csvLegend):
- 		super(TrainingRecorder, self).__init__()
- 		self.outputLayerName = outputLayerName
+ 	"""docstring for OutputRecorder"""
+ 	def __init__(self, runName, csvLegend):
 		self.runName = runName
+		self.csvLegend = csvLegend
 
-		self.csvFiles = {
-			"test" : CSVFile(legend = csvLegend),
-			"train" : CSVFile(legend = csvLegend),
-			"validation" : CSVFile(legend = csvLegend),
-		}
+ 		self.outputLayers = []
+		self.bestScores = {}
+		self.currentScores = {}
+		self.bestFilenames = {}
+		self.maps = {}
 
-		for k in self.csvFiles :
-			self.csvFiles.streamToFile("%s-%s-best_%s_score.csv" % (runName, outputLayerName, k) , writeRate = 1)
+		self.stackLen = 0
+		self.currentLen = 0
+		self.stackLen = 0
+		self.csvFile = None
+
+		self._mustInit = True
+	def addMap(self, mapName, mapValue) :
+		self.maps[mapName] = mapValue
+
+	def addOutput(self, outputLayer) :
+		self.outputLayers.append(outputLayer)
+
+	def _init(self) :
+		for o in self.outputLayers :
+			for s in self.maps :
+				self.bestScores[o][s] = []
+				self.currentScores[o][s] = []
+				self.bestFilenames[o][s] = "best_%s_%s" % (s, o.name)
+
+		self.csvLegend.append("score")
+		self.csvLegend.append("best_score")
+		self.csvLegend.append("set")
+		self.csvLegend.append("output")
+		self.csvFile = CSVFile(legend = self.csvLegend)
+		self.csvFile.streamToFile("%s-evolution.csv" % (runName, ), writeRate = len(self.maps) * (len(self.outputLayers) + 1) ) #(output + avg) x #set
+
+		self._mustInit = False
+
+	def getBestScore(self, outputLayer, theSet) :
+		return self.bestScores[outputLayers.name][theSet][-1]
+
+	def getCurrentScore(self, outputLayer, theSet) :
+		return self.currentScores[outputLayers.name][theSet][-1]
+
+	def commitToCSVs(self, **csvValues) :
+		"""saves the stack to disk. It will automatically add the scores and the sets to the file"""
+		def _fillLine(line, score, bestScore, setName, setLen, outputName, **csvValues) :
+			for k, v in csvValues.iteritems() :
+				line[k] = v
+			line["score"] = score
+			line["best_score"] = bestScore
+			line["set"] = "%s(%s)" %(setName, setName)
+			line["output"] = outputName
+			line.commit()
+		
+		if self._mustInit :
+			self._init()
+
+		start = self.currentLen - self.stackLen
+		stop = self.currentLen
+		for i in xrange(start, stop) :
+			meanCurrent = []
+			meanBest = []
+			for theSet in self.maps :
+				for o in self.outputLayers :
+					score = None
+					try :
+						bestScore = self.bestScores[o.name][theSet][i]
+					except IndexError :
+						bestScore = self.bestScores[o.name][theSet][-1]
+					
+					score = self.currentScores[o.name][theSet][i]
+					_fillLine( self.csvFile.newLine(), score, bestScore, theSet, len(self.maps[theSet]), o.name, **csvValues)
+
+					meanCurrent.append(self.currentScores[o.name][theSet][i])	
+					meanBest.append(self.bestScores[o.name][theSet][i])	
 			
-		self.csvEvolution = CSVFile(legend = csvLegend)
-		self.csvEvolution.streamToFile("%s-%s-evolution.csv" % (runName, outputLayerName) , writeRate = 1)
+				meanCurrent = numpy.mean(meanCurrent)
+				meanBest = numpy.mean(meanBest)
 
-		self.bestScores = {
-			"test" : None,
-			"train" : None,
-			"validation" : None
-		}
+				_fillLine( self.csvFile.newLine(), meanCurrent, meanBest, theSet, len(self.maps[theSet]), "average", **csvValues)
 		
-		self.bestModelFiles = {
-			"test" : None,
-			"train" : None,
-			"validation" : None
-		}
-		
-		self.currentScores = {
-			"test" : numpy.inf,
-			"train" : numpy.inf,
-			"validation" : numpy.inf	
-		}
+		self.stackLen = 0
 
-	def _appendEvolution(self, csvEvolution, **kwargs) :
-		line = csvEvolution.newLine()
-		for k, v in kwargs.iteritems() :
-			line[k] = v
-		line.commit()
-
-	def updateEvolution(self, **csvValues) :
-		self._appendEvolution(self.csvEvolution, **csvValues)
-
-	def updateBestScore(self, theSet, score, **csvValues) :
-		self.currentScores[theSet] = score
-		if score < self.bestScores[theSet] :
-			print "\t=x=> new best [-%s-] score for layer '%s' %s -> %s [:-)" % (theSet.upper(), self.outputLayerName, self.bestScores[theSet], score)
-			self.bestScores[theSet] = score
-			self._appendEvolution(self.bestScores[theSet], **csvValues)
-
+	def updateScore(self, outputLayerName, theSet, score) :
+		self.currentScores[outputLayerName][theSet].append(score)
+		if score < self.bestScores[outputLayerName][theSet] and theSet != "train":
+			print "\t=x=> new best [-%s-] score for layer '%s' %s -> %s [:-)" % (theSet.upper(), self.outputLayerName, self.bestScores[outputLayerName][theSet], score)
+			self.bestScores[outputLayerName][theSet].append(score)
+		self.stackLen += 1
+		self.currentLen += 1 
 
 class DefaultTrainer(object):
 	"""Should serve for most purposes"""
@@ -74,7 +214,7 @@ class DefaultTrainer(object):
 		self.trainMaps = trainMaps
 		self.testMaps = testMaps
 		self.validationMaps = validationMaps
-
+		
 		self.miniBatchSize = miniBatchSize
 		self.stopCriteria = stopCriteria
 		
@@ -87,13 +227,8 @@ class DefaultTrainer(object):
 
 	def reset(self) :
 		'resets the beast'	
-	
-		self.bestTrainingScores = {}
-		self.bestValidationScores = {}
-		self.bestTestScores = {}
-
-		self.bestTestModelFiles = {}
-		self.bestValidationModelFiles = {}
+		
+		self.recorder = None
 		self.currentEpoch = 0
 
 	def getBestValidationModel(self) :
@@ -135,9 +270,6 @@ class DefaultTrainer(object):
 			f.close()
 
 		self.currentEpoch = 0
-		# self.currentTrainingScore = numpy.inf
-		# self.currentValidationScore = numpy.inf
-		# self.currentTestScore = numpy.inf
 
 		if not self.saveOnException :
 			return self._run(name, model, *args, **kwargs)
@@ -186,17 +318,15 @@ class DefaultTrainer(object):
 		if reset :
 			self.reset()
 		
-		startTime = time.time()
+		self.recorder = TrainingRecorder( name, legend )
+		
+		for m, v in [ ( "train", self.trainMaps ), ( "test", self.testMaps ), ( "validation", self.validationMaps )] :
+			self.recorder.addMap( m, v )
+
 		legend = ["name", "epoch", "runtime", "set", "score", "dataset_name"]
 		layersForLegend = OrderedDict()
-		
-		for l in model.outputs.itervalues() :
-			if l.type == "output" :
-				for typ in ["train", "test", "validation"] :
-					scoreName = "%s_%s_score" % (l.name, typ)
-					legend.append( scoreName )
-					outputScores[ scoreName ] = []
-			
+		for l in model.outputs.itervalues() :			
+			self.recorder.addOutput(l)	
 			layersForLegend["%s_size" % l.name] = len(l)
 			try :
 				layersForLegend["activation"] = l.activation.__name__
@@ -208,48 +338,28 @@ class DefaultTrainer(object):
 
 		legend.extend(layersForLegend.keys())
 
-		self.recorders = {}
-		for l in model.outputs.itervalues() :
-			self.recorders[l.name] = TrainingRecorder( name, l.name, legend )
-
-		self.recorders["mean"] = TrainingRecorder( name, "mean", legend )
 
 		print "learning..."
+		startTime = time.time()
 		self.currentEpoch = 0
 		while True :
 			for crit in self.stopCriteria :
 				if crit.stop(self) :
 					raise EndOfTraining(crit)
 
-			csvFields = {
-					"name" : name,
-					"epoch" : self.currentEpoch,
-					"runtime" : runtime,
-					"set" : None,
-					"score" : None,
-					"dataset_name" : datasetName,
-				}
-			csvFields.update(layersForLegend)
-			csvFields.update(outputScores)
-
-			meanTrain = []
-			meanTest = []
-			meanValidation = []
-			
 			for k in outputScores :
 				outputScores[k] = []
 
 			for i in xrange(0, len(self.trainMaps), self.miniBatchSize) :
 				if shuffleMinibatches :
 					self.trainMaps.shuffle()
+
 				kwargs = self.trainMaps.getInputBatches(i, self.miniBatchSize)
 				for outputName in self.trainMaps.outputs.iterkeys() :
 					kwargs.update({ "target" : self.trainMaps.getOutputLayerBatch(outputName, i, self.miniBatchSize)} )
 					res = model.train(outputName, **kwargs)
 					meanTrain.append(res[0])
-					outputScores["%s_%s_score" % (outputName, "train")].append(res[0])
-
-			self.currentTrainingScore = numpy.mean(meanTrain)
+					self.recorder.updateScore(outputName, "train", res[0])
 			
 			if len(self.testMaps) > 0 and (self.currentEpoch % self.testFrequency == 0) :
 				kwargs = self.testMaps.getInputBatches(0, size = "all")
@@ -257,11 +367,7 @@ class DefaultTrainer(object):
 					kwargs.update({ "target" : self.testMaps.getOutputLayerBatch(outputName, 0, size = "all")} )
 					res = model.test(outputName, **kwargs)
 					meanTest.append(res[0])
-					outputScores["%s_%s_score" % (outputName, "test")].append(res[0])
-
-				self.currentTestScore = numpy.mean(meanTest)
-			else :
-				self.currentTestScore = 0
+					self.recorder.updateScore(outputName, "test", res[0])
 			
 			if len(self.validationMaps) > 0 and (self.currentEpoch % self.validationFrequency == 0) :
 				kwargs = self.validationMaps.getInputBatches(0, size = "all")
@@ -269,68 +375,20 @@ class DefaultTrainer(object):
 					kwargs.update({ "target" : self.validationMaps.getOutputLayerBatch(outputName, 0, size = "all")} )
 					res = model.test(outputName, **kwargs)
 					meanValidation.append(res[0])
-					outputScores["%s_%s_score" % (outputName, "validation")].append(res[0])
-
-				self.currentValidationScore = numpy.mean(meanValidation)
-			else :
-				self.currentValidationScore = 0
+					self.recorder.updateScore(outputName, "validation", res[0])
 
 			runtime = (time.time() - startTime)/60
 			
-			for k in outputScores :
-				outputScores[k] = numpy.mean(outputScores[k])
+			csvValues = {
+				"name" : name,
+				"epoch" : self.currentEpoch,
+				"runtime(min)" : runtime,
+				"dataset_name" : datasetName,
+			}
+			csvValues.update(layersForLegend)
+			csvValues.update(outputScores)
 
-			print "epoch %s, mean Score (train: %s, test: %s, validation: %s)" %(self.currentEpoch, self.currentTrainingScore, self.currentTestScore, self.currentValidationScore)
-			
-			if self.currentTestScore < self.bestTestScore :
-				print "\t===>%s: new best test score %s -> %s" % (name, self.bestTestScore, self.currentTestScore)
-				self.bestTestScore = self.currentTestScore
-				params = {
-					"name" : name,
-					"epoch" : self.currentEpoch,
-					"runtime" : runtime,
-					"set" : "Test(%d)" % len(self.testMaps),
-					"score" : self.currentTestScore,
-					"dataset_name" : datasetName,
-				}
-				params.update(layersForLegend)
-				params.update(outputScores)
-				appendEvolution(csvBestTestScore, **params)
-
-			if self.currentValidationScore < self.bestValidationScore :
-				print "\txxx>%s: new best Validation score %s -> %s" % (name, self.bestValidationScore, self.currentValidationScore)
-				self.bestValidationScore = self.currentValidationScore
-				params = {
-					"name" : name,
-					"epoch" : self.currentEpoch,
-					"runtime" : runtime,
-					"set" : "Test(%d)" % len(self.validationMaps),
-					"score" : self.currentValidationScore,
-					"dataset_name" : datasetName,
-				}
-				params.update(layersForLegend)
-				params.update(outputScores)
-				appendEvolution(csvBestValidationScore, **params)
-
-			params = {
-					"name" : name,
-					"epoch" : self.currentEpoch,
-					"runtime" : runtime,
-					"set" : "Train(%d)" % len(self.trainMaps),
-					"score" : self.currentTrainingScore,
-					"dataset_name" : datasetName,
-				}
-			params.update(layersForLegend)
-			params.update(outputScores)
-			appendEvolution(csvEvolution, **params)
-
-			params["set"] = "Test(%d)" % len(self.testMaps)
-			params["score"] = self.currentTestScore
-			appendEvolution(csvEvolution, **params)
-
-			params["set"] = "Validation(%d)" % len(self.validationMaps)
-			params["score"] = self.currentValidationScore
-			appendEvolution(csvEvolution, **params)
+			self.recorder.commitToCSVs(**csvValues)
 
 			sys.stdout.flush()
 			self.currentEpoch += 1
