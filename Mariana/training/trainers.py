@@ -227,27 +227,29 @@ class TrainingRecorder(object):
 
 	def printCurrentState(self) :
 		if self.currentLen > 0 :
+			print "State:"
 			for s in self.maps :
-				print "=M=> %s set" % s
+				print "  =M=> %s set" % s
 				for o in self.outputLayers :
-					print "  |-%s: %s" % (o.name, self.currentScores[o.name][s][-1])
+					print "    |->%s: %s" % (o.name, self.currentScores[o.name][s][-1])
 		else :
 			print "=M=> Nothing to show yet"
 
 class DefaultTrainer(object):
 	"""Should serve for most purposes"""
-	def __init__(self, trainMaps, testMaps, validationMaps, miniBatchSize, stopCriteria, testFrequency = 1, validationFrequency = 1, saveOnException = True) :
+	def __init__(self, trainMaps, testMaps, validationMaps, miniBatchSize, stopCriteria, miniBatchTestSize = "all", testFrequency = 1, saveOnException = True) :
 		
-		self.trainMaps = trainMaps
-		self.testMaps = testMaps
-		self.validationMaps = validationMaps
+		self.maps = {}
+		self.maps["train"] = trainMaps
+		self.maps["test"] = testMaps
+		self.maps["validation"] = validationMaps
 		
 		self.miniBatchSize = miniBatchSize
+		self.miniBatchTestSize = miniBatchTestSize
 		self.stopCriteria = stopCriteria
 		
 		self.testFrequency = testFrequency
-		self.validationFrequency = validationFrequency
-
+		
 		self.saveOnException = saveOnException
 		
 		self.reset()
@@ -315,7 +317,10 @@ class DefaultTrainer(object):
 				f.flush()
 				f.close()
 				model.save(filename)
-			except KeyboardInterrupt, Exception :
+			except KeyboardInterrupt :
+				_dieGracefully()
+				raise
+			except :
 				_dieGracefully()
 				raise
 
@@ -360,15 +365,14 @@ class DefaultTrainer(object):
 		legend.extend(layersForLegend.keys())
 
 		self.recorder = TrainingRecorder( name, legend )
-				
-		for m, v in [ ( "train", self.trainMaps ), ( "test", self.testMaps ), ( "validation", self.validationMaps )] :
-			self.recorder.addMap( m, v )
+		
+		# print self.maps.values()
+		for m in self.maps :
+			self.recorder.addMap( m, self.maps[m] )
 
-		trainVals = {}
 		for l in model.outputs.itervalues() :
 			self.recorder.addOutput(l)
-			trainVals[l.name] = []
-
+		
 		print "learning..."
 		startTime = time.time()
 		self.currentEpoch = 0
@@ -379,36 +383,37 @@ class DefaultTrainer(object):
 					raise EndOfTraining(crit)
 
 			self.recorder.newEntry()
-			for outputName in trainVals :
-				trainVals[outputName] = []
+		
+			for mapName in ["train", "test", "validation"] :		
+				aMap = self.maps[mapName]
+				vals = {}
+				if len(aMap) > 0 and (self.currentEpoch % self.testFrequency == 0) :
+					training = False
+					if mapName == "train" :
+						if shuffleMinibatches :
+							aMap.shuffle()
+						steps = xrange(0, len(aMap), self.miniBatchSize)
+						size = self.miniBatchSize
+						training = True
+					else :
+						if self.miniBatchTestSize == "all" :
+							steps = [0]
+							size = "all"
+						else :
+							steps = xrange(0, len(aMap), self.miniBatchTestSize)
+							size = self.miniBatchTestSize
 
-			for i in xrange(0, len(self.trainMaps), self.miniBatchSize) :
-				if shuffleMinibatches :
-					self.trainMaps.shuffle()
-
-				kwargs = self.trainMaps.getInputBatches(i, self.miniBatchSize)
-				for outputName in self.trainMaps.outputs.iterkeys() :
-					kwargs.update({ "target" : self.trainMaps.getOutputLayerBatch(outputName, i, self.miniBatchSize)} )
-					res = model.train(outputName, **kwargs)
-					trainVals[outputName].append(res[0])
-			
-			print numpy.mean(trainVals[outputName]), len(trainVals[outputName])
-			for outputName in trainVals :
-				self.recorder.updateScore(outputName, "train", numpy.mean(trainVals[outputName]))
-			
-			if len(self.testMaps) > 0 and (self.currentEpoch % self.testFrequency == 0) :
-				kwargs = self.testMaps.getInputBatches(0, size = "all")
-				for outputName in self.testMaps.outputs.iterkeys() :
-					kwargs.update({ "target" : self.testMaps.getOutputLayerBatch(outputName, 0, size = "all")} )
-					res = model.test(outputName, **kwargs)
-					self.recorder.updateScore(outputName, "test", res[0])
-			
-			if len(self.validationMaps) > 0 and (self.currentEpoch % self.validationFrequency == 0) :
-				kwargs = self.validationMaps.getInputBatches(0, size = "all")
-				for outputName in self.validationMaps.outputs.iterkeys() :
-					kwargs.update({ "target" : self.validationMaps.getOutputLayerBatch(outputName, 0, size = "all")} )
-					res = model.test(outputName, **kwargs)
-					self.recorder.updateScore(outputName, "validation", res[0])
+					for outputName in aMap.outputs.iterkeys() :
+						vals[outputName] = []
+						for i in steps :
+							kwargs = aMap.getInputBatches(i, size = size)
+							kwargs.update({ "target" : aMap.getOutputLayerBatch(outputName, i, size = size)} )
+							if training :
+								res = model.train(outputName, **kwargs)
+							else :	
+								res = model.test(outputName, **kwargs)
+							vals[outputName].append(res[0])
+						self.recorder.updateScore(outputName, mapName, numpy.mean(vals[outputName]))
 
 			runtime = (time.time() - startTime)/60
 			
