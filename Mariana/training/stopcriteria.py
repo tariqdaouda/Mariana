@@ -27,31 +27,38 @@ class EpochWall(StopCriterion_ABC) :
 		"""returns information about the reason why the training stopped"""
 		return "Reached epoch wall %s" % self.maxEpochs
 
-class TestScoreWall(StopCriterion_ABC) :
-	"""Stops training when maxEpochs is reached"""
-	def __init__(self, wallValue) :
+class ScoreWall(StopCriterion_ABC) :
+	"""Stops training when a givven score is reached"""
+	def __init__(self, wallValue, theSet, outputLayer = None) :
+		"""if outputLayer is None, will consider the average of all outputs"""
 		StopCriterion_ABC.__init__(self)
+
+		self.theSet = theSet
+		self.outputLayer = outputLayer
 		self.wallValue = wallValue
 
 	def stop(self, trainer) :
-		if trainer.currentTestScore <= self.wallValue :
+		if self.outputLayer is None :
+			curr = trainer.recorder.getAverageCurrentScore(self.theSet)
+		else :
+			curr = trainer.recorder.getCurrentScore(self.outputLayer, self.theSet)
+	
+		if curr <= self.wallValue :
 			return True
 		return False
 
 	def endMessage(self) :
 		"""returns information about the reason why the training stopped"""
-		return "Reached test score wall %s" % self.wallValue
+		return "Reached score wall %s" % self.wallValue
 
 class GeometricEarlyStopping(StopCriterion_ABC) :
 	"""Geometrically increases the patiences with the epochs and stops the training when the patience is over."""
-	def __init__(self, theSet, patience, patienceIncreaseFactor, significantImprovement) :
-		"""theSet must either be 'test' or 'validation'"""
-		
+	def __init__(self, theSet, patience, patienceIncreaseFactor, significantImprovement, outputLayer = None) :
+		"""if outputLayer is None, will consider the average of all outputs"""
 		StopCriterion_ABC.__init__(self)
-		if theSet.lower() != "test" and theSet.lower() != "validation" :
-			raise KeyError("theSet must either be 'test' or 'validation'")
-
-		self.theSet = theSet.lower()
+		
+		self.outputLayer = outputLayer
+		self.theSet = theSet
 		self.patience = patience
 		self.patienceIncreaseFactor = patienceIncreaseFactor
 		self.wall = patience
@@ -61,12 +68,15 @@ class GeometricEarlyStopping(StopCriterion_ABC) :
 		if self.wall <= 0 :
 			return True
 
-		if self.theSet == "test" :
-			if trainer.currentTestScore < (trainer.bestTestScore + self.significantImprovement) :
-				self.wall = max(self.patience, trainer.currentEpoch * self.patienceIncreaseFactor)
+		if self.outputLayer is None :
+			curr = trainer.recorder.getAverageCurrentScore(self.theSet)
+			best = trainer.recorder.getAverageBestScore(self.theSet)
 		else :
-			if trainer.currentValidationScore < (trainer.bestValidationScore + self.significantImprovement) :
-				self.wall = max(self.patience, trainer.currentEpoch * self.patienceIncreaseFactor)
+			curr = trainer.recorder.getCurrentScore(self.outputLayer, self.theSet)
+			best = trainer.recorder.getBestScore(self.outputLayer, self.theSet)
+		
+		if curr < (best + self.significantImprovement) :
+			self.wall = max(self.patience, trainer.currentEpoch * self.patienceIncreaseFactor)
 		
 		self.wall -= 1	
 		return False

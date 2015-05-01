@@ -133,7 +133,8 @@ class TrainingRecorder(object):
 
 		self._mustInit = True
 	def addMap(self, mapName, mapValue) :
-		self.maps[mapName] = mapValue
+		if len(mapValue) > 1 :
+			self.maps[mapName] = mapValue
 
 	def addOutput(self, outputLayer) :
 		self.outputLayers.append(outputLayer)
@@ -143,7 +144,7 @@ class TrainingRecorder(object):
 			self.bestScores[o.name] = {}
 			self.currentScores[o.name] = {}
 			self.bestFilenames[o.name] = {}
-			for s in self.maps :
+			for s, v in self.maps.iteritems() :
 				self.bestScores[o.name][s] = []
 				self.currentScores[o.name][s] = []
 				self.bestFilenames[o.name][s] = "best_%s_%s" % (s, o.name)
@@ -159,10 +160,22 @@ class TrainingRecorder(object):
 		self._mustInit = False
 
 	def getBestScore(self, outputLayer, theSet) :
-		return self.bestScores[outputLayers.name][theSet][-1]
+		return self.bestScores[outputLayer.name][theSet][-1]
 
 	def getCurrentScore(self, outputLayer, theSet) :
-		return self.currentScores[outputLayers.name][theSet][-1]
+		return self.currentScores[outputLayer.name][theSet][-1]
+
+	def getAverageBestScore(self, theSet) :
+		l = []
+		for o in self.outputLayers :
+			l.append(self.bestScores[o.name][theSet][-1])
+		return numpy.mean(l)
+
+	def getAverageCurrentScore(self, theSet) :
+		l = []
+		for o in self.outputLayers :
+			l.append(self.currentScores[o.name][theSet][-1])
+		return numpy.mean(l)
 
 	def commitToCSVs(self, **csvValues) :
 		"""saves the stack to disk. It will automatically add the scores and the sets to the file"""
@@ -195,7 +208,6 @@ class TrainingRecorder(object):
 					else :
 						bestScore = self.currentScores[o.name][theSet][i]
 
-					# print o.name, theSet, i, start, stop, self.currentLen, self.stackLen, len(self.currentScores[o.name][theSet]) 
 					score = self.currentScores[o.name][theSet][i]
 					_fillLine( self.csvFile, score, bestScore, theSet, len(self.maps[theSet]), o.name, **csvValues)
 
@@ -215,23 +227,27 @@ class TrainingRecorder(object):
 			self._init()
 
 		self.currentScores[outputLayerName][theSet].append(score)
-
 		if theSet not in self.noBestSets :
 			if len(self.bestScores[outputLayerName][theSet]) > 1 :
 				if (score < self.bestScores[outputLayerName][theSet][-1] ) :
-					print "=M=> new best [-%s-] score for layer '%s' %s -> %s [:-)" % (theSet.upper(), outputLayerName, self.bestScores[outputLayerName][theSet][-1], score)
+					# print "=M=> new best [-%s-] score for layer '%s' %s -> %s [:-)" % (theSet.upper(), outputLayerName, self.bestScores[outputLayerName][theSet][-1], score)
 					self.bestScores[outputLayerName][theSet].append(score)
 			else :
-				print "=M=> First [-%s-] score for layer '%s' %s [:-)" % (theSet.upper(), outputLayerName, score)
+				# print "=M=> First [-%s-] score for layer '%s' %s [:-)" % (theSet.upper(), outputLayerName, score)
 				self.bestScores[outputLayerName][theSet].append(score)
 
 	def printCurrentState(self) :
 		if self.currentLen > 0 :
-			print "State:"
+			print "\n=M=>State %s:" % self.currentLen
 			for s in self.maps :
-				print "  =M=> %s set" % s
+				print "  |-%s set" % s
 				for o in self.outputLayers :
-					print "    |->%s: %s" % (o.name, self.currentScores[o.name][s][-1])
+					if s not in self.noBestSets and self.currentScores[o.name][s][-1] == self.bestScores[o.name][s][-1] :
+						highlight = "+best+"
+					else :
+						highlight = ""
+
+					print "    |->%s: %s %s" % (o.name, self.currentScores[o.name][s][-1], highlight)
 		else :
 			print "=M=> Nothing to show yet"
 
@@ -366,7 +382,6 @@ class DefaultTrainer(object):
 
 		self.recorder = TrainingRecorder( name, legend )
 		
-		# print self.maps.values()
 		for m in self.maps :
 			self.recorder.addMap( m, self.maps[m] )
 
@@ -378,10 +393,6 @@ class DefaultTrainer(object):
 		self.currentEpoch = 0
 
 		while True :
-			for crit in self.stopCriteria :
-				if crit.stop(self) :
-					raise EndOfTraining(crit)
-
 			self.recorder.newEntry()
 		
 			for mapName in ["train", "test", "validation"] :		
@@ -428,4 +439,9 @@ class DefaultTrainer(object):
 			self.recorder.commitToCSVs(**csvValues)
 			self.recorder.printCurrentState()
 			sys.stdout.flush()
+
+			for crit in self.stopCriteria :
+				if crit.stop(self) :
+					raise EndOfTraining(crit)
+
 			self.currentEpoch += 1
