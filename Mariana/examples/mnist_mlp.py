@@ -7,7 +7,7 @@ import Mariana.layers as ML
 import Mariana.costs as MC
 import Mariana.regularizations as MR
 import Mariana.scenari as MS
-import Mariana.trainers as MT
+import Mariana.training.trainers as MT
 
 """
 This is the equivalent the theano MLP from here: http://deeplearning.net/tutorial/mlp.html
@@ -58,5 +58,5 @@ if __name__ == "__main__" :
 	validationMaps.addInput(i, validation_set[0])
 	validationMaps.addOutput(o, validation_set[1].astype('int32'))
 
-	trainer = MT.Trainer(trainMaps = trainMaps, testMaps = testMaps, validationMaps = validationMaps, stopCriteria = [], miniBatchSize = miniBatchSize)
+	trainer = MT.DefaultTrainer(trainMaps = trainMaps, testMaps = testMaps, validationMaps = validationMaps, stopCriteria = [], miniBatchSize = miniBatchSize)
 	trainer.start("MLP", mlp)
