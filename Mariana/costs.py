@@ -1,3 +1,4 @@
+import theano
 import theano.tensor as tt
 
 class Cost_ABC(object) :
@@ -16,7 +17,7 @@ class Cost_ABC(object) :
 
 class Null(Cost_ABC) :
 	def _costFct(self, targets, outputs) :
-		return 0
+		return outputs*0 + targets*0
 
 class NegativeLogLikelihood(Cost_ABC) :
 	"""cost fct for softmax"""

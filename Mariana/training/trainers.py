@@ -15,15 +15,15 @@ class DatasetMapper(object):
  		self.outputs = {}
  		self.length = 0
  		self.randomIds = None
- 		self.locked = False
+ 		# self.locked = False
 
  	def _add(self, dct, layer, setOrLayer) :
  		"""This function is here because i don't like repeating myself"""
- 		if self.length != 0 and len(setOrLayer) != self.length:
- 			raise ValueError("All sets must have the same number of elements. len(setOrLayer) = %s, but another set has a length of %s" % (len(setOrLayer), self.length))
+ 		# if issubclass(dct[layerName].__class__, ML.Layer_ABC) self.length != 0 and len(setOrLayer) != self.length:
+ 		# 	raise ValueError("All sets must have the same number of elements. len(setOrLayer) = %s, but another set has a length of %s" % (len(setOrLayer), self.length))
 
- 		if layer.name in self.inputs or layer.name in self.outputs:
- 			raise ValueError("There is already a mapped layer by that name")
+ 		# if layer.name in self.inputs or layer.name in self.outputs:
+ 		# 	raise ValueError("There is already a mapped layer by that name")
  		
  		if len(setOrLayer) > self.length :
 	 		self.length = len(setOrLayer)
@@ -31,14 +31,14 @@ class DatasetMapper(object):
 
  	def addInput(self, layer, setOrLayer) :
  		"""Adds a mapping rule ex: .add(input1, dataset["train"]["examples"])"""
- 		if self.locked :
- 			raise ValueError("Can't add a map if a batch has already been requested")
+ 		# if self.locked :
+ 		# 	raise ValueError("Can't add a map if a batch has already been requested")
  		self._add(self.inputs, layer, setOrLayer)
 
  	def addOutput(self, layer, setOrLayer) :
  		"""Adds a mapping rule ex: .add(output1, dataset["train"]["targets"])"""
-		if self.locked :
- 			raise ValueError("Can't add a map if a batch has already been requested")
+		# if self.locked :
+ 	# 		raise ValueError("Can't add a map if a batch has already been requested")
  		self._add(self.outputs, layer, setOrLayer)
 
  	def shuffle(self) :
@@ -50,8 +50,8 @@ class DatasetMapper(object):
 
  	def _getLayerBatch(self, dct, layerName, i, size) :
  		"""This function is here because i don't like repeating myself"""
- 		if not self.locked :
- 			self.locked = True				
+ 		# if not self.locked :
+ 		# 	self.locked = True
 
  		if issubclass(dct[layerName].__class__, ML.Layer_ABC) :
  			return dct[layerName].outputs
@@ -230,10 +230,8 @@ class TrainingRecorder(object):
 		if theSet not in self.noBestSets :
 			if len(self.bestScores[outputLayerName][theSet]) > 1 :
 				if (score < self.bestScores[outputLayerName][theSet][-1] ) :
-					# print "=M=> new best [-%s-] score for layer '%s' %s -> %s [:-)" % (theSet.upper(), outputLayerName, self.bestScores[outputLayerName][theSet][-1], score)
 					self.bestScores[outputLayerName][theSet].append(score)
 			else :
-				# print "=M=> First [-%s-] score for layer '%s' %s [:-)" % (theSet.upper(), outputLayerName, score)
 				self.bestScores[outputLayerName][theSet].append(score)
 
 	def printCurrentState(self) :
@@ -358,25 +356,26 @@ class DefaultTrainer(object):
 								dct["%s_%s_%s_%s" % (l.name, thing, obj.name, hp)] = getattr(obj, hp)
 				else :
 					if len(thingObj.hyperParameters) == 0 :
-						dct["%s_%s" % (l.name, thing)] = 1
+						dct["%s_%s" % (l.name, thingObj.name)] = 1
 					else :
 						for hp in thingObj.hyperParameters :
-							dct["%s_%s" % (l.name, hp)] = getattr(thingObj, hp)
+							dct["%s_%s" % (l.name, hp)] = getattr(thingObj.name, hp)
 
 		if reset :
 			self.reset()
 		
 		legend = ["name", "epoch", "runtime(min)", "dataset_name"]
 		layersForLegend = OrderedDict()
-		for l in model.outputs.itervalues() :
+		for l in model.layers.itervalues() :
 			layersForLegend["%s_size" % l.name] = len(l)
 			try :
 				layersForLegend["activation"] = l.activation.__name__
 			except AttributeError :
 				pass
 			setHPs(l, "learningScenario", layersForLegend)
-			setHPs(l, "costObject", layersForLegend)
 			setHPs(l, "decorators", layersForLegend)
+			if l.type == "output" :
+				setHPs(l, "costObject", layersForLegend)
 
 		legend.extend(layersForLegend.keys())
 

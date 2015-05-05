@@ -46,15 +46,7 @@ class Layer_ABC(object) :
 
 	def clone(self, **kwargs) :
 		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
-		res = self.__class__(self.nbOutputs)
-		res.W = self.W
-		res.b = self.b
-		res.name = self.name + "_clone"
-		
-		for k, v in kwargs.iteritems() :
-			setattr(res, k, v)
-
-		return res
+		raise NotImplemented("Should be implemented in child")
 
 	def _registerInput(self, inputLayer) :
 		"Registers an input to the layer. This function is meant to be called by inputLayer"
@@ -143,6 +135,7 @@ class Input(Layer_ABC) :
 	"An input layer"
 	def __init__(self, nbInputs, name = None, **kwargs) :
 		Layer_ABC.__init__(self, nbInputs, name = name, **kwargs)
+		self.kwargs = kwargs
 		self.type = "input"
 		self.nbInputs = nbInputs
 		self.network = Network()#y, self)
@@ -154,6 +147,11 @@ class Input(Layer_ABC) :
 
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=invtriangle]' % (self.name, self.nbOutputs)
+
+	def clone(self, **kwargs) :
+		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
+		res = self.__class__(self.nbInputs, name = self.name, **self.kwargs)
+		return res
 
 class Composite(Layer_ABC):
 	"""A Composite layer is a layer that brings together the outputs of several other layers
@@ -182,7 +180,7 @@ class Composite(Layer_ABC):
 		
 class Hidden(Layer_ABC) :
 	"A basic hidden layer"
-	def __init__(self, nbOutputs, activation = getattr(MA, "tanh"), learningScenario = None, name = None, regularizations = [], **kwargs) :
+	def __init__(self, nbOutputs, activation = getattr(MA, "reLu"), learningScenario = None, name = None, regularizations = [], **kwargs) :
 		Layer_ABC.__init__(self, nbOutputs, name = name, **kwargs)
 		self.W = None
 		self.b = None
@@ -227,9 +225,21 @@ class Hidden(Layer_ABC) :
 		for reg in self.regularizationObjects :
 			self.regularizations.append(reg.getFormula(self))
 
+	def clone(self, **kwargs) :
+		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
+		res = self.__class__(self.nbOutputs)
+		res.W = self.W
+		res.b = self.b
+		res.name = self.name
+		
+		for k, v in kwargs.iteritems() :
+			setattr(res, k, v)
+
+		return res
+
 	def toOutput(self, outputType, **kwargs) :
 		"returns an output layer with the same activation function, weights and bias"
-		o = outputType(self.nbOutputs, activation = self.activation, name = self.name + '_toOutput', **kwargs)
+		o = outputType(self.nbOutputs, activation = self.activation, name = self.name, **kwargs)
 		o.W = self.W
 		o.b = self.b
 		return o
@@ -323,3 +333,31 @@ class Regression(Output_ABC) :
 	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
 		Output_ABC.__init__(self, nbOutputs, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.target = tt.matrix(name = self.name + "_Target")
+
+class Convolution2D(Hidden) :
+
+	def __init__(self, nbMaps, height, width) :
+		self.nbMaps = 32
+		self.height = 3
+		self.width = 3
+	
+	def _setOutputs(self) :
+		self.outputs = self.activation(conv2d(self.inputs, self.outputs, border_mode='full'))
+
+class MaxPooling2D(LayerABC) :
+	
+	def __init__(self, downScaleFactors) :
+		"""downScaleFactors is the factor by which to downscale vertical and horizontal dimentions. (2,2) will halve the image in each dimension."""
+		self.downScaleFactors = downScaleFactors
+
+	def _setOutputs(self) :
+		self.outputs =  max_pool_2d(self.inputs, self.downScaleFactors)
+
+class Flatten(LayerABC) :
+	"""Flattens the output of a convolution to a given numer of dimentions"""
+
+	def __init__(self, outdim) :
+		self.outdim = outdim
+
+	def _setOutputs(self) :
+		self.outputs = T.flatten(self.inputs, self.outdim)
