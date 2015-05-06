@@ -180,7 +180,7 @@ class Composite(Layer_ABC):
 		
 class Hidden(Layer_ABC) :
 	"A basic hidden layer"
-	def __init__(self, nbOutputs, activation = getattr(MA, "reLu"), learningScenario = None, name = None, regularizations = [], **kwargs) :
+	def __init__(self, nbOutputs, activation = getattr(MA, "reLU"), learningScenario = None, name = None, regularizations = [], **kwargs) :
 		Layer_ABC.__init__(self, nbOutputs, name = name, **kwargs)
 		self.W = None
 		self.b = None
@@ -344,7 +344,7 @@ class Convolution2D(Hidden) :
 	def _setOutputs(self) :
 		self.outputs = self.activation(conv2d(self.inputs, self.outputs, border_mode='full'))
 
-class MaxPooling2D(LayerABC) :
+class MaxPooling2D(Layer_ABC) :
 	
 	def __init__(self, downScaleFactors) :
 		"""downScaleFactors is the factor by which to downscale vertical and horizontal dimentions. (2,2) will halve the image in each dimension."""
@@ -353,7 +353,7 @@ class MaxPooling2D(LayerABC) :
 	def _setOutputs(self) :
 		self.outputs =  max_pool_2d(self.inputs, self.downScaleFactors)
 
-class Flatten(LayerABC) :
+class Flatten(Layer_ABC) :
 	"""Flattens the output of a convolution to a given numer of dimentions"""
 
 	def __init__(self, outdim) :

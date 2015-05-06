@@ -15,6 +15,7 @@ class DefaultScenario(LearningScenario_ABC):
 	"The default scenarios has a fixed learning rate and a fixed momentum"
  	def __init__(self, lr, momentum):
  		super(LearningScenario_ABC, self).__init__()
+ 		self.name = self.__class__.__name__
  		self.lr = lr
  		self.momentum = momentum
  		self.hyperParameters = ["lr", "momentum"]
@@ -34,6 +35,7 @@ class Fixed(LearningScenario_ABC):
 	"No learning, the layer weights stay fixed"
  	def __init__(self):
  		super(LearningScenario_ABC, self).__init__()
+ 		self.name = self.__class__.__name__
 
  	def getUpdates(self, layer, cost) :
 		return []
@@ -42,6 +44,8 @@ class GradientFloor(LearningScenario_ABC):
 	"On propagates the garidient of its absolute value is above floor"
  	def __init__(self, lr, momentum, floor):
  		super(LearningScenario_ABC, self).__init__()
+ 		self.name = self.__class__.__name__
+ 		
  		self.lr = lr
  		self.momentum = momentum
  		self.floor = floor

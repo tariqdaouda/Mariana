@@ -7,52 +7,42 @@ from pyGeno.tools.parsers.CSVTools import CSVFile
 import Mariana.layers as ML
 import theano.tensor as tt
 
-class DatasetMapper(object):
+class DatasetMapper(object) :
  	"""This class is here to map inputs of a network to datasets, or outputs to target sets.
  	If forceSameLengths all sets must have the same length."""
  	def __init__(self):
  		self.inputs = {}
  		self.outputs = {}
  		self.length = 0
- 		self.randomIds = None
- 		# self.locked = False
+ 		self.runIds = None
+ 		self.locked = False
 
- 	def _add(self, dct, layer, setOrLayer) :
+ 	def _add(self, dct, layer, aSet) :
  		"""This function is here because i don't like repeating myself"""
- 		# if issubclass(dct[layerName].__class__, ML.Layer_ABC) self.length != 0 and len(setOrLayer) != self.length:
- 		# 	raise ValueError("All sets must have the same number of elements. len(setOrLayer) = %s, but another set has a length of %s" % (len(setOrLayer), self.length))
-
- 		# if layer.name in self.inputs or layer.name in self.outputs:
- 		# 	raise ValueError("There is already a mapped layer by that name")
+ 		if self.length != 0 and len(aSet) != self.length:
+ 			raise ValueError("All sets must have the same number of elements. len(aSet) = %s, but another set has a length of %s" % (len(aSet), self.length))
  		
- 		if len(setOrLayer) > self.length :
-	 		self.length = len(setOrLayer)
- 		dct[layer.name] = setOrLayer
+ 		if len(aSet) > self.length :
+	 		self.length = len(aSet)
+ 		dct[layer.name] = aSet
 
- 	def addInput(self, layer, setOrLayer) :
+ 	def addInput(self, layer, aSet) :
  		"""Adds a mapping rule ex: .add(input1, dataset["train"]["examples"])"""
- 		# if self.locked :
- 		# 	raise ValueError("Can't add a map if a batch has already been requested")
- 		self._add(self.inputs, layer, setOrLayer)
+ 		self._add(self.inputs, layer, aSet)
 
- 	def addOutput(self, layer, setOrLayer) :
+ 	def addOutput(self, layer, aSet) :
  		"""Adds a mapping rule ex: .add(output1, dataset["train"]["targets"])"""
-		# if self.locked :
- 	# 		raise ValueError("Can't add a map if a batch has already been requested")
- 		self._add(self.outputs, layer, setOrLayer)
+ 		self._add(self.outputs, layer, aSet)
 
  	def shuffle(self) :
  		"""Shuffles the sets. You should call this function before asking for each minibatch if you want
  		random minibatches"""
- 		if self.randomIds is None :
-	 		self.randomIds = range(len(self))
- 		random.shuffle(self.randomIds)
+ 		if self.runIds is None :
+	 		self.runIds = range(len(self))
+ 		random.shuffle(self.runIds)
 
  	def _getLayerBatch(self, dct, layerName, i, size) :
  		"""This function is here because i don't like repeating myself"""
- 		# if not self.locked :
- 		# 	self.locked = True
-
  		if issubclass(dct[layerName].__class__, ML.Layer_ABC) :
  			return dct[layerName].outputs
 
@@ -61,11 +51,11 @@ class DatasetMapper(object):
  		else :
  			ssize = size
 
- 		if self.randomIds is None :
+ 		if self.runIds is None :
 	 		return dct[layerName][i:i+ssize]
 	 	else :
 	 		res = []
-	 		for ii in self.randomIds[i:i+ssize] :
+	 		for ii in self.runIds[i:i+ssize] :
 	 			res.append(dct[layerName][ii])
 	 		return res
 
@@ -101,11 +91,129 @@ class DatasetMapper(object):
  		layer name => batch"""
  		return self._getBatches(self.outputs, i, size)
 
+ 	def getBatches(self, i, size) :
+ 		return (self._getLayerBatch(self.outputs, layer, i, size), self._getBatches(self.outputs, i, size))
+
+ 	def getOutputNames(self) :
+ 		return self.outputs.keys()
+
  	def __len__(self) :
  		return self.length
 
  	def __str__(self) :
  		return str(self.inputs).replace(" : ", " => ")  + "\n" + str(self.outputs).replace(" : ", " => ") 
+
+class ClassSuperset(object) :
+
+	def __init__(self) :
+		self.sets = []
+		self.targets = []
+		self.maxLen = 0
+		self.minLen = 0
+
+		self.nbClasses = 0
+		self.runExamples = [] 
+		self.runTargets = []
+		self.runIds = []
+
+		self.name = time.clock() + random.randint(0, 100)
+
+	def add(self, aSet) :
+		self.sets.append(aSet)
+		self.targets.append( numpy.ones(len(aSet), dtype = "int32") * self.nbClasses )
+		if len(aSet) > self.maxLen :
+			self.maxLen = len(aSet)
+
+		if self.minLen == 0 or len(aSet) < self.minLen :
+			self.minLen = len(aSet)
+
+		self.nbClasses += 1
+
+	def shuffle(self) :
+		self.runExamples = []
+		self.runTargets = []
+		for i in xrange(len(self.sets)) :
+			s = self.sets[i]
+			t = self.targets[i]
+
+			off = len(s) - self.minLen
+			if off == 0 :
+				startPos = 0
+			else :
+				startPos = random.randrange(len(s) - self.minLen)
+			self.runExamples.extend( s[startPos: startPos + self.minLen] )
+			self.runTargets.extend( t[startPos: startPos + self.minLen] )
+
+		self.runIds = range(len(self.runExamples))
+		random.shuffle(self.runIds)
+
+	def getBatch(self, i, size) :
+		if size == "all" :
+			return (self.runExamples, self.runTargets)
+		else :
+			inps = []
+			outs = []
+			for ii in self.runIds[i : i + size] :
+				inps.append( self.runExamples[ii] )
+				outs.append( self.runTargets[ii] )
+			
+			return (inps, outs)
+
+	def __len__(self) :
+ 		return self.minLen
+
+class DatasetClassMapper(object):
+ 	"""docstring for DatasetClassMapper"""
+
+ 	def __init__(self):
+ 		self.inputs = {}
+ 		self.outputs = {}
+		self.supersets = {}
+		self.minLen = 0
+
+	def addInput(self, layer, superset) :
+		self.inputs[layer.name] = superset.name
+		self.supersets[superset.name] = superset
+		
+		if self.minLen == 0 or len(superset) < self.minLen :
+			self.minLen = len(superset)
+
+	def addOutput(self, layer, superset) :
+		self.outputs[layer.name] = superset.name
+		self.supersets[superset.name] = superset
+		
+		if self.minLen == 0 or len(superset) < self.minLen :
+			self.minLen = len(superset)
+
+	def shuffle(self) :
+		for m in self.supersets.itervalues() :
+			m.shuffle()
+
+ 	def getBatches(self, i, size) :
+		"""Returns a random set of examples for each class, all classes have an equal chance of apperance
+		regardless of their number of elements. If you want  the limit to be length of the whole set
+ 		instead of a mini batch you can set size to "all".
+ 		"""
+
+ 		batches = {}
+		for k, v in self.supersets.iteritems() :
+			batches[k] = v.getBatch(i, size)
+
+ 		inps = {}
+		for k, v in self.inputs.iteritems() :
+			inps[k] = batches[v][0]
+
+ 		outs = {}
+		for k, v in self.outputs.iteritems() :
+			outs[k] = batches[v][1]
+
+		return (inps, outs)
+
+	def getOutputNames(self) :
+ 		return self.outputs.keys()
+ 	
+	def __len__(self) :
+		return self.minLen
 
 class EndOfTraining(Exception) :
 	"""Exception raised when a training criteria is met"""
@@ -132,6 +240,7 @@ class TrainingRecorder(object):
 		self.csvFile = None
 
 		self._mustInit = True
+
 	def addMap(self, mapName, mapValue) :
 		if len(mapValue) > 1 :
 			self.maps[mapName] = mapValue
@@ -359,7 +468,7 @@ class DefaultTrainer(object):
 						dct["%s_%s" % (l.name, thingObj.name)] = 1
 					else :
 						for hp in thingObj.hyperParameters :
-							dct["%s_%s" % (l.name, hp)] = getattr(thingObj.name, hp)
+							dct["%s_%s" % (l.name, hp)] = getattr(thingObj, hp)
 
 		if reset :
 			self.reset()
@@ -413,17 +522,20 @@ class DefaultTrainer(object):
 							steps = xrange(0, len(aMap), self.miniBatchTestSize)
 							size = self.miniBatchTestSize
 
-					for outputName in aMap.outputs.iterkeys() :
+					for outputName in aMap.getOutputNames() :
 						vals[outputName] = []
 						for i in steps :
-							kwargs = aMap.getInputBatches(i, size = size)
-							kwargs.update({ "target" : aMap.getOutputLayerBatch(outputName, i, size = size)} )
-							if training :
-								res = model.train(outputName, **kwargs)
-							else :	
-								res = model.test(outputName, **kwargs)
-							vals[outputName].append(res[0])
-						self.recorder.updateScore(outputName, mapName, numpy.mean(vals[outputName]))
+							batchData = aMap.getBatches(i, size = size)
+							kwargs = batchData[0] #inputs
+							kwargs.update({ "target" : batchData[1][outputName][0]} )
+							print kwargs
+							stop
+						# 	if training :
+						# 		res = model.train(outputName, **kwargs)
+						# 	else :	
+						# 		res = model.test(outputName, **kwargs)
+						# 	vals[outputName].append(res[0])
+						# self.recorder.updateScore(outputName, mapName, numpy.mean(vals[outputName]))
 
 			runtime = (time.time() - startTime)/60
 			
