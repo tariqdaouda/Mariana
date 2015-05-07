@@ -105,7 +105,7 @@ class DatasetMapper(object) :
 
 class ClassSuperset(object) :
 
-	def __init__(self) :
+	def __init__(self, name = None) :
 		self.sets = []
 		self.targets = []
 		self.maxLen = 0
@@ -116,7 +116,10 @@ class ClassSuperset(object) :
 		self.runTargets = []
 		self.runIds = []
 
-		self.name = time.clock() + random.randint(0, 100)
+		if name is None :
+			self.name = time.clock() + random.randint(0, 100)
+		else :
+			self.name = name
 
 	def add(self, aSet) :
 		self.sets.append(aSet)
@@ -141,6 +144,7 @@ class ClassSuperset(object) :
 				startPos = 0
 			else :
 				startPos = random.randrange(len(s) - self.minLen)
+
 			self.runExamples.extend( s[startPos: startPos + self.minLen] )
 			self.runTargets.extend( t[startPos: startPos + self.minLen] )
 
@@ -149,6 +153,7 @@ class ClassSuperset(object) :
 
 	def getBatch(self, i, size) :
 		if size == "all" :
+			self.shuffle()
 			return (self.runExamples, self.runTargets)
 		else :
 			inps = []
@@ -157,6 +162,7 @@ class ClassSuperset(object) :
 				inps.append( self.runExamples[ii] )
 				outs.append( self.runTargets[ii] )
 			
+			# print i, size, (len(inps), len(outs))
 			return (inps, outs)
 
 	def __len__(self) :
@@ -207,6 +213,7 @@ class DatasetClassMapper(object):
 		for k, v in self.outputs.iteritems() :
 			outs[k] = batches[v][1]
 
+		# print (len(inps), len(outs))
 		return (inps, outs)
 
 	def getOutputNames(self) :
@@ -352,7 +359,7 @@ class TrainingRecorder(object):
 					if s not in self.noBestSets and self.currentScores[o.name][s][-1] == self.bestScores[o.name][s][-1] :
 						highlight = "+best+"
 					else :
-						highlight = ""
+						highlight = "(best: %s)" % (self.bestScores[o.name][s][-1])
 
 					print "    |->%s: %s %s" % (o.name, self.currentScores[o.name][s][-1], highlight)
 		else :
@@ -527,15 +534,13 @@ class DefaultTrainer(object):
 						for i in steps :
 							batchData = aMap.getBatches(i, size = size)
 							kwargs = batchData[0] #inputs
-							kwargs.update({ "target" : batchData[1][outputName][0]} )
-							print kwargs
-							stop
-						# 	if training :
-						# 		res = model.train(outputName, **kwargs)
-						# 	else :	
-						# 		res = model.test(outputName, **kwargs)
-						# 	vals[outputName].append(res[0])
-						# self.recorder.updateScore(outputName, mapName, numpy.mean(vals[outputName]))
+							kwargs.update({ "target" : batchData[1][outputName]} )
+							if training :
+								res = model.train(outputName, **kwargs)
+							else :	
+								res = model.test(outputName, **kwargs)
+							vals[outputName].append(res[0])
+						self.recorder.updateScore(outputName, mapName, numpy.mean(vals[outputName]))
 
 			runtime = (time.time() - startTime)/60
 			
