@@ -4,104 +4,23 @@ from collections import OrderedDict
 
 from pyGeno.tools.parsers.CSVTools import CSVFile
 
-import Mariana.layers as ML
+import Mariana.settings as MSET
+
 import theano.tensor as tt
 
-class DatasetMapper(object) :
- 	"""This class is here to map inputs of a network to datasets, or outputs to target sets.
- 	If forceSameLengths all sets must have the same length."""
- 	def __init__(self):
- 		self.inputs = {}
- 		self.outputs = {}
- 		self.length = 0
- 		self.runIds = None
- 		self.locked = False
+class SingleSet(object) :
+	def __init__(self, values) :
+		self.values = values
+		self.name = time.clock() + random.randint(0, 100)
 
- 	def _add(self, dct, layer, aSet) :
- 		"""This function is here because i don't like repeating myself"""
- 		if self.length != 0 and len(aSet) != self.length:
- 			raise ValueError("All sets must have the same number of elements. len(aSet) = %s, but another set has a length of %s" % (len(aSet), self.length))
- 		
- 		if len(aSet) > self.length :
-	 		self.length = len(aSet)
- 		dct[layer.name] = aSet
+	def getAll(self) :
+		return self.values
+	
+	def __getitem__(self, i) :
+		return self.values[i]
 
- 	def addInput(self, layer, aSet) :
- 		"""Adds a mapping rule ex: .add(input1, dataset["train"]["examples"])"""
- 		self._add(self.inputs, layer, aSet)
-
- 	def addOutput(self, layer, aSet) :
- 		"""Adds a mapping rule ex: .add(output1, dataset["train"]["targets"])"""
- 		self._add(self.outputs, layer, aSet)
-
- 	def shuffle(self) :
- 		"""Shuffles the sets. You should call this function before asking for each minibatch if you want
- 		random minibatches"""
- 		if self.runIds is None :
-	 		self.runIds = range(len(self))
- 		random.shuffle(self.runIds)
-
- 	def _getLayerBatch(self, dct, layerName, i, size) :
- 		"""This function is here because i don't like repeating myself"""
- 		if issubclass(dct[layerName].__class__, ML.Layer_ABC) :
- 			return dct[layerName].outputs
-
- 		if size == "all" :
- 			ssize = len(dct[layerName])
- 		else :
- 			ssize = size
-
- 		if self.runIds is None :
-	 		return dct[layerName][i:i+ssize]
-	 	else :
-	 		res = []
-	 		for ii in self.runIds[i:i+ssize] :
-	 			res.append(dct[layerName][ii])
-	 		return res
-
- 	def _getBatches(self, dct, i, size) :
- 		"""This function is here because i don't like repeating myself"""
- 		res = {}
- 		for k in dct :
- 			res[k] = self._getLayerBatch(dct, k, i, size)
-
- 		return res
-
-	def getInputLayerBatch(self, layer, i, size) :
-		"""Returns a batch for a given input layer sarting at position i, and of length size.
- 		If you want  the limit to be length of the whole set
- 		instead of a mini batch you can set size to "all".
- 		"""
- 		return self._getLayerBatch(self.inputs, layer, i, size)
-
- 	def getInputBatches(self, i, size) :
- 		"""Applies getInputLayerBatch iteratively for all layers and returns a dict:
- 		layer name => batch"""
- 		return self._getBatches(self.inputs, i, size)
-
- 	def getOutputLayerBatch(self, layer, i, size) :
-		"""Returns a batch for a given output layer sarting at position i, and of length size.
- 		If you want  the limit to be length of the whole set
- 		instead of a mini batch you can set size to "all".
- 		"""
- 		return self._getLayerBatch(self.outputs, layer, i, size)
- 	
- 	def getOutputBatches(self, i, size) :
-		"""Applies getOutputLayerBatch iteratively for all layers and returns a dict:
- 		layer name => batch"""
- 		return self._getBatches(self.outputs, i, size)
-
- 	def getBatches(self, i, size) :
- 		return (self._getLayerBatch(self.outputs, layer, i, size), self._getBatches(self.outputs, i, size))
-
- 	def getOutputNames(self) :
- 		return self.outputs.keys()
-
- 	def __len__(self) :
- 		return self.length
-
- 	def __str__(self) :
- 		return str(self.inputs).replace(" : ", " => ")  + "\n" + str(self.outputs).replace(" : ", " => ") 
+	def __len__(self) :
+ 		return len(self.values)
 
 class ClassSuperset(object) :
 
@@ -110,16 +29,25 @@ class ClassSuperset(object) :
 		self.targets = []
 		self.maxLen = 0
 		self.minLen = 0
+		self.smallestSetLen = 0
 
 		self.nbClasses = 0
 		self.runExamples = [] 
 		self.runTargets = []
 		self.runIds = []
 
+		self.currentInps = []
+		self.currentOuts = []
+
 		if name is None :
 			self.name = time.clock() + random.randint(0, 100)
 		else :
 			self.name = name
+
+	def setMinLen(self, v) :
+		if v > self.smallestSetLen :
+			raise ValueError("Min length cannot be smaller that le length of the smallest set: %d" % self.smallestSetLen)
+		self.minLen = v
 
 	def add(self, aSet) :
 		self.sets.append(aSet)
@@ -129,10 +57,14 @@ class ClassSuperset(object) :
 
 		if self.minLen == 0 or len(aSet) < self.minLen :
 			self.minLen = len(aSet)
+			self.smallestSetLen = self.minLen
 
 		self.nbClasses += 1
 
 	def shuffle(self) :
+		if len(self.runIds) == 0 :
+			self.runIds = range(len(self.minLen))
+
 		self.runExamples = []
 		self.runTargets = []
 		for i in xrange(len(self.sets)) :
@@ -148,52 +80,103 @@ class ClassSuperset(object) :
 			self.runExamples.extend( s[startPos: startPos + self.minLen] )
 			self.runTargets.extend( t[startPos: startPos + self.minLen] )
 
-		self.runIds = range(len(self.runExamples))
 		random.shuffle(self.runIds)
 
-	def getBatch(self, i, size) :
-		if size == "all" :
-			self.shuffle()
-			return (self.runExamples, self.runTargets)
-		else :
-			inps = []
-			outs = []
-			for ii in self.runIds[i : i + size] :
-				inps.append( self.runExamples[ii] )
-				outs.append( self.runTargets[ii] )
-			
-			# print i, size, (len(inps), len(outs))
-			return (inps, outs)
+	def getAll(self) :
+		self.shuffle()
+		return (self.runExamples, self.runTargets)
+
+	def __getitem__(self, i) :
+		return (self.runExamples[i], self.runTargets[i])
 
 	def __len__(self) :
  		return self.minLen
 
-class DatasetClassMapper(object):
+class DatasetMapper_2(object):
  	"""docstring for DatasetClassMapper"""
 
  	def __init__(self):
- 		self.inputs = {}
- 		self.outputs = {}
-		self.supersets = {}
+ 		self.inputSets = {}
+ 		self.outputSets = {}
+ 		self.inputNames = set()
+ 		self.outputNames = set()
+		self.sets = {}
+
+		self.sync_from_inputs = {}
+		self.sync_from_outputs = {}
+		
 		self.minLen = 0
+		self.runIds = []
 
-	def addInput(self, layer, superset) :
-		self.inputs[layer.name] = superset.name
-		self.supersets[superset.name] = superset
-		
-		if self.minLen == 0 or len(superset) < self.minLen :
-			self.minLen = len(superset)
+	def mapInputs(self, someSet, layers) :
 
-	def addOutput(self, layer, superset) :
-		self.outputs[layer.name] = superset.name
-		self.supersets[superset.name] = superset
+		if someSet.__class__ not in [ClassSuperset, SingleSet] :
+			aSet = SingleSet(someSet)
+		else :
+			aSet = someSet
+
+		for l in layers :
+			if l.type == MSET.TYPE_INPUT_LAYER :
+				try :
+					self.inputSets[aSet.name].append(l)
+				except :
+					self.inputSets[aSet.name] = [l]
+			else :
+				raise ValueError("Only input layers are allowed")
+
+			self.inputNames.add(l.name)
+		self.sets[aSet.name] = aSet
 		
-		if self.minLen == 0 or len(superset) < self.minLen :
-			self.minLen = len(superset)
+		if self.minLen == 0 or len(aSet) < self.minLen :
+			self.minLen = len(aSet)
+
+	def mapOutputs(self, someSet, layers) :
+
+		if someSet.__class__ is not ClassSuperset :
+			aSet = SingleSet(someSet)
+		else :
+			aSet = someSet
+
+		for l in layers :
+			if l.type == MSET.TYPE_OUTPUT_LAYER :
+				try :
+					self.outputSets[aSet.name].append(l)
+				except :
+					self.outputSets[aSet.name] = [l]
+			else :
+				raise ValueError("Only output layers are allowed")
+			
+			self.outputNames.add(l.name)
+		
+		self.sets[aSet.name] = aSet
+		
+		if self.minLen == 0 or len(aSet) < self.minLen :
+			self.minLen = len(aSet)
+
+	def syncWithInputLayer(self, layer, layers) :
+		if layer.name not in self.inputNames :
+			raise ValueError("There's no input layer by the name '%s'" % layer.name)
+		
+		for l in layers :
+			self.sync_from_inputs[layer.name][l]
+	
+	def syncWithOutputLayer(self, layer, layers) :
+		if layer.name not in self.inputNames :
+			raise ValueError("There's no output layer by the name '%s'" % layer.name)
+		
+		for l in layers :
+			self.sync_from_outputs[layer.name][l]
+
 
 	def shuffle(self) :
-		for m in self.supersets.itervalues() :
-			m.shuffle()
+		for s in self.sets.itervalues() :
+			if s.__class__ is ClassSuperset 
+				s.setMinLen(self.minLen)
+				s.shuffle()
+		
+		if len(self.runIds) == 0 :
+			self.runIds = range(len(self.minLen))
+		random.shuffle(self.runIds)
 
  	def getBatches(self, i, size) :
 		"""Returns a random set of examples for each class, all classes have an equal chance of apperance
@@ -202,18 +185,40 @@ class DatasetClassMapper(object):
  		"""
 
  		batches = {}
-		for k, v in self.supersets.iteritems() :
-			batches[k] = v.getBatch(i, size)
-
  		inps = {}
-		for k, v in self.inputs.iteritems() :
-			inps[k] = batches[v][0]
+		outs = {}
+		for ii in xrange(i, min( (i+size), self.minLen ) ) :
+			for k, v in self.sets.iteritems() :
+				elmt = v.get(ii)
+				if v.__class__ is ClassSuperset :
+					for l in self.inputSets[k] :
+						inps[l.name] = elmt[0]
+					for l in self.outputSets[k] :
+						outs[l.name] = elmt[1]
+				else :
+					for l in self.inputSets[k] :
+						inps[l.name] = elmt
+					for l in self.outputSets[k] :
+						outs[l.name] = elmt
+		
+		for k, layers in self.sync_from_inputs.iteritems() :
+			for l in layers :
+				if layer.type == MSET.TYPE_OUTPUT_LAYER :
+					outs[layers.name] = outs[k]
+				elif layer.type == MSET.TYPE_INPUT_LAYER :
+					inps[layers.name] = inps[k]
+				else :
+					raise ValueError("Syncronized layer ''%s is neither an input nor an output" % l.name)
+		
+		for k, layers in self.sync_from_outputs.iteritems() :
+			for l in layers :
+				if layer.type == MSET.TYPE_OUTPUT_LAYER :
+					outs[layers.name] = outs[k]
+				elif layer.type == MSET.TYPE_INPUT_LAYER :
+					inps[layers.name] = inps[k]
+				else :
+					raise ValueError("Syncronized layer ''%s is neither an input nor an output" % l.name)
 
- 		outs = {}
-		for k, v in self.outputs.iteritems() :
-			outs[k] = batches[v][1]
-
-		# print (len(inps), len(outs))
 		return (inps, outs)
 
 	def getOutputNames(self) :
@@ -358,7 +363,7 @@ class TrainingRecorder(object):
 				for o in self.outputLayers :
 					if s not in self.noBestSets and self.currentScores[o.name][s][-1] == self.bestScores[o.name][s][-1] :
 						highlight = "+best+"
-					else :
+					elif len(self.bestScores[o.name][s]) > 0 :
 						highlight = "(best: %s)" % (self.bestScores[o.name][s][-1])
 
 					print "    |->%s: %s %s" % (o.name, self.currentScores[o.name][s][-1], highlight)
@@ -490,7 +495,7 @@ class DefaultTrainer(object):
 				pass
 			setHPs(l, "learningScenario", layersForLegend)
 			setHPs(l, "decorators", layersForLegend)
-			if l.type == "output" :
+			if l.type == MSET.TYPE_OUTPUT_LAYER :
 				setHPs(l, "costObject", layersForLegend)
 
 		legend.extend(layersForLegend.keys())

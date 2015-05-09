@@ -8,6 +8,8 @@ import theano, numpy, time
 import theano.tensor as tt
 #import Mariana.rules as MR
 import Mariana.activations as MA
+import Mariana.settings as MSET
+
 from network import Network
 from wrappers import TheanoFunction
 
@@ -136,13 +138,13 @@ class Input(Layer_ABC) :
 	def __init__(self, nbInputs, name = None, **kwargs) :
 		Layer_ABC.__init__(self, nbInputs, name = name, **kwargs)
 		self.kwargs = kwargs
-		self.type = "input"
+		self.type = MSET.TYPE_INPUT_LAYER
 		self.nbInputs = nbInputs
 		self.network = Network()#y, self)
 		self.network.addInput(self)
 
 	def _setOutputs(self) :
-		"initialises the ouput to be the same as the inputs"
+		"initialises the output to be the same as the inputs"
 		self.outputs = tt.matrix(name = self.name + "_X")
 
 	def _dot_representation(self) :
@@ -250,7 +252,7 @@ class Output_ABC(Hidden) :
 		"""The output layer defines the learning rate (lr), as well as any other parameters related to the learning"""
 
 		Hidden.__init__(self, nbOutputs, activation = activation, name = name, **kwargs)
-		self.type = "output"
+		self.type = MSET.TYPE_OUTPUT_LAYER
 		self.target = None
 		self.dependencies = OrderedDict()
 		self.costObject = costObject
