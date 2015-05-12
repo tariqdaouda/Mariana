@@ -63,7 +63,7 @@ class ClassSuperset(object) :
 
 	def shuffle(self) :
 		if len(self.runIds) == 0 :
-			self.runIds = range(len(self.minLen))
+			self.runIds = range(self.minLen)
 
 		self.runExamples = []
 		self.runTargets = []
@@ -92,90 +92,94 @@ class ClassSuperset(object) :
 	def __len__(self) :
  		return self.minLen
 
-class DatasetMapper_2(object):
- 	"""docstring for DatasetClassMapper"""
+class DatasetMapper(object):
+ 	"""docstring for DatasetMapper"""
 
  	def __init__(self):
  		self.inputSets = {}
  		self.outputSets = {}
- 		self.inputNames = set()
- 		self.outputNames = set()
-		self.sets = {}
+ 		self.layerNames = set()
+ 		self.outputLayerNames = set()
+ 		self.sets = {}
 
-		self.sync_from_inputs = {}
-		self.sync_from_outputs = {}
+		self.syncedLayers = {}
 		
 		self.minLen = 0
 		self.runIds = []
 
-	def mapInputs(self, someSet, layers) :
+	def mapInput(self, someSet, layer) :
+		if layer.name in self.layerNames :
+			raise ValueError("There is already a registered layer by the name of: '%s'" % (layer.name))
 
 		if someSet.__class__ not in [ClassSuperset, SingleSet] :
 			aSet = SingleSet(someSet)
 		else :
 			aSet = someSet
 
-		for l in layers :
-			if l.type == MSET.TYPE_INPUT_LAYER :
-				try :
-					self.inputSets[aSet.name].append(l)
-				except :
-					self.inputSets[aSet.name] = [l]
-			else :
-				raise ValueError("Only input layers are allowed")
+		if layer.type == MSET.TYPE_INPUT_LAYER :
+			try :
+				self.inputSets[aSet.name].append(layer)
+			except :
+				self.inputSets[aSet.name] = [layer]
+		else :
+			raise ValueError("Only input layers are allowed")
 
-			self.inputNames.add(l.name)
+		self.layerNames.add(layer.name)
 		self.sets[aSet.name] = aSet
 		
 		if self.minLen == 0 or len(aSet) < self.minLen :
 			self.minLen = len(aSet)
 
-	def mapOutputs(self, someSet, layers) :
+	def mapOutput(self, someSet, layer) :
+		if layer.name in self.layerNames :
+			raise ValueError("There is already a registered layer by the name of: '%s'" % (layer.name))
 
 		if someSet.__class__ is not ClassSuperset :
 			aSet = SingleSet(someSet)
 		else :
 			aSet = someSet
 
-		for l in layers :
-			if l.type == MSET.TYPE_OUTPUT_LAYER :
-				try :
-					self.outputSets[aSet.name].append(l)
-				except :
-					self.outputSets[aSet.name] = [l]
-			else :
-				raise ValueError("Only output layers are allowed")
-			
-			self.outputNames.add(l.name)
+		if layer.type == MSET.TYPE_OUTPUT_LAYER :
+			try :
+				self.outputSets[aSet.name].append(layer)
+			except :
+				self.outputSets[aSet.name] = [layer]
+		else :
+			raise ValueError("Only output layers are allowed")
 		
+		self.layerNames.add(layer.name)
+		self.outputLayerNames.add(layer.name)
 		self.sets[aSet.name] = aSet
 		
 		if self.minLen == 0 or len(aSet) < self.minLen :
 			self.minLen = len(aSet)
 
-	def syncWithInputLayer(self, layer, layers) :
-		if layer.name not in self.inputNames :
-			raise ValueError("There's no input layer by the name '%s'" % layer.name)
-		
-		for l in layers :
-			self.sync_from_inputs[layer.name][l]
-	
-	def syncWithOutputLayer(self, layer, layers) :
-		if layer.name not in self.inputNames :
-			raise ValueError("There's no output layer by the name '%s'" % layer.name)
-		
-		for l in layers :
-			self.sync_from_outputs[layer.name][l]
+	def syncLayers(self, refLayer, layer) :
+		"""Ensures that all layers in 'layers' receive the same data a refLayer"""
 
+		if refLayer.name not in self.layerNames :
+			raise ValueError("There's no registered refLayer by the name '%s'" % refLayer.name)
+		
+		if layer.name in self.layerNames :
+			raise ValueError("There is already a registered layer by the name of: '%s'" % (layer.name))
+		
+		try :
+			self.syncedLayers[refLayer.name].append(layer)
+		except KeyError, IndexError:
+			self.syncedLayers[refLayer.name] = [layer]
+		
+		if layer.type == MSET.TYPE_OUTPUT_LAYER :
+			self.outputLayerNames.add(layer.name)
+		self.layerNames.add(layer.name)
 
 	def shuffle(self) :
 		for s in self.sets.itervalues() :
-			if s.__class__ is ClassSuperset 
+			if s.__class__ is ClassSuperset : 
 				s.setMinLen(self.minLen)
 				s.shuffle()
 		
 		if len(self.runIds) == 0 :
-			self.runIds = range(len(self.minLen))
+			self.runIds = range(self.minLen)
 		random.shuffle(self.runIds)
 
  	def getBatches(self, i, size) :
@@ -184,12 +188,45 @@ class DatasetMapper_2(object):
  		instead of a mini batch you can set size to "all".
  		"""
 
- 		batches = {}
  		inps = {}
 		outs = {}
-		for ii in xrange(i, min( (i+size), self.minLen ) ) :
+		for ii in xrange(i, self.minLen, size) :
 			for k, v in self.sets.iteritems() :
-				elmt = v.get(ii)
+				elmt = v[ii: ii+size]
+				if v.__class__ is ClassSuperset :
+					for l in self.inputSets[k] :
+						inps[l.name] = elmt[0]
+					for l in self.outputSets[k] :
+						outs[l.name] = elmt[1]
+				else :
+					for l in self.inputSets[k] :
+						inps[l.name] = elmt
+					for l in self.outputSets[k] :
+						outs[l.name] = elmt
+
+		for k, layers in self.syncedLayers.iteritems() :
+			for l in layers :
+				if l.type == MSET.TYPE_OUTPUT_LAYER :
+					try :
+						outs[l.name] = inps[k]
+					except KeyError :
+						outs[l.name] = outs[k]
+
+				elif l.type == MSET.TYPE_INPUT_LAYER :
+					try :
+						inps[l.name] = inps[k]
+					except KeyError :
+						outs[l.name] = outs[k]
+				else :
+					raise ValueError("Synced layer ''%s is neither an input nor an output" % l.name)
+		
+		return (inps, outs)
+
+	def getAll(self) :
+		inps = {}
+		outs = {}
+		for k, v in self.sets.iteritems() :
+				elmt = v.getAll()
 				if v.__class__ is ClassSuperset :
 					for l in self.inputSets[k] :
 						inps[l.name] = elmt[0]
@@ -201,28 +238,25 @@ class DatasetMapper_2(object):
 					for l in self.outputSets[k] :
 						outs[l.name] = elmt
 		
-		for k, layers in self.sync_from_inputs.iteritems() :
+		for k, layers in self.syncedLayers.iteritems() :
 			for l in layers :
-				if layer.type == MSET.TYPE_OUTPUT_LAYER :
-					outs[layers.name] = outs[k]
-				elif layer.type == MSET.TYPE_INPUT_LAYER :
-					inps[layers.name] = inps[k]
+				if l.type == MSET.TYPE_OUTPUT_LAYER :
+					try :
+						outs[l.name] = inps[k]
+					except KeyError :
+						outs[l.name] = outs[k]
+				elif l.type == MSET.TYPE_INPUT_LAYER :
+					try :
+						inps[l.name] = inps[k]
+					except KeyError :
+						outs[l.name] = outs[k]
 				else :
-					raise ValueError("Syncronized layer ''%s is neither an input nor an output" % l.name)
+					raise ValueError("Synced layer ''%s is neither an input nor an output" % l.name)
 		
-		for k, layers in self.sync_from_outputs.iteritems() :
-			for l in layers :
-				if layer.type == MSET.TYPE_OUTPUT_LAYER :
-					outs[layers.name] = outs[k]
-				elif layer.type == MSET.TYPE_INPUT_LAYER :
-					inps[layers.name] = inps[k]
-				else :
-					raise ValueError("Syncronized layer ''%s is neither an input nor an output" % l.name)
-
 		return (inps, outs)
 
 	def getOutputNames(self) :
- 		return self.outputs.keys()
+ 		return self.outputLayerNames
  	
 	def __len__(self) :
 		return self.minLen
@@ -365,6 +399,8 @@ class TrainingRecorder(object):
 						highlight = "+best+"
 					elif len(self.bestScores[o.name][s]) > 0 :
 						highlight = "(best: %s)" % (self.bestScores[o.name][s][-1])
+					else :
+						highlight = ""
 
 					print "    |->%s: %s %s" % (o.name, self.currentScores[o.name][s][-1], highlight)
 		else :
@@ -372,15 +408,19 @@ class TrainingRecorder(object):
 
 class DefaultTrainer(object):
 	"""Should serve for most purposes"""
-	def __init__(self, trainMaps, testMaps, validationMaps, miniBatchSize, stopCriteria, miniBatchTestSize = "all", testFrequency = 1, saveOnException = True) :
+	def __init__(self, trainMaps, testMaps, validationMaps, trainMiniBatchSize, stopCriteria, testMiniBatchSize = "all", testFrequency = 1, saveOnException = True) :
 		
 		self.maps = {}
 		self.maps["train"] = trainMaps
 		self.maps["test"] = testMaps
 		self.maps["validation"] = validationMaps
 		
-		self.miniBatchSize = miniBatchSize
-		self.miniBatchTestSize = miniBatchTestSize
+		self.miniBatchSizes = {
+			"train" : trainMiniBatchSize,
+			"test" : testMiniBatchSize,
+			"validation" : testMiniBatchSize
+		}
+
 		self.stopCriteria = stopCriteria
 		
 		self.testFrequency = testFrequency
@@ -517,35 +557,27 @@ class DefaultTrainer(object):
 		
 			for mapName in ["train", "test", "validation"] :		
 				aMap = self.maps[mapName]
-				vals = {}
-				if len(aMap) > 0 and (self.currentEpoch % self.testFrequency == 0) :
-					training = False
-					if mapName == "train" :
-						if shuffleMinibatches :
-							aMap.shuffle()
-						steps = xrange(0, len(aMap), self.miniBatchSize)
-						size = self.miniBatchSize
-						training = True
-					else :
-						if self.miniBatchTestSize == "all" :
-							steps = [0]
-							size = "all"
-						else :
-							steps = xrange(0, len(aMap), self.miniBatchTestSize)
-							size = self.miniBatchTestSize
-
-					for outputName in aMap.getOutputNames() :
-						vals[outputName] = []
-						for i in steps :
-							batchData = aMap.getBatches(i, size = size)
+				if len(aMap) > 0 :
+					if self.miniBatchSizes[mapName] == "all" :
+						for outputName in aMap.getOutputNames() :
+							batchData = aMap.getAll()
 							kwargs = batchData[0] #inputs
 							kwargs.update({ "target" : batchData[1][outputName]} )
-							if training :
+							res = model.train(outputName, **kwargs)
+							self.recorder.updateScore(outputName, mapName, res[0])
+					else :
+						if shuffleMinibatches :
+							aMap.shuffle()
+						vals = {}
+						for outputName in aMap.getOutputNames() :
+							vals[outputName] = []
+							for i in xrange(0, len(aMap), self.miniBatchSizes[mapName]) :
+								batchData = aMap.getBatches(i, self.miniBatchSizes[mapName])
+								kwargs = batchData[0] #inputs
+								kwargs.update({ "target" : batchData[1][outputName]} )
 								res = model.train(outputName, **kwargs)
-							else :	
-								res = model.test(outputName, **kwargs)
-							vals[outputName].append(res[0])
-						self.recorder.updateScore(outputName, mapName, numpy.mean(vals[outputName]))
+								vals[outputName].append(res[0])
+							self.recorder.updateScore(outputName, mapName, numpy.mean(vals[outputName]))
 
 			runtime = (time.time() - startTime)/60
 			
