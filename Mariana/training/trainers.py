@@ -3,263 +3,10 @@ import numpy
 from collections import OrderedDict
 
 from pyGeno.tools.parsers.CSVTools import CSVFile
+import theano.tensor as tt
 
 import Mariana.settings as MSET
 
-import theano.tensor as tt
-
-class SingleSet(object) :
-	def __init__(self, values) :
-		self.values = values
-		self.name = time.clock() + random.randint(0, 100)
-
-	def getAll(self) :
-		return self.values
-	
-	def __getitem__(self, i) :
-		return self.values[i]
-
-	def __len__(self) :
- 		return len(self.values)
-
-class ClassSuperset(object) :
-
-	def __init__(self, name = None) :
-		self.sets = []
-		self.targets = []
-		self.maxLen = 0
-		self.minLen = 0
-		self.smallestSetLen = 0
-
-		self.nbClasses = 0
-		self.runExamples = [] 
-		self.runTargets = []
-		self.runIds = []
-
-		self.currentInps = []
-		self.currentOuts = []
-
-		if name is None :
-			self.name = time.clock() + random.randint(0, 100)
-		else :
-			self.name = name
-
-	def setMinLen(self, v) :
-		if v > self.smallestSetLen :
-			raise ValueError("Min length cannot be smaller that le length of the smallest set: %d" % self.smallestSetLen)
-		self.minLen = v
-
-	def add(self, aSet) :
-		self.sets.append(aSet)
-		self.targets.append( numpy.ones(len(aSet), dtype = "int32") * self.nbClasses )
-		if len(aSet) > self.maxLen :
-			self.maxLen = len(aSet)
-
-		if self.minLen == 0 or len(aSet) < self.minLen :
-			self.minLen = len(aSet)
-			self.smallestSetLen = self.minLen
-
-		self.nbClasses += 1
-
-	def shuffle(self) :
-		if len(self.runIds) == 0 :
-			self.runIds = range(self.minLen)
-
-		self.runExamples = []
-		self.runTargets = []
-		for i in xrange(len(self.sets)) :
-			s = self.sets[i]
-			t = self.targets[i]
-
-			off = len(s) - self.minLen
-			if off == 0 :
-				startPos = 0
-			else :
-				startPos = random.randrange(len(s) - self.minLen)
-
-			self.runExamples.extend( s[startPos: startPos + self.minLen] )
-			self.runTargets.extend( t[startPos: startPos + self.minLen] )
-
-		random.shuffle(self.runIds)
-
-	def getAll(self) :
-		self.shuffle()
-		return (self.runExamples, self.runTargets)
-
-	def __getitem__(self, i) :
-		return (self.runExamples[i], self.runTargets[i])
-
-	def __len__(self) :
- 		return self.minLen
-
-class DatasetMapper(object):
- 	"""docstring for DatasetMapper"""
-
- 	def __init__(self):
- 		self.inputSets = {}
- 		self.outputSets = {}
- 		self.layerNames = set()
- 		self.outputLayerNames = set()
- 		self.sets = {}
-
-		self.syncedLayers = {}
-		
-		self.minLen = 0
-		self.runIds = []
-
-	def mapInput(self, someSet, layer) :
-		if layer.name in self.layerNames :
-			raise ValueError("There is already a registered layer by the name of: '%s'" % (layer.name))
-
-		if someSet.__class__ not in [ClassSuperset, SingleSet] :
-			aSet = SingleSet(someSet)
-		else :
-			aSet = someSet
-
-		if layer.type == MSET.TYPE_INPUT_LAYER :
-			try :
-				self.inputSets[aSet.name].append(layer)
-			except :
-				self.inputSets[aSet.name] = [layer]
-		else :
-			raise ValueError("Only input layers are allowed")
-
-		self.layerNames.add(layer.name)
-		self.sets[aSet.name] = aSet
-		
-		if self.minLen == 0 or len(aSet) < self.minLen :
-			self.minLen = len(aSet)
-
-	def mapOutput(self, someSet, layer) :
-		if layer.name in self.layerNames :
-			raise ValueError("There is already a registered layer by the name of: '%s'" % (layer.name))
-
-		if someSet.__class__ is not ClassSuperset :
-			aSet = SingleSet(someSet)
-		else :
-			aSet = someSet
-
-		if layer.type == MSET.TYPE_OUTPUT_LAYER :
-			try :
-				self.outputSets[aSet.name].append(layer)
-			except :
-				self.outputSets[aSet.name] = [layer]
-		else :
-			raise ValueError("Only output layers are allowed")
-		
-		self.layerNames.add(layer.name)
-		self.outputLayerNames.add(layer.name)
-		self.sets[aSet.name] = aSet
-		
-		if self.minLen == 0 or len(aSet) < self.minLen :
-			self.minLen = len(aSet)
-
-	def syncLayers(self, refLayer, layer) :
-		"""Ensures that all layers in 'layers' receive the same data a refLayer"""
-
-		if refLayer.name not in self.layerNames :
-			raise ValueError("There's no registered refLayer by the name '%s'" % refLayer.name)
-		
-		if layer.name in self.layerNames :
-			raise ValueError("There is already a registered layer by the name of: '%s'" % (layer.name))
-		
-		try :
-			self.syncedLayers[refLayer.name].append(layer)
-		except KeyError, IndexError:
-			self.syncedLayers[refLayer.name] = [layer]
-		
-		if layer.type == MSET.TYPE_OUTPUT_LAYER :
-			self.outputLayerNames.add(layer.name)
-		self.layerNames.add(layer.name)
-
-	def shuffle(self) :
-		for s in self.sets.itervalues() :
-			if s.__class__ is ClassSuperset : 
-				s.setMinLen(self.minLen)
-				s.shuffle()
-		
-		if len(self.runIds) == 0 :
-			self.runIds = range(self.minLen)
-		random.shuffle(self.runIds)
-
- 	def getBatches(self, i, size) :
-		"""Returns a random set of examples for each class, all classes have an equal chance of apperance
-		regardless of their number of elements. If you want  the limit to be length of the whole set
- 		instead of a mini batch you can set size to "all".
- 		"""
-
- 		inps = {}
-		outs = {}
-		for ii in xrange(i, self.minLen, size) :
-			for k, v in self.sets.iteritems() :
-				elmt = v[ii: ii+size]
-				if v.__class__ is ClassSuperset :
-					for l in self.inputSets[k] :
-						inps[l.name] = elmt[0]
-					for l in self.outputSets[k] :
-						outs[l.name] = elmt[1]
-				else :
-					for l in self.inputSets[k] :
-						inps[l.name] = elmt
-					for l in self.outputSets[k] :
-						outs[l.name] = elmt
-
-		for k, layers in self.syncedLayers.iteritems() :
-			for l in layers :
-				if l.type == MSET.TYPE_OUTPUT_LAYER :
-					try :
-						outs[l.name] = inps[k]
-					except KeyError :
-						outs[l.name] = outs[k]
-
-				elif l.type == MSET.TYPE_INPUT_LAYER :
-					try :
-						inps[l.name] = inps[k]
-					except KeyError :
-						outs[l.name] = outs[k]
-				else :
-					raise ValueError("Synced layer ''%s is neither an input nor an output" % l.name)
-		
-		return (inps, outs)
-
-	def getAll(self) :
-		inps = {}
-		outs = {}
-		for k, v in self.sets.iteritems() :
-				elmt = v.getAll()
-				if v.__class__ is ClassSuperset :
-					for l in self.inputSets[k] :
-						inps[l.name] = elmt[0]
-					for l in self.outputSets[k] :
-						outs[l.name] = elmt[1]
-				else :
-					for l in self.inputSets[k] :
-						inps[l.name] = elmt
-					for l in self.outputSets[k] :
-						outs[l.name] = elmt
-		
-		for k, layers in self.syncedLayers.iteritems() :
-			for l in layers :
-				if l.type == MSET.TYPE_OUTPUT_LAYER :
-					try :
-						outs[l.name] = inps[k]
-					except KeyError :
-						outs[l.name] = outs[k]
-				elif l.type == MSET.TYPE_INPUT_LAYER :
-					try :
-						inps[l.name] = inps[k]
-					except KeyError :
-						outs[l.name] = outs[k]
-				else :
-					raise ValueError("Synced layer ''%s is neither an input nor an output" % l.name)
-		
-		return (inps, outs)
-
-	def getOutputNames(self) :
- 		return self.outputLayerNames
- 	
-	def __len__(self) :
-		return self.minLen
 
 class EndOfTraining(Exception) :
 	"""Exception raised when a training criteria is met"""
@@ -563,20 +310,30 @@ class DefaultTrainer(object):
 							batchData = aMap.getAll()
 							kwargs = batchData[0] #inputs
 							kwargs.update({ "target" : batchData[1][outputName]} )
-							res = model.train(outputName, **kwargs)
+							if mapName == "train" :
+								res = model.train(outputName, **kwargs)
+							else :
+								res = model.test(outputName, **kwargs)
 							self.recorder.updateScore(outputName, mapName, res[0])
 					else :
 						if shuffleMinibatches :
 							aMap.shuffle()
 						vals = {}
-						for outputName in aMap.getOutputNames() :
-							vals[outputName] = []
-							for i in xrange(0, len(aMap), self.miniBatchSizes[mapName]) :
-								batchData = aMap.getBatches(i, self.miniBatchSizes[mapName])
-								kwargs = batchData[0] #inputs
+						for i in xrange(0, len(aMap), self.miniBatchSizes[mapName]) :
+							batchData = aMap.getBatches(i, self.miniBatchSizes[mapName])
+							kwargs = batchData[0] #inputs
+							for outputName in aMap.getOutputNames() :
 								kwargs.update({ "target" : batchData[1][outputName]} )
-								res = model.train(outputName, **kwargs)
-								vals[outputName].append(res[0])
+								if mapName == "train" :
+									res = model.train(outputName, **kwargs)
+								else :
+									res = model.test(outputName, **kwargs)
+								try :
+									vals[outputName].append(res[0])
+								except KeyError:
+									vals[outputName] = [res[0]]
+
+						for outputName in vals :
 							self.recorder.updateScore(outputName, mapName, numpy.mean(vals[outputName]))
 
 			runtime = (time.time() - startTime)/60
