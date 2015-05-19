@@ -21,56 +21,24 @@ class GGPlot2Recorder(object):
 		self.verbose = verbose
 		self.noBestSets = noBestSets
 
- 		self.outputLayers = []
-		self.bestScores = {}
+ 		self.bestScores = {}
 		self.currentScores = {}
-		self.bestFilenames = {}
-		self.maps = {}
-
+		
 		self.csvFile = None
 
-		self._mustInit = True
+		self.length = 0
 
-	def set(self, trainer, runName, csvLegend) :
+	def set(self, trainer, runName, hyperParameters) :
 		self.trainer = trainer
 		self.runName = runName
-		self.csvLegend = csvLegend
+		self.csvLegend = hyperParameters
 
-	def addMap(self, mapName, mapValue) :
-		if len(mapValue) > 1 :
-			self.maps[mapName] = mapValue
-
-	def addOutput(self, outputLayer) :
-		self.outputLayers.append(outputLayer)
-
-	def _init(self) :
-		for o in self.outputLayers :
-			self.bestScores[o.name] = {}
-			self.currentScores[o.name] = {}
-			self.bestFilenames[o.name] = {}
-			for s, v in self.maps.iteritems() :
-				self.bestScores[o.name][s] = []
-				self.currentScores[o.name][s] = []
-				self.bestFilenames[o.name][s] = "best_%s_%s" % (s, o.name)
-
-		self.csvLegend.append("score")
-		self.csvLegend.append("best_score")
-		self.csvLegend.append("set")
-		self.csvLegend.append("output")
+		self.csvLegend.extend( ["score", "best_score", "set", "output"] )
 
 		self.csvFile = CSVFile(legend = self.csvLegend)
 		self.csvFile.streamToFile("%s-evolution.csv" % (self.runName, ), writeRate = len(self.maps) * (len(self.outputLayers) + 1) ) #(output + avg) x #set
 
-		self._mustInit = False
-
-	def _notify(self) :
-		"""notify the recorder that there is a new entry do record"""
-		self._updateScores()
-		self._commitToCSVs()
-		if self.verbose :
-			self._printCurrentState()
-
-	def _commitToCSVs(self) :
+	def commit(self) :
 		"""saves the stack to disk. It will automatically add the scores and the sets to the file"""
 		def _fillLine(csvFile, score, bestScore, setName, setLen, outputName, **csvValues) :
 			line = csvFile.newLine()
@@ -82,10 +50,18 @@ class GGPlot2Recorder(object):
 			line["output"] = outputName
 			line.commit()
 		
-		if self._mustInit :
-			self._init()
+		for theSet in self.currentScores[outputLayerName] :
+			for outputLayerName in self.currentScores :
+				score = store["scores"][theSet][outputLayerName]
+				self.currentScores[theSet][outputLayerName] = score
+			if theSet not in self.noBestSets :
+				if len(self.bestScores[theSet][outputLayerName]) > 1 :
+					if (score < self.bestScores[theSet][outputLayerName][-1] ) :
+						self.bestScores[theSet][outputLayerName] = score
+				else :
+					self.bestScores[theSet][outputLayerName] = score
 
-		csvValues = self.store.hyperParameters
+		csvValues = self.store["hyperParameters"]
 
 		for theSet in self.maps :
 			meanCurrent = []
@@ -93,11 +69,11 @@ class GGPlot2Recorder(object):
 			for o in self.outputLayers :
 				score = None
 				if theSet not in self.noBestSets :
-						bestScore = self.bestScores[o.name][theSet][-1]
+						bestScore = self.bestScores[theSet][o.name]
 				else :
-					bestScore = self.currentScores[o.name][theSet][-1]
+					bestScore = self.currentScores[theSet][o.name]
 
-				score = self.currentScores[o.name][theSet][-1]
+				score = self.currentScores[theSet][o.name]
 				_fillLine( self.csvFile, score, bestScore, theSet, len(self.maps[theSet]), o.name, **csvValues)
 
 				meanCurrent.append(score)
@@ -105,37 +81,27 @@ class GGPlot2Recorder(object):
 		
 			_fillLine( self.csvFile, numpy.mean(meanCurrent), numpy.mean(meanBest), theSet, len(self.maps[theSet]), "average", **csvValues)
 		
-		self.stackLen = 0
 
-	def _updateScores(self, outputLayerName, theSet, score) :
-		if self._mustInit :
-			self._init()
+		if self.verbose :
+			self.printCurrentState()
 
-		for outputLayerName in self.currentScores :
-			for theSet in self.currentScores[outputLayerName] :
-				score = self.trainer.store["scores"][outputLayerName][theSet]
-				self.currentScores[outputLayerName][theSet].append(score)
-			if theSet not in self.noBestSets :
-				if len(self.bestScores[outputLayerName][theSet]) > 1 :
-					if (score < self.bestScores[outputLayerName][theSet][-1] ) :
-						self.bestScores[outputLayerName][theSet].append(score)
-				else :
-					self.bestScores[outputLayerName][theSet].append(score)
+		self.length += 1
+		sys.stdout.flush()
 
-	def _printCurrentState(self) :
-		if self.currentLen > 0 :
-			print "\n=M=>State %s:" % self.currentLen
-			for s in self.maps :
-				print "  |-%s set" % s
-				for o in self.outputLayers :
-					if s not in self.noBestSets and self.currentScores[o.name][s][-1] == self.bestScores[o.name][s][-1] :
+	def printCurrentState(self) :
+		if self.length > 0 :
+			print "\n=M=>State %s:" % self.length
+			for setName, scores in self.bestScore.iteritems() :
+				print "  |-%s set" % setName
+				for outputName in scores :
+					if setName not in self.noBestSets and self.currentScores[setName][outputName] == self.bestScores[setName][outputName] :
 						highlight = "+best+"
-					elif len(self.bestScores[o.name][s]) > 0 :
-						highlight = "(best: %s)" % (self.bestScores[o.name][s][-1])
+					elif len(self.bestScores[setName][outputName]) > 0 :
+						highlight = "(best: %s)" % (self.bestScores[setName][outputName])
 					else :
 						highlight = ""
 
-					print "    |->%s: %s %s" % (o.name, self.currentScores[o.name][s][-1], highlight)
+					print "    |->%s: %s %s" % (outputName, self.currentScores[s][outputName], highlight)
 		else :
 			print "=M=> Nothing to show yet"
 
@@ -158,10 +124,8 @@ class DefaultTrainer(object) :
 			"validation" : testMiniBatchSize
 		}
 
-		self.stopCriteria = stopCriteria
-		
+		self.stopCriteria = stopCriteria		
 		self.testFrequency = testFrequency
-		
 		self.saveOnException = saveOnException
 		
 		self.reset()
@@ -175,6 +139,10 @@ class DefaultTrainer(object) :
 		'resets the beast'	
 		self.recorder = None
 		self.currentEpoch = 0
+		
+		self.store = {}
+		self.store["scores"] = {}
+		self.store["hyperParameters"] = {}
 
 	def getBestValidationModel(self) :
 		"""loads the best validation model from disk and returns it"""
@@ -270,31 +238,19 @@ class DefaultTrainer(object) :
 							dct["%s_%s" % (l.name, hp)] = getattr(thingObj, hp)
 
 		def _trainTest(aMap, modelFct, shuffleMinibatches, trainingOrder, miniBatchSize) :
+				scores = {}
 				if miniBatchSize == "all" :
 					for outputName in aMap.getOutputNames() :
 						batchData = aMap.getAll()
 						kwargs = batchData[0] #inputs
 						kwargs.update({ "target" : batchData[1][outputName]} )
 						res = modelFct(outputName, **kwargs)
+						scores[outputName] = res[0]
 				else :
 					if shuffleMinibatches :
 						aMap.shuffle()
 					
-					vals = {}
-					if trainingOrder == DefaultTrainer.SIMULTANEOUS_TRAINING :
-						for i in xrange(0, len(aMap), miniBatchSize) :
-							batchData = aMap.getBatches(i, miniBatchSize)
-							kwargs = batchData[0] #inputs
-							for outputName in aMap.getOutputNames() :
-								kwargs.update({ "target" : batchData[1][outputName]} )
-								res = modelFct(outputName, **kwargs)
-								
-								try :
-									vals[outputName].append(res[0])
-								except KeyError:
-									vals[outputName] = [res[0]]
-					
-					elif trainingOrder == DefaultTrainer.SEQUENTIAL_TRAINING :
+					if trainingOrder == DefaultTrainer.SEQUENTIAL_TRAINING :
 						for outputName in aMap.getOutputNames() :
 							for i in xrange(0, len(aMap), miniBatchSize) :
 								kwargs = batchData[0] #inputs
@@ -303,12 +259,26 @@ class DefaultTrainer(object) :
 								res = modelFct(outputName, **kwargs)
 
 								try :
-									vals[outputName].append(res[0])
+									scores[outputName].append(res[0])
 								except KeyError:
-									vals[outputName] = [res[0]]
+									scores[outputName] = [res[0]]
+					elif trainingOrder == DefaultTrainer.SIMULTANEOUS_TRAINING :
+						for i in xrange(0, len(aMap), miniBatchSize) :
+							batchData = aMap.getBatches(i, miniBatchSize)
+							kwargs = batchData[0] #inputs
+							for outputName in aMap.getOutputNames() :
+								kwargs.update({ "target" : batchData[1][outputName]} )
+								res = modelFct(outputName, **kwargs)
+								
+								try :
+									scores[outputName].append(res[0])
+								except KeyError:
+									scores[outputName] = [res[0]]
+					
 					else :
 						raise ValueError("Unknown training order: %s" % trainingOrder)
 
+					return scores
 
 		if trainingOrder not in self.trainingOrders:
 			raise ValueError("Unknown training order: %s" % trainingOrder)
@@ -345,75 +315,28 @@ class DefaultTrainer(object) :
 		self.currentEpoch = 0
 
 		while True :
-
-		
 			for mapName in ["train", "test", "validation"] :		
 				aMap = self.maps[mapName]
-				if len(aMap) > 0 :
-					if self.miniBatchSizes[mapName] == "all" :
-						for outputName in aMap.getOutputNames() :
-							batchData = aMap.getAll()
-							kwargs = batchData[0] #inputs
-							kwargs.update({ "target" : batchData[1][outputName]} )
-							if mapName == "train" :
-								res = model.train(outputName, **kwargs)
-							else :
-								res = model.test(outputName, **kwargs)
-							self.recorder.updateScore(outputName, mapName, res[0])
+				if len(aMap) > 0 :					
+					if mapName == "train" :
+						modelFct = model.train
 					else :
-						if shuffleMinibatches :
-							aMap.shuffle()
-						vals = {}
-						if trainingOrder == self.SIMULTANEOUS_TRAINING :
-							for i in xrange(0, len(aMap), self.miniBatchSizes[mapName]) :
-								batchData = aMap.getBatches(i, self.miniBatchSizes[mapName])
-								kwargs = batchData[0] #inputs
-								for outputName in aMap.getOutputNames() :
-									kwargs.update({ "target" : batchData[1][outputName]} )
-									if mapName == "train" :
-										res = model.train(outputName, **kwargs)
-									else :
-										res = model.test(outputName, **kwargs)
-									try :
-										vals[outputName].append(res[0])
-									except KeyError:
-										vals[outputName] = [res[0]]
-						elif trainingOrder == self.SEQUENTIAL_TRAINING :
-							for outputName in aMap.getOutputNames() :
-								for i in xrange(0, len(aMap), self.miniBatchSizes[mapName]) :
-									kwargs = batchData[0] #inputs
-									batchData = aMap.getBatches(i, self.miniBatchSizes[mapName])
-									kwargs.update({ "target" : batchData[1][outputName]} )
-									if mapName == "train" :
-										res = model.train(outputName, **kwargs)
-									else :
-										res = model.test(outputName, **kwargs)
-									try :
-										vals[outputName].append(res[0])
-									except KeyError:
-										vals[outputName] = [res[0]]
-						else :
-							raise ValueError("Unknown training order: %s" % trainingOrder)
-
-						for outputName in vals :
-							self.recorder.updateScore(outputName, mapName, numpy.mean(vals[outputName]))
+						modelFct = model.test
+					self.store["scores"][mapName] = _trainTest(aMap, modelFct, shuffleMinibatches, trainingOrder, self.miniBatchSizes[mapName])
+					
 
 			runtime = (time.time() - startTime)/60
 			
-			self.store.hyperParameters = {
+			self.store["hyperParameters"].udpate({
 				"name" : name,
 				"epoch" : self.currentEpoch,
 				"runtime(min)" : runtime,
 				"dataset_name" : datasetName,
 				"training_order" : self.trainingOrders[trainingOrder]
-			}
-
-			self.store.hyperParameters.update(hyperParameters)
+			})
 	
-			self.recorder.commitToCSVs(**csvValues)
-			self.recorder.printCurrentState()
-			sys.stdout.flush()
-
+			self.recorder.commit(self.store)
+			
 			for crit in self.stopCriteria :
 				if crit.stop(self) :
 					raise EndOfTraining(crit)
