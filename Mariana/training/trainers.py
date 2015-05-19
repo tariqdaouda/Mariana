@@ -14,11 +14,9 @@ class EndOfTraining(Exception) :
 		self.stopCriterion = stopCriterion
 		self.message = "End of training: %s" % stopCriterion.endMessage()
 
-class TrainingRecorder(object):
+class GGPlot2Recorder(object):
  	"""docstring for OutputRecorder"""
- 	def __init__(self, runName, csvLegend, noBestSets = ("train", )):
-		self.runName = runName
-		self.csvLegend = csvLegend
+ 	def __init__(self, noBestSets = ("train", )):
 		self.noBestSets = noBestSets
 
  		self.outputLayers = []
@@ -33,6 +31,10 @@ class TrainingRecorder(object):
 		self.csvFile = None
 
 		self._mustInit = True
+
+	def set(self, runName, csvLegend) :
+		self.runName = runName
+		self.csvLegend = csvLegend
 
 	def addMap(self, mapName, mapValue) :
 		if len(mapValue) > 1 :
@@ -153,7 +155,11 @@ class TrainingRecorder(object):
 		else :
 			print "=M=> Nothing to show yet"
 
-class DefaultTrainer(object):
+class DefaultTrainer(object) :
+
+	SEQUENTIAL_TRAINING = 0
+	SIMULTANEOUS_TRAINING = 1
+
 	"""Should serve for most purposes"""
 	def __init__(self, trainMaps, testMaps, validationMaps, trainMiniBatchSize, stopCriteria, testMiniBatchSize = "all", testFrequency = 1, saveOnException = True) :
 		
@@ -175,6 +181,11 @@ class DefaultTrainer(object):
 		self.saveOnException = saveOnException
 		
 		self.reset()
+
+		self.trainingOrders = {
+			self.SIMULTANEOUS_TRAINING : "SIMULTANEOUS",
+			self.SEQUENTIAL_TRAINING : "SEQUENTIAL"
+		}
 
 	def reset(self) :
 		'resets the beast'	
@@ -198,7 +209,7 @@ class DefaultTrainer(object):
 		
 	def start(self, name, model, *args, **kwargs) :
 		"""Starts the training. If anything bad and unexpected happens during training, the Trainer
-		will attempt to save the model and logs."""
+		will attempt to save the model and logs. See _run documentation for a full list of possible arguments"""
 
 		def _dieGracefully() :
 			exType, ex, tb = sys.exc_info()
@@ -246,8 +257,14 @@ class DefaultTrainer(object):
 				_dieGracefully()
 				raise
 
-	def _run(self, name, model, reset = True, shuffleMinibatches = True, datasetName = "") :
-		
+	def _run(self, name, model, trainingOrder = 0, reset = True, shuffleMinibatches = True, datasetName = "") :
+		"""
+			trainingOrder possible values:
+				* DefaultTrainer.SEQUENTIAL_TRAINING: Each output will be trained indipendetly on it's own epoch
+				* DefaultTrainer.SIMULTANEOUS_TRAINING: All outputs are trained within the same epoch with the same inputs
+				* Both or in O(m*n), where m is the number of mini batches and n the number of outputs
+		"""
+
 		def setHPs(layer, thing, dct) :
 			try :
 				thingObj = getattr(l, thing)
@@ -269,10 +286,54 @@ class DefaultTrainer(object):
 						for hp in thingObj.hyperParameters :
 							dct["%s_%s" % (l.name, hp)] = getattr(thingObj, hp)
 
+		# def _trainTest(aMap, modelFct, shuffleMinibatches, trainingOrder, miniBatchSize) :
+		# 		if miniBatchSize == "all" :
+		# 			for outputName in aMap.getOutputNames() :
+		# 				batchData = aMap.getAll()
+		# 				kwargs = batchData[0] #inputs
+		# 				kwargs.update({ "target" : batchData[1][outputName]} )
+		# 				res = modelFct(outputName, **kwargs)
+		# 		else :
+		# 			if shuffleMinibatches :
+		# 				aMap.shuffle()
+					
+		# 			vals = {}
+		# 			if trainingOrder == self.SIMULTANEOUS_TRAINING :
+		# 				for i in xrange(0, len(aMap), self.miniBatchSizes[mapName]) :
+		# 					batchData = aMap.getBatches(i, self.miniBatchSizes[mapName])
+		# 					kwargs = batchData[0] #inputs
+		# 					for outputName in aMap.getOutputNames() :
+		# 						kwargs.update({ "target" : batchData[1][outputName]} )
+		# 						res = modelFct(outputName, **kwargs)
+								
+		# 						try :
+		# 							vals[outputName].append(res[0])
+		# 						except KeyError:
+		# 							vals[outputName] = [res[0]]
+					
+		# 			elif trainingOrder == self.SEQUENTIAL_TRAINING :
+		# 				for outputName in aMap.getOutputNames() :
+		# 					for i in xrange(0, len(aMap), self.miniBatchSizes[mapName]) :
+		# 						kwargs = batchData[0] #inputs
+		# 						batchData = aMap.getBatches(i, self.miniBatchSizes[mapName])
+		# 						kwargs.update({ "target" : batchData[1][outputName]} )
+		# 						res = modelFct(outputName, **kwargs)
+
+		# 						try :
+		# 							vals[outputName].append(res[0])
+		# 						except KeyError:
+		# 							vals[outputName] = [res[0]]
+		# 			else :
+		# 				raise ValueError("Unknown training order: %s" % trainingOrder)
+
+
+		if trainingOrder not in self.trainingOrders:
+			raise ValueError("Unknown training order: %s" % trainingOrder)
+
 		if reset :
 			self.reset()
 		
-		legend = ["name", "epoch", "runtime(min)", "dataset_name"]
+		legend = ["name", "epoch", "runtime(min)", "dataset_name", "training_order"]
 		layersForLegend = OrderedDict()
 		for l in model.layers.itervalues() :
 			layersForLegend["%s_size" % l.name] = len(l)
@@ -287,7 +348,8 @@ class DefaultTrainer(object):
 
 		legend.extend(layersForLegend.keys())
 
-		self.recorder = TrainingRecorder( name, legend )
+		self.recorder = GGPlot2Recorder()
+		self.recorder.set( name, legend )
 		
 		for m in self.maps :
 			self.recorder.addMap( m, self.maps[m] )
@@ -319,19 +381,36 @@ class DefaultTrainer(object):
 						if shuffleMinibatches :
 							aMap.shuffle()
 						vals = {}
-						for i in xrange(0, len(aMap), self.miniBatchSizes[mapName]) :
-							batchData = aMap.getBatches(i, self.miniBatchSizes[mapName])
-							kwargs = batchData[0] #inputs
+						if trainingOrder == self.SIMULTANEOUS_TRAINING :
+							for i in xrange(0, len(aMap), self.miniBatchSizes[mapName]) :
+								batchData = aMap.getBatches(i, self.miniBatchSizes[mapName])
+								kwargs = batchData[0] #inputs
+								for outputName in aMap.getOutputNames() :
+									kwargs.update({ "target" : batchData[1][outputName]} )
+									if mapName == "train" :
+										res = model.train(outputName, **kwargs)
+									else :
+										res = model.test(outputName, **kwargs)
+									try :
+										vals[outputName].append(res[0])
+									except KeyError:
+										vals[outputName] = [res[0]]
+						elif trainingOrder == self.SEQUENTIAL_TRAINING :
 							for outputName in aMap.getOutputNames() :
-								kwargs.update({ "target" : batchData[1][outputName]} )
-								if mapName == "train" :
-									res = model.train(outputName, **kwargs)
-								else :
-									res = model.test(outputName, **kwargs)
-								try :
-									vals[outputName].append(res[0])
-								except KeyError:
-									vals[outputName] = [res[0]]
+								for i in xrange(0, len(aMap), self.miniBatchSizes[mapName]) :
+									batchData = aMap.getBatches(i, self.miniBatchSizes[mapName])
+									kwargs = batchData[0] #inputs
+									kwargs.update({ "target" : batchData[1][outputName]} )
+									if mapName == "train" :
+										res = model.train(outputName, **kwargs)
+									else :
+										res = model.test(outputName, **kwargs)
+									try :
+										vals[outputName].append(res[0])
+									except KeyError:
+										vals[outputName] = [res[0]]
+						else :
+							raise ValueError("Unknown training order: %s" % trainingOrder)
 
 						for outputName in vals :
 							self.recorder.updateScore(outputName, mapName, numpy.mean(vals[outputName]))
@@ -343,7 +422,9 @@ class DefaultTrainer(object):
 				"epoch" : self.currentEpoch,
 				"runtime(min)" : runtime,
 				"dataset_name" : datasetName,
+				"training_order" : self.trainingOrders[trainingOrder]
 			}
+
 			csvValues.update(layersForLegend)
 	
 			self.recorder.commitToCSVs(**csvValues)

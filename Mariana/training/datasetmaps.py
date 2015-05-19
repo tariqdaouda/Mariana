@@ -116,7 +116,7 @@ class ClassSuperset(object) :
 	def __getitem__(self, i) :
 		if self.likelihoodsSum == 0 :
 			for s in self.sets :
-				self.likelihoodsSum += float(len(s)) / self.totalLen
+				self.likelihoodsSum += 1./len(self.sets)#float(len(s)) / self.totalLen
 				self.likelihoods.append( self.likelihoodsSum )
 
 		elif self.likelihoodsSum > 0 and self.likelihoodsSum < 1 :
