@@ -86,55 +86,23 @@ Please have a look at **mnist_mlp.py** in the examples folder. It illustrates mo
 Using the trainer and loading datasets
 ========================================
 
-Trainer
---------
+Trainers and Recorders
+----------------------
 
-The trainer takes care of the whole training process. If any exception occurs during training it will also automatically save the last
-version of the model as well as logs explaining what happened. The trainer can also take as argument a list of stopCriterias.
+The trainer takes care of the whole training process. If the process dies unexpectedly during training it will also automatically save the last version of the model as well as logs explaining what happened. The trainer can also take as argument a list of stopCriterias, and be
+paired with a recorder whose job is to record the training evolution.
+For now there is only one recorder GGPlot2 (which is also the default recorder).
 
-It will:
+This recorder will:
 
-	* Output the training results for each epoch, highliting every time a new best test error is achieved
-	* Automatically save the model each time a new best test error is achieved
-	* Create and update a *CSV file* that contains the whole historic of the training as well as information such as the hyperparameters. You can later compile several of those files, and plot for example the test error with respect to the number of hidden units
+	* Output the training results for each epoch, highliting every time a new best score is achieved
+	* Automatically save the model each time a new best score is achieved
+	* Create and update a *CSV file* in a GGPlot2 friendly format that contains the whole historic of the training as well as information such as runtime and hyperparameter values.
 
 Dataset maps
 ------------
 
-Mariana is dataset format agnostic. In order to use your dataset you will need to define maps for the differents sets that you need.
-
-Let's assume that our sets are in a python dictionary such as:
-
-.. code:: python
-
-	sets =  {
-			"set1" : {
-				"images" : [....],
-				"classes" : [....]
-				},
-			"set2" : {
-				"images" : [....],
-				"classes" : [....]
-				}
-			}
-
-Using *DatasetMappers* we can now specify wich sets to use for training 
-and testing for each input and each output of our model.
-*Mariana networks can have multiple inputs and outputs, but here we only have a 
-neural network with one input and one output.*
-
-.. code:: python
-
-	#here we decide that we are going to use "set1" as the training set and we map the input layer
-	#to the "images" list of "set1", and the output layer to the "classes" list of the same set.
-	trainMaps = tra.DatasetMapper()
-	trainMaps.addInput(inputLayer, sets["set1"]["images"])
-	trainMaps.addOutput(outputLayer, sets["set1"]["classes"])
-
-	#we do the same with "set2", that we plan to use as our test set
-	testMaps = tra.DatasetMapper()
-	testMaps.addInput(inputLayer, sets["set2"]["images"])
-	testMaps.addOutput(outputLayer, sets["set2"]["classes"])
+Mariana is dataset format agnostic. The way it works is that you map sets to specific input and output layers, cf. the mnist example.
 
 Decorators
 ==========
@@ -204,5 +172,4 @@ You can then visualize your graph with any DOT visualizer such a graphviz.
 Extendable
 ============
 
-Mariana allows you to define new types of layers, learning scenarios and costs by inheriting from the provided base
-classes.
+Mariana allows you to define new types of layers, learning scenarios, costs, stop criteria, recorders and trainers by inheriting from the provided base classes. Feel free to taylor it to your needs.
