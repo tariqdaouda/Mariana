@@ -1,5 +1,5 @@
 import Mariana.settings as MSET
-import numpy, random
+import numpy, random, time
 
 class ListSet(object) :
 	def __init__(self, values) :
@@ -14,6 +14,9 @@ class ListSet(object) :
 
 	def __len__(self) :
  		return len(self.values)
+
+ 	def __repr__(self) :
+ 		return "<Mariana list set len: %d>" % len(self)
 
 class _InnerSet(object) :
 	"""An inner set of a ClassSuperset"""
@@ -149,7 +152,7 @@ class DatasetMapper(object):
 
 	def mapInput(self, lst, layer) :
 		if layer.name in self.layerNames :
-			raise ValueError("There is already a registered layer by the name of: '%s'" % (layer.name))
+			raise ValueError("There is already a registered layer by the name of: '%s'" % (layer.name)) 
 
 		if lst.__class__ not in [ClassSuperset, ListSet] :
 			aSet = ListSet(lst)
@@ -157,13 +160,10 @@ class DatasetMapper(object):
 			aSet = lst
 
 		if layer.type == MSET.TYPE_INPUT_LAYER :
-			try :
-				self.inputSets[aSet.name].append(layer)
-			except :
-				self.inputSets[aSet.name] = [layer]
+			self.inputSets[aSet.name] = layer
 		else :
 			raise ValueError("Only input layers are allowed")
-
+ 
 		self.layerNames.add(layer.name)
 		self.sets[aSet.name] = aSet
 		
@@ -180,10 +180,7 @@ class DatasetMapper(object):
 			aSet = lst
 
 		if layer.type == MSET.TYPE_OUTPUT_LAYER :
-			try :
-				self.outputSets[aSet.name].append(layer)
-			except :
-				self.outputSets[aSet.name] = [layer]
+			self.outputSets[aSet.name] = layer
 		else :
 			raise ValueError("Only output layers are allowed")
 		
@@ -234,14 +231,16 @@ class DatasetMapper(object):
 			for k, v in self.sets.iteritems() :
 				elmt = v[ii: ii+size]
 				if v.__class__ is ClassSuperset :
-					for l in self.inputSets[k] :
-						inps[l.name] = elmt[0]
-					for l in self.outputSets[k] :
-						outs[l.name] = elmt[1]
+					l = self.inputSets[k]
+					inps[l.name] = elmt[0]
+					l = self.outputSets[k]
+					outs[l.name] = elmt[1]
 				else :
-					for l in self.inputSets[k] :
+					try :
+						l = self.inputSets[k]
 						inps[l.name] = elmt
-					for l in self.outputSets[k] :
+					except :
+						l = self.outputSets[k]
 						outs[l.name] = elmt
 
 		for k, layers in self.syncedLayers.iteritems() :
@@ -266,18 +265,21 @@ class DatasetMapper(object):
 		"""Returns the whole batch"""
 		inps = {}
 		outs = {}
+		
 		for k, v in self.sets.iteritems() :
-				elmt = v.getAll()
-				if v.__class__ is ClassSuperset :
-					for l in self.inputSets[k] :
-						inps[l.name] = elmt[0]
-					for l in self.outputSets[k] :
-						outs[l.name] = elmt[1]
-				else :
-					for l in self.inputSets[k] :
-						inps[l.name] = elmt
-					for l in self.outputSets[k] :
-						outs[l.name] = elmt
+			elmt = v.getAll()
+			if v.__class__ is ClassSuperset :
+				l = self.inputSets[k]
+				inps[l.name] = elmt[0]
+				l = self.outputSets[k]
+				outs[l.name] = elmt[1]
+			else :
+				try :
+					l = self.inputSets[k]
+					inps[l.name] = elmt
+				except :
+					l = self.outputSets[k]
+					outs[l.name] = elmt
 		
 		for k, layers in self.syncedLayers.iteritems() :
 			for l in layers :

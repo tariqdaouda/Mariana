@@ -1,11 +1,11 @@
-import cPickle, time, sys, traceback, random, types
+import cPickle, time, sys, os, traceback, types, json, signal
 import numpy
 from collections import OrderedDict
-
-from pyGeno.tools.parsers.CSVTools import CSVFile
 import theano.tensor as tt
 
 import Mariana.settings as MSET
+import Mariana.training.recoders as MREC
+import Mariana.candies as MCAN
 
 
 class EndOfTraining(Exception) :
@@ -13,97 +13,6 @@ class EndOfTraining(Exception) :
 	def __init__(self, stopCriterion) :
 		self.stopCriterion = stopCriterion
 		self.message = "End of training: %s" % stopCriterion.endMessage()
-
-class GGPlot2Recorder(object):
- 	"""docstring for OutputRecorder"""
- 	def __init__(self, verbose = True,  noBestSets = ("train", )):
-		
-		self.verbose = verbose
-		self.noBestSets = noBestSets
-
- 		self.bestScores = {}
-		self.currentScores = {}
-		
-		self.csvFile = None
-
-		self.length = 0
-
-	def set(self, trainer, runName, hyperParameters) :
-		self.trainer = trainer
-		self.runName = runName
-		self.csvLegend = hyperParameters
-
-		self.csvLegend.extend( ["score", "best_score", "set", "output"] )
-
-		self.csvFile = CSVFile(legend = self.csvLegend)
-		self.csvFile.streamToFile("%s-evolution.csv" % (self.runName, ), writeRate = len(self.maps) * (len(self.outputLayers) + 1) ) #(output + avg) x #set
-
-	def commit(self) :
-		"""saves the stack to disk. It will automatically add the scores and the sets to the file"""
-		def _fillLine(csvFile, score, bestScore, setName, setLen, outputName, **csvValues) :
-			line = csvFile.newLine()
-			for k, v in csvValues.iteritems() :
-				line[k] = v
-			line["score"] = score
-			line["best_score"] = bestScore
-			line["set"] = "%s(%s)" %(setName, setLen)
-			line["output"] = outputName
-			line.commit()
-		
-		for theSet in self.currentScores[outputLayerName] :
-			for outputLayerName in self.currentScores :
-				score = store["scores"][theSet][outputLayerName]
-				self.currentScores[theSet][outputLayerName] = score
-			if theSet not in self.noBestSets :
-				if len(self.bestScores[theSet][outputLayerName]) > 1 :
-					if (score < self.bestScores[theSet][outputLayerName][-1] ) :
-						self.bestScores[theSet][outputLayerName] = score
-				else :
-					self.bestScores[theSet][outputLayerName] = score
-
-		csvValues = self.store["hyperParameters"]
-
-		for theSet in self.maps :
-			meanCurrent = []
-			meanBest = []
-			for o in self.outputLayers :
-				score = None
-				if theSet not in self.noBestSets :
-						bestScore = self.bestScores[theSet][o.name]
-				else :
-					bestScore = self.currentScores[theSet][o.name]
-
-				score = self.currentScores[theSet][o.name]
-				_fillLine( self.csvFile, score, bestScore, theSet, len(self.maps[theSet]), o.name, **csvValues)
-
-				meanCurrent.append(score)
-				meanBest.append(bestScore)
-		
-			_fillLine( self.csvFile, numpy.mean(meanCurrent), numpy.mean(meanBest), theSet, len(self.maps[theSet]), "average", **csvValues)
-		
-
-		if self.verbose :
-			self.printCurrentState()
-
-		self.length += 1
-		sys.stdout.flush()
-
-	def printCurrentState(self) :
-		if self.length > 0 :
-			print "\n=M=>State %s:" % self.length
-			for setName, scores in self.bestScore.iteritems() :
-				print "  |-%s set" % setName
-				for outputName in scores :
-					if setName not in self.noBestSets and self.currentScores[setName][outputName] == self.bestScores[setName][outputName] :
-						highlight = "+best+"
-					elif len(self.bestScores[setName][outputName]) > 0 :
-						highlight = "(best: %s)" % (self.bestScores[setName][outputName])
-					else :
-						highlight = ""
-
-					print "    |->%s: %s %s" % (outputName, self.currentScores[s][outputName], highlight)
-		else :
-			print "=M=> Nothing to show yet"
 
 class DefaultTrainer(object) :
 
@@ -143,6 +52,7 @@ class DefaultTrainer(object) :
 		self.store = {}
 		self.store["scores"] = {}
 		self.store["hyperParameters"] = {}
+		self.store["setSizes"] = {}
 
 	def getBestValidationModel(self) :
 		"""loads the best validation model from disk and returns it"""
@@ -158,57 +68,89 @@ class DefaultTrainer(object) :
 		f.close()
 		return model
 		
-	def start(self, name, model, *args, **kwargs) :
+	def start(self, runName, model, recorder = "default", **kwargs) :
 		"""Starts the training. If anything bad and unexpected happens during training, the Trainer
 		will attempt to save the model and logs. See _run documentation for a full list of possible arguments"""
+		import json, signal
 
-		def _dieGracefully() :
-			exType, ex, tb = sys.exc_info()
+		def _handler_sig_term(sig, frame) :
+			_dieGracefully("SIGTERM", None)
+			sys.exit(sig)
+
+		def _dieGracefully(exType, tb = None) :
 			# traceback.print_tb(tb)
+			if type(exType) is types.StringType :
+				exName = exType
+			else :
+				exName = exType.__name__
+
 			death_time = time.ctime().replace(' ', '_')
-			filename = "dx-xb_" + name + "_death_by_" + exType.__name__ + "_" + death_time
-			sys.stderr.write("\n===\nDying gracefully from %s, and saving myself to:\n...%s\n===\n" % (exType, filename))
+			filename = "dx-xb_" + runName + "_death_by_" + exName + "_" + death_time
+			sys.stderr.write("\n===\nDying gracefully from %s, and saving myself to:\n...%s\n===\n" % (exName, filename))
 			model.save(filename)
 			f = open(filename +  ".traceback.log", 'w')
 			f.write("Mariana training Interruption\n=============================\n")
 			f.write("\nDetails\n-------\n")
-			f.write("Name: %s\n" % name)
+			f.write("Name: %s\n" % runName)
 			f.write("Killed by: %s\n" % str(exType))
 			f.write("Time of death: %s\n" % death_time)
 			f.write("Model saved to: %s\n" % filename)
-			f.write("\nTraceback\n---------\n")
-
-			f.write(str(traceback.extract_tb(tb)).replace("), (", "),\n(").replace("[(","[\n(").replace(")]",")\n]"))
+			
+			if tb is not None :
+				f.write("\nTraceback\n---------\n")
+				f.write(str(traceback.extract_tb(tb)).replace("), (", "),\n(").replace("[(","[\n(").replace(")]",")\n]"))
 			f.flush()
 			f.close()
 
+		signal.signal(signal.SIGTERM, _handler_sig_term)
+		print "\n" + MSET.OMICRON_SIGNATURE
+		MCAN.friendly("Process id", "The pid of this run is: %d" % os.getpid())
+
+		if recorder == "default" :
+			recorder = MREC.GGPlot2(runName, verbose = True)
+			MCAN.friendly(
+				"Default recorder",
+				"The trainer will recruit the default 'GGPlot2' recorder on verbose mode.\nResults will be saved into '%s'." % (recorder.filename)
+				)
+		
 		self.currentEpoch = 0
 
 		if not self.saveOnException :
-			return self._run(name, model, *args, **kwargs)
+			return self._run(runName, model, recorder, **kwargs)
 		else :
 			try :
-				return self._run(name, model, *args, **kwargs)
+				return self._run(runName, model, recorder, **kwargs)
 			except EndOfTraining as e :
 				print e.message
 				death_time = time.ctime().replace(' ', '_')
-				filename = "finished_" + name +  "_" + death_time
+				filename = "finished_" + runName +  "_" + death_time
 				f = open(filename +  ".stopreason.txt", 'w')
 				f.write("Time of death: %s\n" % death_time)
 				f.write("Epoch of death: %s\n" % self.currentEpoch)
-				f.write("Stopped by: %s\n" % e.stopCriterion.name)
+				f.write("Stopped by: %s\n" % e.stopCriterion.runName)
 				f.write("Reason: %s\n" % e.message)
+				sstore = str(self.store).replace("'", '"')
+				f.write(
+					json.dumps(
+						json.loads(sstore), sort_keys=True,
+						indent=4,
+						separators=(',', ': ')
+					)
+				)
+
 				f.flush()
 				f.close()
 				model.save(filename)
 			except KeyboardInterrupt :
-				_dieGracefully()
+				exType, ex, tb = sys.exc_info()
+				_dieGracefully(exType, tb)
 				raise
 			except :
-				_dieGracefully()
+				exType, ex, tb = sys.exc_info()
+				_dieGracefully(exType, tb)
 				raise
 
-	def _run(self, name, model, trainingOrder = 0, reset = True, shuffleMinibatches = True, datasetName = "") :
+	def _run(self, name, model, recorder, trainingOrder = 0, reset = True, shuffleMinibatches = True, datasetName = "") :
 		"""
 			trainingOrder possible values:
 				* DefaultTrainer.SEQUENTIAL_TRAINING: Each output will be trained indipendetly on it's own epoch
@@ -238,47 +180,57 @@ class DefaultTrainer(object) :
 							dct["%s_%s" % (l.name, hp)] = getattr(thingObj, hp)
 
 		def _trainTest(aMap, modelFct, shuffleMinibatches, trainingOrder, miniBatchSize) :
-				scores = {}
-				if miniBatchSize == "all" :
+			scores = {}
+			if miniBatchSize == "all" :
+				for outputName in aMap.getOutputNames() :
+					batchData = aMap.getAll()
+					kwargs = batchData[0] #inputs
+					kwargs.update({ "target" : batchData[1][outputName]} )
+					res = modelFct(outputName, **kwargs)
+					scores[outputName] = res[0]
+			else :
+				if shuffleMinibatches :
+					aMap.shuffle()
+				
+				if trainingOrder == DefaultTrainer.SEQUENTIAL_TRAINING :
 					for outputName in aMap.getOutputNames() :
-						batchData = aMap.getAll()
-						kwargs = batchData[0] #inputs
-						kwargs.update({ "target" : batchData[1][outputName]} )
-						res = modelFct(outputName, **kwargs)
-						scores[outputName] = res[0]
-				else :
-					if shuffleMinibatches :
-						aMap.shuffle()
-					
-					if trainingOrder == DefaultTrainer.SEQUENTIAL_TRAINING :
-						for outputName in aMap.getOutputNames() :
-							for i in xrange(0, len(aMap), miniBatchSize) :
-								kwargs = batchData[0] #inputs
-								batchData = aMap.getBatches(i, miniBatchSize)
-								kwargs.update({ "target" : batchData[1][outputName]} )
-								res = modelFct(outputName, **kwargs)
-
-								try :
-									scores[outputName].append(res[0])
-								except KeyError:
-									scores[outputName] = [res[0]]
-					elif trainingOrder == DefaultTrainer.SIMULTANEOUS_TRAINING :
 						for i in xrange(0, len(aMap), miniBatchSize) :
 							batchData = aMap.getBatches(i, miniBatchSize)
 							kwargs = batchData[0] #inputs
-							for outputName in aMap.getOutputNames() :
-								kwargs.update({ "target" : batchData[1][outputName]} )
-								res = modelFct(outputName, **kwargs)
-								
-								try :
-									scores[outputName].append(res[0])
-								except KeyError:
-									scores[outputName] = [res[0]]
-					
-					else :
-						raise ValueError("Unknown training order: %s" % trainingOrder)
+							kwargs.update({ "target" : batchData[1][outputName]} )
+							res = modelFct(outputName, **kwargs)
 
-					return scores
+							try :
+								scores[outputName].append(res[0])
+							except KeyError:
+								scores[outputName] = [res[0]]
+				elif trainingOrder == DefaultTrainer.SIMULTANEOUS_TRAINING :
+					for i in xrange(0, len(aMap), miniBatchSize) :
+						batchData = aMap.getBatches(i, miniBatchSize)
+						kwargs = batchData[0] #inputs
+						for outputName in aMap.getOutputNames() :
+							kwargs.update({ "target" : batchData[1][outputName]} )
+							res = modelFct(outputName, **kwargs)
+							
+							try :
+								scores[outputName].append(res[0])
+							except KeyError:
+								scores[outputName] = [res[0]]		
+				else :
+					raise ValueError("Unknown training order: %s" % trainingOrder)
+
+			if len(scores) > 1 :
+				scores["average"] = 0
+				for outputName in scores :
+					scores[outputName] = numpy.mean(scores[outputName])
+					scores["average"] += scores[outputName]
+
+				scores["average"] = numpy.mean(scores["average"])
+			else :
+				for outputName in scores :
+					scores[outputName] = numpy.mean(scores[outputName])
+
+			return scores
 
 		if trainingOrder not in self.trainingOrders:
 			raise ValueError("Unknown training order: %s" % trainingOrder)
@@ -300,42 +252,43 @@ class DefaultTrainer(object) :
 				setHPs(l, "costObject", hyperParameters)
 
 		legend.extend(hyperParameters.keys())
+		self.store["hyperParameters"].update(hyperParameters)
+		for mapName in self.maps :
+			self.store["setSizes"][mapName] = len(self.maps[mapName])
 
-		self.recorder = GGPlot2Recorder()
-		self.recorder.set( name, legend )
+		self.recorder = recorder
 		
-		for m in self.maps :
-			self.recorder.addMap( m, self.maps[m] )
-
-		for l in model.outputs.itervalues() :
-			self.recorder.addOutput(l)
-		
-		print "learning..."
 		startTime = time.time()
 		self.currentEpoch = 0
 
 		while True :
-			for mapName in ["train", "test", "validation"] :		
+			for mapName in ["train", "validation", "test"] :
 				aMap = self.maps[mapName]
 				if len(aMap) > 0 :					
 					if mapName == "train" :
 						modelFct = model.train
 					else :
 						modelFct = model.test
-					self.store["scores"][mapName] = _trainTest(aMap, modelFct, shuffleMinibatches, trainingOrder, self.miniBatchSizes[mapName])
 					
+					self.store["scores"][mapName] = _trainTest(
+						aMap,
+						modelFct,
+						shuffleMinibatches,
+						trainingOrder,
+						self.miniBatchSizes[mapName]
+					)
 
 			runtime = (time.time() - startTime)/60
 			
-			self.store["hyperParameters"].udpate({
-				"name" : name,
-				"epoch" : self.currentEpoch,
-				"runtime(min)" : runtime,
-				"dataset_name" : datasetName,
-				"training_order" : self.trainingOrders[trainingOrder]
-			})
+			self.store["hyperParameters"].update( (
+				("name", name),
+				("epoch", self.currentEpoch),
+				("runtime(min)", runtime),
+				("dataset_name", datasetName),
+				("training_order", self.trainingOrders[trainingOrder])
+			) )
 	
-			self.recorder.commit(self.store)
+			self.recorder.commit(self.store, model)
 			
 			for crit in self.stopCriteria :
 				if crit.stop(self) :

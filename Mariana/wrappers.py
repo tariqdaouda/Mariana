@@ -2,6 +2,8 @@ from collections import OrderedDict
 import theano
 import sys
 
+import Mariana.candies as MCAN
+
 class TheanoFunction(object) :
 	"This class encapsulates a Theano function"
 
@@ -24,9 +26,10 @@ class TheanoFunction(object) :
 		self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs, updates = self.updates, **kwargs)
 
 		if any([x.__class__.__name__.lower().find("gpu") for x in self.theano_fct.maker.fgraph.toposort()]):
-			print "Mariana friendly msg: I will use the [-GPU-] to run function '%s' of layer '%s' :)!" % (name, outputLayer.name)
+			device = "GPU"
 		else:
-			print "Mariana friendly msg: I will use the [-CPU-] to run function '%s' of layer '%s' ;)" % (name, outputLayer.name)
+			device = "CPU"
+		MCAN.friendly("Run device", "I will use the [-%s-] to run function '%s' of layer '%s'!" % (device, name, outputLayer.name))
 
 	def printGraph(self) :
 		"""Print the theano graph of the function"""

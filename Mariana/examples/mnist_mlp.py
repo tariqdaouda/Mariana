@@ -7,7 +7,10 @@ import Mariana.layers as ML
 import Mariana.costs as MC
 import Mariana.regularizations as MR
 import Mariana.scenari as MS
+
 import Mariana.training.trainers as MT
+import Mariana.training.datasetmaps as MDM
+import Mariana.training.stopcriteria as MSTOP
 
 """
 This is the equivalent the theano MLP from here: http://deeplearning.net/tutorial/mlp.html
@@ -46,17 +49,19 @@ if __name__ == "__main__" :
 	#And then map sets to the inputs and outputs of our network
 	train_set, validation_set, test_set = load_mnist()
 
-	trainMaps = MT.DatasetMapper()
-	trainMaps.addInput(i, train_set[0])
-	trainMaps.addOutput(o, train_set[1].astype('int32'))
+	trainMaps = MDM.DatasetMapper()
+	trainMaps.mapInput(train_set[0], i)
+	trainMaps.mapOutput(train_set[1].astype('int32'), o)
 
-	testMaps = MT.DatasetMapper()
-	testMaps.addInput(i, test_set[0])
-	testMaps.addOutput(o, test_set[1].astype('int32'))
+	testMaps = MDM.DatasetMapper()
+	testMaps.mapInput(test_set[0], i)
+	testMaps.mapOutput(test_set[1].astype('int32'), o)
 
-	validationMaps = MT.DatasetMapper()
-	validationMaps.addInput(i, validation_set[0])
-	validationMaps.addOutput(o, validation_set[1].astype('int32'))
+	validationMaps = MDM.DatasetMapper()
+	validationMaps.mapInput(validation_set[0], i)
+	validationMaps.mapOutput(validation_set[1].astype('int32'), o)
 
-	trainer = MT.DefaultTrainer(trainMaps = trainMaps, testMaps = testMaps, validationMaps = validationMaps, stopCriteria = [], miniBatchSize = miniBatchSize)
+	earlyStop = MSTOP.GeometricEarlyStopping('test', patience = 10000, patienceIncreaseFactor = 1.1, significantImprovement = 0.00001, outputLayer = o)
+
+	trainer = MT.DefaultTrainer(trainMaps = trainMaps, testMaps = testMaps, validationMaps = validationMaps, stopCriteria = [earlyStop], trainMiniBatchSize = miniBatchSize)
 	trainer.start("MLP", mlp)

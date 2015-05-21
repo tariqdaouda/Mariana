@@ -47,7 +47,7 @@ class BinomialTurnOff(Decorator):
 		#cast to stay in GPU float limit
 		mask = tt.cast(mask, theano.config.floatX)
 		layer.outputs = layer.outputs * mask
-		layer.name += "_drop_%s" % self.ratio
+		# layer.name += "_drop_%s" % self.ratio
 
 class WeightSparsity(Decorator):
 	"""Stochatically sets a certain ratio of the weight to 0"""
@@ -66,7 +66,7 @@ class WeightSparsity(Decorator):
 				if numpy.random.rand() < self.ratio :
 					initWeights[i, j] = 0
 		
-		layer.name += "_ws_%s" % self.ratio
+		# layer.name += "_ws_%s" % self.ratio
 		layer.W = theano.shared(value = initWeights, name = layer.name)
 
 class InputSparsity(Decorator):
@@ -85,7 +85,7 @@ class InputSparsity(Decorator):
 			if numpy.random.rand() < self.ratio :
 				initWeights[i, : ] = numpy.zeros(initWeights.shape[1])
 		
-		layer.name += "_is_%s" % self.ratio
+		# layer.name += "_is_%s" % self.ratio
 		layer.W = theano.shared(value = initWeights, name = layer.name)
 
 		

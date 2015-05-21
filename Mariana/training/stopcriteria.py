@@ -64,20 +64,25 @@ class GeometricEarlyStopping(StopCriterion_ABC) :
 		self.wall = patience
 		self.significantImprovement = significantImprovement
 
+		self.bestScore = None
+
 	def stop(self, trainer) :
 		if self.wall <= 0 :
 			return True
 
 		if self.outputLayer is None :
-			curr = trainer.recorder.getAverageCurrentScore(self.theSet)
-			best = trainer.recorder.getAverageBestScore(self.theSet)
+			curr = trainer.store["scores"][self.theSet]["average"]
 		else :
-			curr = trainer.recorder.getCurrentScore(self.outputLayer, self.theSet)
-			best = trainer.recorder.getBestScore(self.outputLayer, self.theSet)
+			curr = trainer.store["scores"][self.theSet][self.outputLayer.name]
+			
+		if self.bestScore is None :
+			self.bestScore = curr
+		elif curr < (self.bestScore + self.significantImprovement) :
+			self.bestScore = curr
 		
-		if curr < (best + self.significantImprovement) :
+		
 			self.wall = max(self.patience, trainer.currentEpoch * self.patienceIncreaseFactor)
-		
+	
 		self.wall -= 1	
 		return False
 	
