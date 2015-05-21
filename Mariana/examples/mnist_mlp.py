@@ -61,7 +61,15 @@ if __name__ == "__main__" :
 	validationMaps.mapInput(validation_set[0], i)
 	validationMaps.mapOutput(validation_set[1].astype('int32'), o)
 
-	earlyStop = MSTOP.GeometricEarlyStopping('test', patience = 10000, patienceIncreaseFactor = 1.1, significantImprovement = 0.00001, outputLayer = o)
+	earlyStop = MSTOP.GeometricEarlyStopping('test', patience = 100, patienceIncreaseFactor = 1.1, significantImprovement = 0.00001, outputLayer = o)
+	epochWall = MSTOP.EpochWall(1000)
 
-	trainer = MT.DefaultTrainer(trainMaps = trainMaps, testMaps = testMaps, validationMaps = validationMaps, stopCriteria = [earlyStop], trainMiniBatchSize = miniBatchSize)
+	trainer = MT.DefaultTrainer(
+		trainMaps = trainMaps,
+		testMaps = testMaps,
+		validationMaps = validationMaps,
+		stopCriteria = [earlyStop, epochWall],
+		trainMiniBatchSize = miniBatchSize
+	)
+	
 	trainer.start("MLP", mlp)

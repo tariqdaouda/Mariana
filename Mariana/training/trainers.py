@@ -92,6 +92,7 @@ class DefaultTrainer(object) :
 			f.write("Mariana training Interruption\n=============================\n")
 			f.write("\nDetails\n-------\n")
 			f.write("Name: %s\n" % runName)
+			f.write("pid: %s\n" % os.getpid())
 			f.write("Killed by: %s\n" % str(exType))
 			f.write("Time of death: %s\n" % death_time)
 			f.write("Model saved to: %s\n" % filename)
@@ -125,9 +126,11 @@ class DefaultTrainer(object) :
 				death_time = time.ctime().replace(' ', '_')
 				filename = "finished_" + runName +  "_" + death_time
 				f = open(filename +  ".stopreason.txt", 'w')
+				f.write("Name: %s\n" % runName)
+				f.write("pid: %s\n" % os.getpid())
 				f.write("Time of death: %s\n" % death_time)
 				f.write("Epoch of death: %s\n" % self.currentEpoch)
-				f.write("Stopped by: %s\n" % e.stopCriterion.runName)
+				f.write("Stopped by: %s\n" % e.stopCriterion.name)
 				f.write("Reason: %s\n" % e.message)
 				sstore = str(self.store).replace("'", '"')
 				f.write(

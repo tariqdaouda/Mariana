@@ -18,7 +18,7 @@ class Layer_ABC(object) :
 
 	__metaclass__ = ABCMeta
 
-	def __init__(self, nbOutputs, decorators = [], name = None) :
+	def __init__(self, nbOutputs, saveOutputs = True, decorators = [], name = None) :
 		
 		if name is not None :
 			self.name = name
@@ -30,7 +30,13 @@ class Layer_ABC(object) :
 		self.nbInputs = None
 		self.inputs = None
 		self.nbOutputs = nbOutputs
-		self.outputs = None
+		self.outputs = None # this is a symbolic var
+		if saveOutputs :
+			initLO = numpy.zeros(self.nbOutputs, dtype=theano.config.floatX)
+			self.last_outputs = theano.shared(value = numpy.matrix(initLO) ) # this will be a shared variable with the last values of outputs
+		else :
+			self.last_outputs = None
+
 		self.params = []
 
 		self.decorators = decorators
@@ -58,7 +64,7 @@ class Layer_ABC(object) :
 		"Initialise the layer making it ready for training. This function is automatically called before train/test etc..."
 		if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.feededBy) ) :
 			self._setOutputs()
-			if self.outputs == None :
+			if self.outputs is None :
 				raise ValueError("Invalid network, layer '%s' has no defined outputs" % self.name)
 
 			for l in self.feedsInto.itervalues() :
@@ -118,6 +124,12 @@ class Layer_ABC(object) :
 			_connectLayer(self, layer)
 			
 		return self.network
+
+	def getOutputs(self) :
+		try :
+			self.last_outputs.get_value()
+		except AttributeError :
+			raise AttributeError("Impossible to get the last ouputs of this layer, if you want them to be stored create with saveOutputs = True")
 
 	def __gt__(self, pathOrLayer) :
 		"""Alias to connect, make it possible to write things such as layer1 > layer2"""
@@ -284,12 +296,16 @@ class Output_ABC(Hidden) :
 					cost += reg
 
 		updates = self.learningScenario.getUpdates(self, cost)
-
+		
 		for l in self.dependencies.itervalues() :
 			try :
 				updates.extend(l.learningScenario.getUpdates(l, cost))
 			except AttributeError :
 				updates.extend(self.learningScenario.getUpdates(l, cost))
+		
+		for l in self.network.layers.itervalues() :
+			if l.last_outputs is not None :
+				updates.append( (l.last_outputs, l.outputs ) )
 
 		self.train = TheanoFunction("train", self, [cost, self.outputs], { "target" : self.target }, updates = updates)
 		self.test = TheanoFunction("test", self, [cost, self.outputs], { "target" : self.target })
