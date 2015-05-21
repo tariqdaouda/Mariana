@@ -3,7 +3,8 @@ Mariana(Beta)
 ==============
 
 Named after the deepest place on earth (Mariana trench), Mariana is a machine learning framework on top of theano.
-Mariana is still in active developement, but please feel free to play with it.
+Mariana is still in active developement, and there might be some bugs lurking in the dark. But I use it everyday, and bugs
+tend to be rapidely corrected. Please feel free to play with it.
 
 Why is it cool?
 ===============
