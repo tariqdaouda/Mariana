@@ -18,7 +18,7 @@ But using Mariana
 """
 
 def load_mnist() :
-	"""If i can't find it i will attempt to download it from lisa's place"""
+	"""If i can't find it i will attempt to download it from LISA's place"""
 	import urllib, os
 	dataset = 'mnist.pkl.gz'
 	if (not os.path.isfile(dataset)):
@@ -34,7 +34,6 @@ def load_mnist() :
 if __name__ == "__main__" :
 	
 	miniBatchSize = 20
-	nbEpochs = -1
 
 	#Let's define the network
 	ls = MS.DefaultScenario(lr = 0.01, momentum = 0)
@@ -61,7 +60,7 @@ if __name__ == "__main__" :
 	validationMaps.mapInput(validation_set[0], i)
 	validationMaps.mapOutput(validation_set[1].astype('int32'), o)
 
-	earlyStop = MSTOP.GeometricEarlyStopping('test', patience = 100, patienceIncreaseFactor = 1.1, significantImprovement = 0.00001, outputLayer = o)
+	earlyStop = MSTOP.GeometricEarlyStopping(testMaps, patience = 100, patienceIncreaseFactor = 1.1, significantImprovement = 0.00001, outputLayer = o)
 	epochWall = MSTOP.EpochWall(1000)
 
 	trainer = MT.DefaultTrainer(

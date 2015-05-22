@@ -29,19 +29,31 @@ class EpochWall(StopCriterion_ABC) :
 
 class ScoreWall(StopCriterion_ABC) :
 	"""Stops training when a givven score is reached"""
-	def __init__(self, wallValue, theSet, outputLayer = None) :
+	def __init__(self, wallValue, datasetMap, outputLayer = None) :
 		"""if outputLayer is None, will consider the average of all outputs"""
 		StopCriterion_ABC.__init__(self)
 
-		self.theSet = theSet
+		self.datasetMap = datasetMap
+		self.datasetName = None
 		self.outputLayer = outputLayer
 		self.wallValue = wallValue
 
 	def stop(self, trainer) :
+		
+		if self.datasetName is None :
+			found = False
+			for name, m in trainer.maps.iteritems() :
+				if m is self.datasetMap :
+					self.datasetName = name
+					found = True
+					break
+			if not found :
+				raise ValueError("the trainer does not know the supplied dataset map")
+
 		if self.outputLayer is None :
-			curr = trainer.recorder.getAverageCurrentScore(self.theSet)
+			curr = trainer.store["scores"][self.datasetName]["average"]
 		else :
-			curr = trainer.recorder.getCurrentScore(self.outputLayer, self.theSet)
+			curr = trainer.store["scores"][self.datasetName][self.outputLayer.name]
 	
 		if curr <= self.wallValue :
 			return True
@@ -53,12 +65,13 @@ class ScoreWall(StopCriterion_ABC) :
 
 class GeometricEarlyStopping(StopCriterion_ABC) :
 	"""Geometrically increases the patiences with the epochs and stops the training when the patience is over."""
-	def __init__(self, theSet, patience, patienceIncreaseFactor, significantImprovement, outputLayer = None) :
+	def __init__(self, datasetMap, patience, patienceIncreaseFactor, significantImprovement, outputLayer = None) :
 		"""if outputLayer is None, will consider the average of all outputs"""
 		StopCriterion_ABC.__init__(self)
 		
 		self.outputLayer = outputLayer
-		self.theSet = theSet
+		self.datasetMap = datasetMap
+		self.datasetName = None
 		self.patience = patience
 		self.patienceIncreaseFactor = patienceIncreaseFactor
 		self.wall = patience
@@ -70,10 +83,20 @@ class GeometricEarlyStopping(StopCriterion_ABC) :
 		if self.wall <= 0 :
 			return True
 
+		if self.datasetName is None :
+			found = False
+			for name, m in trainer.maps.iteritems() :
+				if m is self.datasetMap :
+					self.datasetName = name
+					found = True
+					break
+			if not found :
+				raise ValueError("the trainer does not know the supplied dataset map")
+
 		if self.outputLayer is None :
-			curr = trainer.store["scores"][self.theSet]["average"]
+			curr = trainer.store["scores"][self.datasetName]["average"]
 		else :
-			curr = trainer.store["scores"][self.theSet][self.outputLayer.name]
+			curr = trainer.store["scores"][self.datasetName][self.outputLayer.name]
 			
 		if self.bestScore is None :
 			self.bestScore = curr
