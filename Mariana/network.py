@@ -38,6 +38,8 @@ class Network(object) :
 		self.inputs = OrderedDict()
 		self.layers = OrderedDict()
 		self.outputs = OrderedDict()
+		self.layerConnectionCount = {}
+
 		self.regularizations = OrderedDict()
 		self.edges = set()
 
@@ -51,10 +53,35 @@ class Network(object) :
 		self.params.extend(params)
 
 	def addEdge(self, layer1, layer2) :
-		"""Add a connection between two layers to the network"""
+		"""Add a connection between two layers"""
 		self.layers[layer1.name] = layer1
 		self.layers[layer2.name] = layer2
 		self.edges.add( (layer1, layer2))
+		try :
+			self.layerConnectionCount[layer1.name] += 1
+		except KeyError
+			self.layerConnectionCount[layer1.name] = 1
+
+		try :
+			self.layerConnectionCount[layer2.name] += 1
+		except KeyError
+			self.layerConnectionCount[layer2.name] = 1
+
+	def removeEdge(self, layer1, leyer2) :
+		"""Remove the connection between two layers"""
+		def _del(self, layer) :
+			ds = [self.inputs, self.outputs, self.layers]
+			if self.layerConnectionCount[layer.name] < 1 :
+				for d in ds :
+					if layer.name in d :
+						del(d[layer.name])
+
+		self.edges.remove( (layer1, layer2))
+		self.layerConnectionCount[layer1] -= 1
+		self.layerConnectionCount[layer2] -= 1
+
+		_del(self, layer1)
+		_del(self, layer2)
 
 	def addInput(self, i) :
 		"""adds an input to the layer"""
@@ -143,6 +170,7 @@ class Network(object) :
 		s = s.replace("#COM#", com)
 		s = s.replace("#HEAD#", ';\n'.join(headers))
 		s = s.replace("#GRAPH#", ';\n'.join(g))
+		s = s.replace("-", '_')
 
 		return s
 

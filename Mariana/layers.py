@@ -95,7 +95,7 @@ class Layer_ABC(object) :
 		self.nbInputs = layer.nbOutputs
 
 	def connect(self, layerOrList) :
-		"""Connect the layer to list of layers or to a single layer"""
+		"""Connect the layer to another one"""
 		def _connectLayer(me, layer) :
 			me.feedsInto[layer.name] = layer
 			layer.feededBy[me.name] = me
@@ -125,6 +125,13 @@ class Layer_ABC(object) :
 			
 		return self.network
 
+	def disconnect(self, layer) :
+		"""Severs a connection"""
+		del(me.feedsInto[layer.name])
+		del(layer.feededBy[me.name])
+		me.network.removeEdge(me, layer)
+		me.network._mustInit = True
+
 	def getOutputs(self) :
 		try :
 			self.last_outputs.get_value()
@@ -134,6 +141,10 @@ class Layer_ABC(object) :
 	def __gt__(self, pathOrLayer) :
 		"""Alias to connect, make it possible to write things such as layer1 > layer2"""
 		return self.connect(pathOrLayer)
+
+	def __div__(self, pathOrLayer) :
+		"""Alias to disconnect, make it possible to write things such as layer1 / layer2"""
+		return self.disconnect(pathOrLayer)
 
 	def __repr__(self) :
 		return "(Mariana %s '%s': %sx%s )" % (self.__class__.__name__, self.name, self.nbInputs, self.nbOutputs)
