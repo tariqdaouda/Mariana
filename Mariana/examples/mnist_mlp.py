@@ -44,7 +44,8 @@ if __name__ == "__main__" :
 	o = ML.SoftmaxClassifier(10, learningScenario = ls, costObject = cost, name = "out", regularizations = [ MR.L1(0), MR.L2(0.0001) ] )
 
 	mlp = i > h > o
-
+	
+	mlp.saveDOT("minist_mlp")
 	#And then map sets to the inputs and outputs of our network
 	train_set, validation_set, test_set = load_mnist()
 

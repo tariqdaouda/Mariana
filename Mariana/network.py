@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from wrappers import TheanoFunction
+import Mariana.settings as MSET
 
 class OutputMap(object):
 	"""
@@ -59,12 +60,12 @@ class Network(object) :
 		self.edges.add( (layer1, layer2))
 		try :
 			self.layerConnectionCount[layer1.name] += 1
-		except KeyError
+		except KeyError :
 			self.layerConnectionCount[layer1.name] = 1
 
 		try :
 			self.layerConnectionCount[layer2.name] += 1
-		except KeyError
+		except KeyError :
 			self.layerConnectionCount[layer2.name] = 1
 
 	def removeEdge(self, layer1, leyer2) :
@@ -112,6 +113,7 @@ class Network(object) :
 		"Initialiases the network by initialising every layer."
 
 		if self._mustInit :
+			print "\n" + MSET.OMICRON_SIGNATURE
 			for inp in self.inputs.itervalues() :
 				inp._init()
 

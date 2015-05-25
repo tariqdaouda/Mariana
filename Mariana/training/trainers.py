@@ -104,7 +104,7 @@ class DefaultTrainer(object) :
 			f.close()
 
 		signal.signal(signal.SIGTERM, _handler_sig_term)
-		print "\n" + MSET.OMICRON_SIGNATURE
+		print "\n" + "Training starts."
 		MCAN.friendly("Process id", "The pid of this run is: %d" % os.getpid())
 
 		if recorder == "default" :
