@@ -50,6 +50,7 @@ class DefaultTrainer(object) :
 		self.currentEpoch = 0
 		
 		self.store = {}
+		self.store["runInfos"] = {}
 		self.store["scores"] = {}
 		self.store["hyperParameters"] = {}
 		self.store["setSizes"] = {}
@@ -153,7 +154,7 @@ class DefaultTrainer(object) :
 				_dieGracefully(exType, tb)
 				raise
 
-	def _run(self, name, model, recorder, trainingOrder = 0, reset = True, shuffleMinibatches = True, datasetName = "") :
+	def _run(self, name, model, recorder, trainingOrder = 0, reset = True, shuffleMinibatches = False, datasetName = "") :
 		"""
 			trainingOrder possible values:
 				* DefaultTrainer.SEQUENTIAL_TRAINING: Each output will be trained indipendetly on it's own epoch
@@ -256,6 +257,12 @@ class DefaultTrainer(object) :
 
 		legend.extend(hyperParameters.keys())
 		self.store["hyperParameters"].update(hyperParameters)
+		
+		self.store["runInfos"]["name"] = name
+		self.store["runInfos"]["dataset_name"] = datasetName
+		self.store["runInfos"]["training_order"] = self.trainingOrders[trainingOrder]
+		self.store["runInfos"]["pid"] = os.getpid()
+
 		for mapName in self.maps :
 			self.store["setSizes"][mapName] = len(self.maps[mapName])
 
@@ -267,7 +274,7 @@ class DefaultTrainer(object) :
 		while True :
 			for mapName in ["train", "validation", "test"] :
 				aMap = self.maps[mapName]
-				if len(aMap) > 0 :					
+				if len(aMap) > 0 :			
 					if mapName == "train" :
 						modelFct = model.train
 					else :
@@ -283,12 +290,9 @@ class DefaultTrainer(object) :
 
 			runtime = (time.time() - startTime)/60
 			
-			self.store["hyperParameters"].update( (
-				("name", name),
+			self.store["runInfos"].update( (
 				("epoch", self.currentEpoch),
 				("runtime(min)", runtime),
-				("dataset_name", datasetName),
-				("training_order", self.trainingOrders[trainingOrder])
 			) )
 	
 			self.recorder.commit(self.store, model)

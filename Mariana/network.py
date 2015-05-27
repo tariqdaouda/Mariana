@@ -11,25 +11,25 @@ class OutputMap(object):
 		self.name = name
 		self.outputFcts = {}
 
-	def printGraph(self, outputName) :
+	def printGraph(self, outputLayer) :
 		"""Print the theano graph of the function associated with a given output"""
-		self.outputFcts[outputName].printGraph()
+		self.outputFcts[outputLayer.name].printGraph()
 	
-	def addOutput(self, output, fct) :
-		self.outputFcts[output.name] = fct
+	def addOutput(self, outputLayer, fct) :
+		self.outputFcts[outputLayer.name] = fct
 
-	def map(self, outputLayerName, **kwargs) :
-		return self.outputFcts[outputLayerName](**kwargs)
+	def callTheanoFct(self, outputLayer, **kwargs) :
+		return self.outputFcts[outputLayer.name](**kwargs)
 
-	def __call__(self, outputLayerName, **kwargs) :
-		return self.map(outputLayerName, **kwargs)
+	def __call__(self, outputLayer, **kwargs) :
+		return self.callTheanoFct(outputLayer, **kwargs)
 
 	def __repr__(self) :
 		os = []
 		for o, v in self.outputFcts.iteritems() :
 			os.append(o)
 		os = ', '.join(os)
-		return "<'%s' for outputs: %s>" % (self.name, os)
+		return "<theano fct '%s' for output layer: '%s'>" % (self.name, os)
 
 class Network(object) :
 	"""All theano_x functions of the outputs are accessible through the network interface network.x().

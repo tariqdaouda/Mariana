@@ -1,4 +1,4 @@
-import sys
+import sys, os
 from pyGeno.tools.parsers.CSVTools import CSVFile
 
 class Recorder_ABC(object) :
@@ -21,7 +21,7 @@ class GGPlot2(Recorder_ABC):
 	
  		self.bestScores = {}
 		self.currentScores = {}
-		
+
 		self.csvLegend = None
 		self.csvFile = None
 
@@ -43,7 +43,8 @@ class GGPlot2(Recorder_ABC):
 		self.length += 1
 		if self.csvLegend is None :
 			self.csvLegend = store["hyperParameters"].keys()
-			self.csvLegend.extend( ["score", "best_score", "set", "output"] )
+			self.csvLegend.extend(store["runInfos"].keys())
+			self.csvLegend.extend( ["score", "best_score", "best_score_commit", "set", "output"] )
 
 			self.csvFile = CSVFile(legend = self.csvLegend)
 			self.csvFile.streamToFile( self.filename, writeRate = 1 )
@@ -58,6 +59,8 @@ class GGPlot2(Recorder_ABC):
 					self.bestScores[theSet][outputName] = (score, self.length)
 					model.save("best-%s-%s" % (theSet, self.filename))
 
+				muchData = store["hyperParameters"]
+				muchData.update(store["runInfos"]) 
 				_fillLine(
 					self.csvFile,
 					self.currentScores[theSet][outputName],
@@ -65,7 +68,7 @@ class GGPlot2(Recorder_ABC):
 					theSet,
 					store["setSizes"][theSet],
 					outputName,
-					**store["hyperParameters"]
+					**muchData
 				)
 	
 	
@@ -75,7 +78,7 @@ class GGPlot2(Recorder_ABC):
 	def printCurrentState(self) :
 		"""prints the current state stored in the recorder"""
 		if self.length > 0 :
-			print "\n==>rec: ggplot2, commit %s:" % self.length
+			print "\n==>rec: ggplot2, commit %s, pid: %s:" % (self.length, os.getpid())
 			for setName, scores in self.bestScores.iteritems() :
 				print "  |-%s set" % setName
 				for outputName in scores :

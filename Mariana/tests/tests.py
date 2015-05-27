@@ -1,7 +1,6 @@
 import unittest
 
-from Mariana.layers import *
-from Mariana.rules import *
+import Mariana.layers as ML
 import Mariana.decorators as dec
 import Mariana.costs as MC
 import Mariana.regularizations as MR
@@ -30,9 +29,9 @@ class MLPTests(unittest.TestCase):
 		ls = MS.DefaultScenario(lr = 0.1, momentum = 0)
 		cost = MC.NegativeLogLikelihood()
 
-		i = Input(2, 'inp')
-		h = Hidden(4, activation = MA.tanh, decorators = [dec.GlorotTanhInit()], regularizations = [MR.L1(0), MR.L2(0)])
-		o = SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
+		i = ML.Input(2, 'inp')
+		h = ML.Hidden(4, activation = MA.tanh, decorators = [dec.GlorotTanhInit()], regularizations = [MR.L1(0), MR.L2(0)])
+		o = ML.SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
 
 		mlp = i > h > o
 
@@ -40,17 +39,19 @@ class MLPTests(unittest.TestCase):
 		self.xor_outs = N.array(self.xor_outs)
 		for i in xrange(1000) :
 			ii = i%len(self.xor_ins)
-			mlp.train("out", inp = [ self.xor_ins[ ii ] ], target = [ self.xor_outs[ ii ] ] )
+			mlp.train(o, inp = [ self.xor_ins[ ii ] ], target = [ self.xor_outs[ ii ] ] )
 		
 		return mlp
 
 	# @unittest.skip("skipping")
 	def test_xor(self) :
 		mlp = self.trainMLP_xor()
-		self.assertEqual(mlp.classify( "out", inp = [ self.xor_ins[0] ] )[0], 0 )
-		self.assertEqual(mlp.classify( "out", inp = [ self.xor_ins[1] ] )[0], 1 )
-		self.assertEqual(mlp.classify( "out", inp = [ self.xor_ins[2] ] )[0], 1 )
-		self.assertEqual(mlp.classify( "out", inp = [ self.xor_ins[3] ] )[0], 0 )
+		o = mlp.outputs.values()[0]
+		
+		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[0] ] )[0], 0 )
+		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[1] ] )[0], 1 )
+		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
+		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[3] ] )[0], 0 )
 
 	# @unittest.skip("skipping")
 	def test_save_load(self) :
@@ -60,10 +61,12 @@ class MLPTests(unittest.TestCase):
 		mlp.save("test_save")
 		mlp2 = cPickle.load(open('test_save.mariana.pkl'))
 
-		self.assertEqual(mlp2.classify( "out", inp = [ self.xor_ins[0] ] )[0], 0 )
-		self.assertEqual(mlp2.classify( "out", inp = [ self.xor_ins[1] ] )[0], 1 )
-		self.assertEqual(mlp2.classify( "out", inp = [ self.xor_ins[2] ] )[0], 1 )
-		self.assertEqual(mlp2.classify( "out", inp = [ self.xor_ins[3] ] )[0], 0 )
+
+		o = mlp.outputs.values()[0]
+		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[0] ] )[0], 0 )
+		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[1] ] )[0], 1 )
+		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
+		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[3] ] )[0], 0 )
 		
 		os.remove('test_save.mariana.pkl')
 
@@ -72,11 +75,11 @@ class MLPTests(unittest.TestCase):
 		ls = MS.DefaultScenario(lr = 0.1, momentum = 0)
 		cost = MC.NegativeLogLikelihood()
 
-		inp = Input(2, 'inp')
-		h1 = Hidden(2, activation = MA.tanh, name = "h1")
-		h2 = Hidden(2, activation = MA.tanh, name = "h2")
-		o = SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
-		c = Composite(name = "Comp")
+		inp = ML.Input(2, 'inp')
+		h1 = ML.Hidden(2, activation = MA.tanh, name = "h1")
+		h2 = ML.Hidden(2, activation = MA.tanh, name = "h2")
+		o = ML.SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
+		c = ML.Composite(name = "Comp")
 		
 		inp > h1 > c
 		inp > h2 > c
@@ -86,12 +89,12 @@ class MLPTests(unittest.TestCase):
 		self.xor_outs = N.array(self.xor_outs)
 		for i in xrange(1000) :
 			ii = i%len(self.xor_ins)
-			mlp.train("out", inp = [ self.xor_ins[ ii ] ], target = [ self.xor_outs[ ii ] ])
+			mlp.train(o, inp = [ self.xor_ins[ ii ] ], target = [ self.xor_outs[ ii ] ])
 		
-		self.assertEqual(mlp.classify( "out", inp = [ self.xor_ins[0] ] )[0], 0 )
-		self.assertEqual(mlp.classify( "out", inp = [ self.xor_ins[1] ] )[0], 1 )
-		self.assertEqual(mlp.classify( "out", inp = [ self.xor_ins[2] ] )[0], 1 )
-		self.assertEqual(mlp.classify( "out", inp = [ self.xor_ins[3] ] )[0], 0 )
+		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[0] ] )[0], 0 )
+		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[1] ] )[0], 1 )
+		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
+		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[3] ] )[0], 0 )
 		
 if __name__ == '__main__' :
 	unittest.main()

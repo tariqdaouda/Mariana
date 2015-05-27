@@ -2,9 +2,12 @@ import Mariana.settings as MSET
 import numpy, random, time
 
 class ListSet(object) :
-	def __init__(self, values) :
+	def __init__(self, values, name = None) :
 		self.values = values
-		self.name = time.clock() + random.randint(0, 100)
+		if name is not None :
+			self.name = name
+		else :
+			self.name = time.clock() + random.randint(0, 100)
 
 	def getAll(self) :
 		return self.values
@@ -149,6 +152,7 @@ class DatasetMapper(object):
 		
 		self.minLen = 0
 		self.runIds = []
+		self.mustInit = True
 
 	def mapInput(self, lst, layer) :
 		if layer.name in self.layerNames :
@@ -210,6 +214,9 @@ class DatasetMapper(object):
 		self.layerNames.add(layer.name)
 
 	def shuffle(self) :
+		if self.mustInit :
+			self._init()
+
 		for s in self.sets.itervalues() :
 			if s.__class__ is ClassSuperset : 
 				s.setMinLen(self.minLen)
@@ -219,29 +226,35 @@ class DatasetMapper(object):
 			self.runIds = range(self.minLen)
 		random.shuffle(self.runIds)
 
+	def _init(self) :
+		self.runIds = range(self.minLen)
+		self.mustInit = False
+
  	def getBatches(self, i, size) :
 		"""Returns a random set of examples for each class, all classes have an equal chance of apperance
 		regardless of their number of elements. If you want  the limit to be length of the whole set
  		instead of a mini batch you can set size to "all".
  		"""
-
+		if self.mustInit :
+			self._init()
+			
  		inps = {}
 		outs = {}
-		for ii in self.runIds[i: i+size] :
-			for k, v in self.sets.iteritems() :
-				elmt = v[ii: ii+size]
-				if v.__class__ is ClassSuperset :
+		ii = self.runIds[i]
+		for k, v in self.sets.iteritems() :
+			elmt = v[ii: ii+size]
+			if v.__class__ is ClassSuperset :
+				l = self.inputSets[k]
+				inps[l.name] = elmt[0]
+				l = self.outputSets[k]
+				outs[l.name] = elmt[1]
+			else :
+				try :
 					l = self.inputSets[k]
-					inps[l.name] = elmt[0]
+					inps[l.name] = elmt
+				except :
 					l = self.outputSets[k]
-					outs[l.name] = elmt[1]
-				else :
-					try :
-						l = self.inputSets[k]
-						inps[l.name] = elmt
-					except :
-						l = self.outputSets[k]
-						outs[l.name] = elmt
+					outs[l.name] = elmt
 
 		for k, layers in self.syncedLayers.iteritems() :
 			for l in layers :
@@ -257,12 +270,15 @@ class DatasetMapper(object):
 					except KeyError :
 						outs[l.name] = outs[k]
 				else :
-					raise ValueError("Synced layer ''%s is neither an input nor an output" % l.name)
+					raise ValueError("Synced layer ''%s is neither an input nor an output layer" % l.name)
 		
 		return (inps, outs)
 
 	def getAll(self) :
 		"""Returns the whole batch"""
+		if self.mustInit :
+			self._init()
+
 		inps = {}
 		outs = {}
 		
@@ -294,12 +310,15 @@ class DatasetMapper(object):
 					except KeyError :
 						outs[l.name] = outs[k]
 				else :
-					raise ValueError("Synced layer ''%s is neither an input nor an output" % l.name)
+					raise ValueError("Synced layer ''%s is neither an input nor an output layer" % l.name)
 		
 		return (inps, outs)
 
 	def getOutputNames(self) :
  		return self.outputLayerNames
  	
+ 	def __repr__(self) :
+ 		return "<DatasetMapper len: %s, sets: %s, inputs: %s, outputs: %s>" % (self.minLen, len(self.sets), len(self.inputSets), len(self.outputSets))
+
 	def __len__(self) :
 		return self.minLen

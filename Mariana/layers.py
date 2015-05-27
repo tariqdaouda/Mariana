@@ -18,7 +18,7 @@ class Layer_ABC(object) :
 
 	__metaclass__ = ABCMeta
 
-	def __init__(self, nbOutputs, saveOutputs = True, decorators = [], name = None) :
+	def __init__(self, nbOutputs, saveOutputs = False, decorators = [], name = None) :
 		
 		if name is not None :
 			self.name = name
@@ -315,7 +315,7 @@ class Output_ABC(Hidden) :
 				updates.extend(self.learningScenario.getUpdates(l, cost))
 		
 		for l in self.network.layers.itervalues() :
-			if l.last_outputs is not l.outputs is not None :
+			if ( l.last_outputs is not None ) and ( l.outputs is not None ) :
 				updates.append( (l.last_outputs, l.outputs ) )
 
 		self.train = TheanoFunction("train", self, [cost, self.outputs], { "target" : self.target }, updates = updates)

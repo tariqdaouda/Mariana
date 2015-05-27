@@ -33,14 +33,12 @@ def load_mnist() :
 
 if __name__ == "__main__" :
 	
-	miniBatchSize = 20
-
 	#Let's define the network
 	ls = MS.DefaultScenario(lr = 0.01, momentum = 0)
 	cost = MC.NegativeLogLikelihood()
 
-	i = ML.Input(28*28, 'inp')
-	h = ML.Hidden(500, activation = MA.tanh, decorators = [MD.GlorotTanhInit()], regularizations = [ MR.L1(0), MR.L2(0.0001) ] )
+	i = ML.Input(28*28, name = 'inp')
+	h = ML.Hidden(500, activation = MA.tanh, decorators = [MD.GlorotTanhInit()], regularizations = [ MR.L1(0), MR.L2(0.0001) ], name = "hid" )
 	o = ML.SoftmaxClassifier(10, learningScenario = ls, costObject = cost, name = "out", regularizations = [ MR.L1(0), MR.L2(0.0001) ] )
 
 	mlp = i > h > o
@@ -69,7 +67,7 @@ if __name__ == "__main__" :
 		testMaps = testMaps,
 		validationMaps = validationMaps,
 		stopCriteria = [earlyStop, epochWall],
-		trainMiniBatchSize = miniBatchSize
+		trainMiniBatchSize = 20
 	)
 	
-	trainer.start("MLP", mlp)
+	trainer.start("MLP", mlp, shuffleMinibatches = False)
