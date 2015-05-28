@@ -171,7 +171,7 @@ class Input(Layer_ABC) :
 		self.outputs = tt.matrix(name = self.name + "_X")
 
 	def _dot_representation(self) :
-		return '[label="%s: %s" shape=invtriangle]' % (self.name, self.nbOutputs)
+		return '[label="%s: %s" shape=invhouse]' % (self.name, self.nbOutputs)
 
 	def clone(self, **kwargs) :
 		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
@@ -201,7 +201,7 @@ class Composite(Layer_ABC):
 		self.outputs = tt.concatenate( [l.outputs for l in self.feededBy.itervalues()], axis = 1 )
 
 	def _dot_representation(self) :
-		return '[label="%s: %s" shape=box]' % (self.name, self.nbOutputs)
+		return '[label="%s: %s" shape=tripleoctogon]' % (self.name, self.nbOutputs)
 		
 class Hidden(Layer_ABC) :
 	"A basic hidden layer"
@@ -318,8 +318,8 @@ class Output_ABC(Hidden) :
 			if ( l.last_outputs is not None ) and ( l.outputs is not None ) :
 				updates.append( (l.last_outputs, l.outputs ) )
 
-		self.train = TheanoFunction("train", self, [cost, self.outputs], { "target" : self.target }, updates = updates)
-		self.test = TheanoFunction("test", self, [cost, self.outputs], { "target" : self.target })
+		self.train = TheanoFunction("train", self, [cost], { "target" : self.target }, updates = updates)
+		self.test = TheanoFunction("test", self, [cost], { "target" : self.target })
 		self.propagate = TheanoFunction("propagate", self, [self.outputs])
 	
 		self._setTheanoFunctions()
@@ -336,7 +336,7 @@ class Output_ABC(Hidden) :
 		return h
 
 	def _dot_representation(self) :
-		return '[label="%s: %sx%s" shape=invtriangle]' % (self.name, self.nbInputs, self.nbOutputs)
+		return '[label="%s: %sx%s" shape=invhouse]' % (self.name, self.nbInputs, self.nbOutputs)
 
 class Classifier_ABC(Output_ABC):
 		"An abstract Classifier"
@@ -357,12 +357,19 @@ class SoftmaxClassifier(Classifier_ABC) :
 		"""defined theano_classify, that returns the argmax of the output"""
 		self.classify = TheanoFunction("classify", self, [ tt.argmax(self.outputs) ])
 
+	def _dot_representation(self) :
+		return '[label="%s: %s" shape=doublecircle]' % (self.name, self.nbOutputs)
+
 class Regression(Output_ABC) :
 	"""For regressions"""
 	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
 		Output_ABC.__init__(self, nbOutputs, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.target = tt.matrix(name = self.name + "_Target")
 
+	def _dot_representation(self) :
+		return '[label="%s: %s" shape=egg]' % (self.name, self.nbOutputs)
+
+#work in progress
 class Convolution2D(Hidden) :
 
 	def __init__(self, nbMaps, height, width) :
