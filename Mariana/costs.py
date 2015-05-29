@@ -20,7 +20,7 @@ class Null(Cost_ABC) :
 		return outputs*0 + targets*0
 
 class NegativeLogLikelihood(Cost_ABC) :
-	"""cost fct for softmax"""
+	"""cost fct for a probalistic output, ex: softmax"""
 	def _costFct(self, targets, outputs) :
 		cost = -tt.mean(tt.log(outputs)[tt.arange(targets.shape[0]), targets])
 		return cost

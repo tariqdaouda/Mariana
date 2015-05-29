@@ -186,40 +186,40 @@ class DefaultTrainer(object) :
 		def _trainTest(aMap, modelFct, shuffleMinibatches, trainingOrder, miniBatchSize) :
 			scores = {}
 			if miniBatchSize == "all" :
-				for outputName in aMap.getOutputNames() :
+				for output in aMap.getOutputs() :
 					batchData = aMap.getAll()
 					kwargs = batchData[0] #inputs
-					kwargs.update({ "target" : batchData[1][outputName]} )
-					res = modelFct(outputName, **kwargs)
-					scores[outputName] = res[0]
+					kwargs.update({ "target" : batchData[1][output.name]} )
+					res = modelFct(output, **kwargs)
+					scores[output.name] = res[0]
 			else :
 				if shuffleMinibatches :
 					aMap.shuffle()
 				
 				if trainingOrder == DefaultTrainer.SEQUENTIAL_TRAINING :
-					for outputName in aMap.getOutputNames() :
+					for output in aMap.getOutputs() :
 						for i in xrange(0, len(aMap), miniBatchSize) :
 							batchData = aMap.getBatches(i, miniBatchSize)
 							kwargs = batchData[0] #inputs
-							kwargs.update({ "target" : batchData[1][outputName]} )
-							res = modelFct(outputName, **kwargs)
+							kwargs.update({ "target" : batchData[1][output.name]} )
+							res = modelFct(output, **kwargs)
 
 							try :
-								scores[outputName].append(res[0])
+								scores[output.name].append(res[0])
 							except KeyError:
-								scores[outputName] = [res[0]]
+								scores[output.name] = [res[0]]
 				elif trainingOrder == DefaultTrainer.SIMULTANEOUS_TRAINING :
 					for i in xrange(0, len(aMap), miniBatchSize) :
 						batchData = aMap.getBatches(i, miniBatchSize)
 						kwargs = batchData[0] #inputs
-						for outputName in aMap.getOutputNames() :
-							kwargs.update({ "target" : batchData[1][outputName]} )
-							res = modelFct(outputName, **kwargs)
+						for output in aMap.getOutputs() :
+							kwargs.update({ "target" : batchData[1][output.name]} )
+							res = modelFct(output, **kwargs)
 							
 							try :
-								scores[outputName].append(res[0])
+								scores[output.name].append(res[0])
 							except KeyError:
-								scores[outputName] = [res[0]]		
+								scores[output.name] = [res[0]]		
 				else :
 					raise ValueError("Unknown training order: %s" % trainingOrder)
 
@@ -272,7 +272,7 @@ class DefaultTrainer(object) :
 		self.currentEpoch = 0
 
 		while True :
-			for mapName in ["train", "validation", "test"] :
+			for mapName in ["train", "test", "validation"] :
 				aMap = self.maps[mapName]
 				if len(aMap) > 0 :			
 					if mapName == "train" :

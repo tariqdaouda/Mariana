@@ -19,7 +19,7 @@ But using Mariana
 
 def load_mnist() :
 	"""If i can't find it i will attempt to download it from LISA's place"""
-	import urllib, os
+	import urllib, os, gzip, cPickle
 	dataset = 'mnist.pkl.gz'
 	if (not os.path.isfile(dataset)):
 		origin = (

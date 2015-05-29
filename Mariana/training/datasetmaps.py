@@ -145,7 +145,7 @@ class DatasetMapper(object):
  		self.inputSets = {}
  		self.outputSets = {}
  		self.layerNames = set()
- 		self.outputLayerNames = set()
+ 		self.outputLayers = set()
  		self.sets = {}
 
 		self.syncedLayers = {}
@@ -189,7 +189,7 @@ class DatasetMapper(object):
 			raise ValueError("Only output layers are allowed")
 		
 		self.layerNames.add(layer.name)
-		self.outputLayerNames.add(layer.name)
+		self.outputLayers.add(layer)
 		self.sets[aSet.name] = aSet
 		
 		if self.minLen == 0 or len(aSet) < self.minLen :
@@ -210,7 +210,7 @@ class DatasetMapper(object):
 			self.syncedLayers[refLayer.name] = [layer]
 		
 		if layer.type == MSET.TYPE_OUTPUT_LAYER :
-			self.outputLayerNames.add(layer.name)
+			self.outputLayers.add(layer)
 		self.layerNames.add(layer.name)
 
 	def shuffle(self) :
@@ -314,8 +314,8 @@ class DatasetMapper(object):
 		
 		return (inps, outs)
 
-	def getOutputNames(self) :
- 		return self.outputLayerNames
+	def getOutputs(self) :
+ 		return self.outputLayers
  	
  	def __repr__(self) :
  		return "<DatasetMapper len: %s, sets: %s, inputs: %s, outputs: %s>" % (self.minLen, len(self.sets), len(self.inputSets), len(self.outputSets))

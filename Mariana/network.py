@@ -49,10 +49,6 @@ class Network(object) :
 		self._mustInit = True
 		self.outputMaps = {}
 
-	def addParams(self, params) :
-		"""Add parameters to the network"""
-		self.params.extend(params)
-
 	def addEdge(self, layer1, layer2) :
 		"""Add a connection between two layers"""
 		self.layers[layer1.name] = layer1
@@ -114,12 +110,18 @@ class Network(object) :
 
 		if self._mustInit :
 			print "\n" + MSET.OMICRON_SIGNATURE
+			# print "\tcompiling..."
+
 			for inp in self.inputs.itervalues() :
 				inp._init()
 
 			self._mustInit = False
+			
+			for l in self.layers.itervalues() :
+				self.params.extend(l.getParams())
 
 			for o in self.outputs.itervalues() :
+				o._setTheanoFunctions()
 				for k, v in o.__dict__.iteritems() :
 					if ( v.__class__ is TheanoFunction ) or issubclass(v.__class__, TheanoFunction) :
 						if k not in self.outputMaps :

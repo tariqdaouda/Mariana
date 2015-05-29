@@ -37,8 +37,6 @@ class Layer_ABC(object) :
 		else :
 			self.last_outputs = None
 
-		self.params = []
-
 		self.decorators = decorators
 
 		self.feedsInto = OrderedDict()
@@ -51,6 +49,10 @@ class Layer_ABC(object) :
 
 	def addDecorator(self, decorator) :
 		self.decorators.append(decorator)
+
+	def getParams(self) :
+		"""returns the layer parameters"""
+		raise NotImplemented("Should be implemented in child")
 
 	def clone(self, **kwargs) :
 		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
@@ -65,7 +67,7 @@ class Layer_ABC(object) :
 		if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.feededBy) ) :
 			self._setOutputs()
 			if self.outputs is None :
-				raise ValueError("Invalid network, layer '%s' has no defined outputs" % self.name)
+				raise ValueError("Invalid layer '%s' has no defined outputs" % self.name)
 
 			for l in self.feedsInto.itervalues() :
 				if l.inputs is None :
@@ -75,7 +77,6 @@ class Layer_ABC(object) :
 				l._setNbInputs(self)
 				l._registerInput(self)
 				l._init()
-				l._decorate()
 			self._mustInit = False
 	
 	#theano hates abstract methods defined with a decorator
@@ -109,11 +110,6 @@ class Layer_ABC(object) :
 
 		if type(layerOrList) is ListType :
 			raise NotImplemented("List as argument is deprecated")
-			# for p in layerOrList :
-			# 	layer = p[1].entryLayer
-			# 	_connectLayer(self, layer)
-			# 	self.network.merge(self, p[1])
-			# 	layer.network = self.network
 		else :
 			layer = layerOrList
 			if isinstance(layer, Input) :
@@ -163,8 +159,11 @@ class Input(Layer_ABC) :
 		self.kwargs = kwargs
 		self.type = MSET.TYPE_INPUT_LAYER
 		self.nbInputs = nbInputs
-		self.network = Network()#y, self)
+		self.network = Network()
 		self.network.addInput(self)
+
+	def getParams(self) :
+		return []
 
 	def _setOutputs(self) :
 		"initialises the output to be the same as the inputs"
@@ -190,6 +189,9 @@ class Composite(Layer_ABC):
 	"""
 	def __init__(self, name = None):
 		Layer_ABC.__init__(self, nbOutputs = None, name = name)
+
+	def getParams(self) :
+		return []
 
 	def _setNbInputs(self, layer) :
 		if self.nbInputs is None :
@@ -238,9 +240,8 @@ class Hidden(Layer_ABC) :
 			if self.b.get_value().shape[0] != self.nbOutputs :
 				raise ValueError("bias has a length of %s, but there are %s outputs" % (self.b.get_value().shape[0], self.nbOutputs))
 
-		self.params = [self.W, self.b]
-		self.network.addParams(self.params)
-
+		self._decorate()
+		
 		if self.activation is None :
 			self.outputs = tt.dot(self.inputs, self.W) + self.b
 		else :
@@ -249,6 +250,10 @@ class Hidden(Layer_ABC) :
 	
 		for reg in self.regularizationObjects :
 			self.regularizations.append(reg.getFormula(self))
+
+	def getParams(self) :
+		"""returns the layer parameters (Weights and bias)"""
+		return [self.W, self.b]
 
 	def clone(self, **kwargs) :
 		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
@@ -264,7 +269,12 @@ class Hidden(Layer_ABC) :
 
 	def toOutput(self, outputType, **kwargs) :
 		"returns an output layer with the same activation function, weights and bias"
-		o = outputType(self.nbOutputs, activation = self.activation, name = self.name, **kwargs)
+		if "activation" in kwargs :
+			act = kwargs["activation"]
+		else :
+			act = self.activation
+
+		o = outputType(self.nbOutputs, activation = act, name = self.name, **kwargs)
 		o.W = self.W
 		o.b = self.b
 		return o
@@ -292,13 +302,12 @@ class Output_ABC(Hidden) :
 
 		self.dependencies = _bckTrk(self.dependencies, self)
 
-	def _setOutputs(self) :
-		"""Initialises the layer by creating the weights and and bias.
-		Creates theano_train/theano_test/theano_propagate functions and calls _setTheanoFunctions to 
+	def _setTheanoFunctions(self) :
+		"""Creates theano_train/theano_test/theano_propagate functions and calls _setCustomTheanoFunctions to 
 		create user custom theano functions."""
-		Hidden._setOutputs(self)
 
 		self._backTrckDependencies()
+		
 		cost = self.costObject.getCost(self)
 	
 		for l in self.dependencies.itervalues() :
@@ -313,18 +322,21 @@ class Output_ABC(Hidden) :
 				updates.extend(l.learningScenario.getUpdates(l, cost))
 			except AttributeError :
 				updates.extend(self.learningScenario.getUpdates(l, cost))
-		
+			
+		lastOutsUpdates = []
 		for l in self.network.layers.itervalues() :
 			if ( l.last_outputs is not None ) and ( l.outputs is not None ) :
-				updates.append( (l.last_outputs, l.outputs ) )
+				lastOutsUpdates.append( (l.last_outputs, l.outputs ) )
 
-		self.train = TheanoFunction("train", self, [cost], { "target" : self.target }, updates = updates)
-		self.test = TheanoFunction("test", self, [cost], { "target" : self.target })
-		self.propagate = TheanoFunction("propagate", self, [self.outputs])
+		updates.extend(lastOutsUpdates)
+
+		self.train = TheanoFunction("train", self, [cost], { "target" : self.target }, updates = updates, allow_input_downcast=True)
+		self.test = TheanoFunction("test", self, [cost], { "target" : self.target }, updates = lastOutsUpdates, allow_input_downcast=True)
+		self.propagate = TheanoFunction("propagate", self, [self.outputs], updates = lastOutsUpdates, allow_input_downcast=True)
 	
-		self._setTheanoFunctions()
+		self._setCustomTheanoFunctions()
 
-	def _setTheanoFunctions(self) :
+	def _setCustomTheanoFunctions(self) :
 		"This is where you should put the definitions of your custom theano functions"
 		pass
 
@@ -343,9 +355,9 @@ class Classifier_ABC(Output_ABC):
 		def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
 			Output_ABC.__init__(self, nbOutputs, activation, learningScenario, costObject, name, **kwargs)
 
-		def _setTheanoFunctions(self) :
+		def _setCustomTheanoFunctions(self) :
 			"""Classifiers must define a 'classify' function that returns the result of the classification"""
-			raise NotImplemented("theano classify must be defined in child's _setTheanoFunctions()")				
+			raise NotImplemented("theano classify must be defined in child's _setCustomTheanoFunctions()")				
 
 class SoftmaxClassifier(Classifier_ABC) :
 	"""A softmax Classifier"""
@@ -353,7 +365,7 @@ class SoftmaxClassifier(Classifier_ABC) :
 		Classifier_ABC.__init__(self, nbOutputs, activation = MA.softmax, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.target = tt.ivector(name = self.name + "_Target")
 
-	def _setTheanoFunctions(self) :
+	def _setCustomTheanoFunctions(self) :
 		"""defined theano_classify, that returns the argmax of the output"""
 		self.classify = TheanoFunction("classify", self, [ tt.argmax(self.outputs) ])
 

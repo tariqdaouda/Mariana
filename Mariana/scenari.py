@@ -1,4 +1,3 @@
-# import Mariana.costs as MC
 import theano
 import theano.tensor as tt
 
@@ -11,8 +10,25 @@ class LearningScenario_ABC(object):
 		"""return the updates for the parameters of layer. Must be implemented in child"""
 		raise NotImplemented("Must be implemented in child")
 
-class DefaultScenario(LearningScenario_ABC):
-	"The default scenarios has a fixed learning rate and a fixed momentum"
+class GradientDescent(LearningScenario_ABC):
+	"The GradientDescent scenarios has a fixed learning rate"
+ 	def __init__(self, lr):
+ 		super(LearningScenario_ABC, self).__init__()
+ 		self.name = self.__class__.__name__
+ 		self.lr = lr
+ 		self.hyperParameters = ["lr"]
+
+ 	def getUpdates(self, layer, cost) :
+ 		updates = []
+ 		if self.lr > 0 :
+	 		for param in layer.getParams() :
+	 			gparam = tt.grad(cost, param)
+		 		updates.append((param, param - self.lr * gparam))
+
+		return updates
+
+class MomentumGradientDescent(LearningScenario_ABC):
+	"The MomentumGradientDescent scenarios has a fixed learning rate and a fixed momentum"
  	def __init__(self, lr, momentum):
  		super(LearningScenario_ABC, self).__init__()
  		self.name = self.__class__.__name__
@@ -23,7 +39,7 @@ class DefaultScenario(LearningScenario_ABC):
  	def getUpdates(self, layer, cost) :
  		updates = []
  		if self.lr > 0 :
-	 		for param in layer.params :
+	 		for param in layer.getParams() :
 	 			gparam = tt.grad(cost, param)
 		 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
 				updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
@@ -54,7 +70,7 @@ class GradientFloor(LearningScenario_ABC):
  	def getUpdates(self, layer, cost) :
  		updates = []
  		if self.lr > 0 :
-	 		for param in layer.params :
+	 		for param in layer.getParams() :
 	 			g = tt.grad(cost, param)
 	 			gparam = tt.switch( tt.abs_(g) > self.floor, g, 0.)
 
