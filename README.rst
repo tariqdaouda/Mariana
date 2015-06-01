@@ -140,6 +140,11 @@ Loading is a simple unpickling:
   mlp = cPickle.load(open("myMLP.mariana.pkl"))
   mlp.train(...)
 
+Getting the outputs of intermediate layers
+==========================================
+
+By setting a layer with the argument **saveOutputs=True**. You tell Mariana to keep the last outputs of that layer stored, so you can access them using **.getLastOutputs()** function.
+
 Cloning layers and re-using layers
 ===================================
 
@@ -160,11 +165,6 @@ And a hidden layer to an output layer using:
 .. code:: python
 
   o = h.toOutput(ML.Regression, costObject = cost, learningScenario = ls)
-
-Getting the outputs of intermediate layers
-==========================================
-
-By setting a layer with the argument **saveOutputs=True**. You tell Mariana to keep the last ouputs of that layer stored, so you can access them using **.getLastOutputs()** function.
 
 Visualizing networks
 ====================
