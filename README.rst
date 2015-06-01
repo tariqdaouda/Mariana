@@ -28,10 +28,10 @@ So in short:
   * free your imagination and experiment
   * no requirements concerning the format of the datasets
 
-A word about the **>**
+A word about the **'>'**
 ======================
 
-When communicating about neural networks people often draw sets of connected layers. That's the idea behind Mariana: layers are first defined, then connected using the **>** operator. 
+When communicating about neural networks people often draw sets of connected layers. That's the idea behind Mariana: layers are first defined, then connected using the **'>'** operator. 
 
 Short examples
 ===============
@@ -139,8 +139,8 @@ Loading is a simple unpickling:
   
   mlp = cPickle.load(open("myMLP.mariana.pkl"))
   mlp.train(...)
-  
-Cloning layers and resusing layers
+
+Cloning layers and re-using layers
 ===================================
 
 Mariana allows you to clone layers so you can train a model, extract one of it's layers, and use it for another model.
@@ -160,6 +160,11 @@ And a hidden layer to an output layer using:
 .. code:: python
 
   o = h.toOutput(ML.Regression, costObject = cost, learningScenario = ls)
+
+Getting the outputs of intermediate layers
+==========================================
+
+By setting a layer with the argument **saveOutputs=True**. You tell Mariana to keep the last ouputs of that layer stored, so you can access them using **.getLastOutputs()** function.
 
 Visualizing networks
 ====================
