@@ -47,8 +47,8 @@ class ZerosInit(Decorator) :
 		initWeights = numpy.asarray(initWeights, dtype=theano.config.floatX)
 		layer.W = theano.shared(value = initWeights, name = layer.W.name)
 		
-class BinomialTurnOff(Decorator):
-	"""Applies BinomialTurnOff with a given ratio to a layer. Use it to make things such as denoising autoencoders and dropout layers"""
+class BinomialDropout(Decorator):
+	"""Use it to make things such as denoising autoencoders and dropout layers"""
 	def __init__(self, ratio, *args, **kwargs):
 		Decorator.__init__(self, *args, **kwargs)
 
@@ -61,10 +61,9 @@ class BinomialTurnOff(Decorator):
 		rnd = tt.shared_randomstreams.RandomStreams()
 		mask = rnd.binomial(n = 1, p = (1-self.ratio), size = layer.outputs.shape)
 		#cast to stay in GPU float limit
-		mask = tt.cast(mask, theano.config.floatX)
+		# mask = tt.cast(mask, theano.config.floatX)
 		layer.outputs = layer.outputs * mask
-		# layer.W.name += "_drop_%s" % self.ratio
-
+	
 class WeightSparsity(Decorator):
 	"""Stochatically sets a certain ratio of the weight to 0"""
 	def __init__(self, ratio, *args, **kwargs):
@@ -82,7 +81,6 @@ class WeightSparsity(Decorator):
 				if numpy.random.rand() < self.ratio :
 					initWeights[i, j] = 0
 		
-		# layer.W.name += "_ws_%s" % self.ratio
 		layer.W = theano.shared(value = initWeights, name = layer.W.name)
 
 class InputSparsity(Decorator):
@@ -101,7 +99,6 @@ class InputSparsity(Decorator):
 			if numpy.random.rand() < self.ratio :
 				initWeights[i, : ] = numpy.zeros(initWeights.shape[1])
 		
-		# layer.W.name += "_is_%s" % self.ratio
 		layer.W = theano.shared(value = initWeights, name = layer.W.name)
 
 		

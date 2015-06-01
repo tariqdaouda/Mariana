@@ -51,6 +51,11 @@ class Network(object) :
 
 	def addEdge(self, layer1, layer2) :
 		"""Add a connection between two layers"""
+		# if layer1.name in self.layers :
+		# 	raise ValueError("There's already a layer named '%s' in the network" % layer1.name)
+		# if layer2.name in self.layers :
+		# 	raise ValueError("There's already a layer named '%s' in the network" % layer2.name)
+
 		self.layers[layer1.name] = layer1
 		self.layers[layer2.name] = layer2
 		self.edges.add( (layer1, layer2))
@@ -64,7 +69,7 @@ class Network(object) :
 		except KeyError :
 			self.layerConnectionCount[layer2.name] = 1
 
-	def removeEdge(self, layer1, leyer2) :
+	def removeEdge(self, layer1, layer2) :
 		"""Remove the connection between two layers"""
 		def _del(self, layer) :
 			ds = [self.inputs, self.outputs, self.layers]

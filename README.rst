@@ -27,7 +27,12 @@ So in short:
   * export your models to DOT format to obtain clean and easy to communicate graphs
   * free your imagination and experiment
   * no requirements concerning the format of the datasets
-  
+
+A word about the **>**
+======================
+
+When communicating about neural networks people often draw sets of connected layers. That's the idea behind Mariana: layers are first defined, then connected using the **>** operator. 
+
 Short examples
 ===============
 
@@ -46,11 +51,11 @@ Importations first
 
 .. code:: python
 
-	ls = MS.DefaultScenario(lr = 0.01, momentum = 0)
+	ls = MS.GradientDescent(lr = 0.01)
 	cost = MC.NegativeLogLikelihood()
 	
 	i = ML.Input(28*28)
-	h = ML.Hidden(300, activation = MA.reLU, decorators = [MD.StochasticTurnOff(0.2)], regularizations = [ MR.L1(0.0001) ])
+	h = ML.Hidden(300, activation = MA.reLU, decorators = [MD.BinomialTurnOff(0.2)], regularizations = [ MR.L1(0.0001) ])
 	o = ML.SoftmaxClassifier(9, learningScenario = ls, costObject = cost, regularizations = [ MR.L1(0.0001) ])
 	
 	MLP = i > h > o
@@ -59,7 +64,7 @@ Importations first
 
 .. code:: python
 
-	ls = MS.DefaultScenario(lr = 0.001, momentum = 0.009)
+	ls = MS.GradientDescent(lr = 0.001)
 	cost = MC.MeanSquaredError()
 	
 	i = ML.Input(10)
@@ -82,6 +87,8 @@ Example
 =======
 
 Please have a look at **mnist_mlp.py** in the examples folder. It illustrates most of what this quickstart guide adresses.
+There's also **vanilla_mnist_perceptron_mlp.py**, wich demonstrate how to train an MLP (network with one hidden layer) or a Percetron on mnist
+without the use of a trainer.
 
 Using the trainer and loading datasets
 ========================================

@@ -3,6 +3,7 @@ import theano
 import sys
 
 import Mariana.candies as MCAN
+import Mariana.settings as MSET
 
 class TheanoFunction(object) :
 	"This class encapsulates a Theano function"
@@ -29,7 +30,9 @@ class TheanoFunction(object) :
 			device = "GPU"
 		else:
 			device = "CPU"
-		MCAN.friendly("Run device", "I will use the [-%s-] to run function '%s' of layer '%s'!" % (device, name, outputLayer.name))
+
+		if MSET.VERBOSE :
+			MCAN.friendly("Run device", "I will use the [-%s-] to run function '%s' of layer '%s'!" % (device, name, outputLayer.name))
 
 	def printGraph(self) :
 		"""Print the theano graph of the function"""

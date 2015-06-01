@@ -8,7 +8,7 @@ import Mariana.scenari as MS
 import Mariana.activations as MA
 
 import theano.tensor as tt
-import numpy as N
+import numpy
 
 class MLPTests(unittest.TestCase):
 
@@ -26,7 +26,7 @@ class MLPTests(unittest.TestCase):
 		pass
 
 	def trainMLP_xor(self) :
-		ls = MS.DefaultScenario(lr = 0.1, momentum = 0)
+		ls = MS.GradientDescent(lr = 0.1)
 		cost = MC.NegativeLogLikelihood()
 
 		i = ML.Input(2, 'inp')
@@ -35,8 +35,8 @@ class MLPTests(unittest.TestCase):
 
 		mlp = i > h > o
 
-		self.xor_ins = N.array(self.xor_ins)
-		self.xor_outs = N.array(self.xor_outs)
+		self.xor_ins = numpy.array(self.xor_ins)
+		self.xor_outs = numpy.array(self.xor_outs)
 		for i in xrange(1000) :
 			ii = i%len(self.xor_ins)
 			mlp.train(o, inp = [ self.xor_ins[ ii ] ], target = [ self.xor_outs[ ii ] ] )
@@ -70,8 +70,36 @@ class MLPTests(unittest.TestCase):
 		os.remove('test_save.mariana.pkl')
 
 	# @unittest.skip("skipping")
+	def test_ae(self) :
+		miniBatchSize = 2
+
+		data = []
+		for i in xrange(8) :
+			zeros = numpy.zeros(8)
+			zeros[i] = 1
+			data.append(zeros)
+
+
+		ls = MS.GradientDescent(lr = 0.1)
+		cost = MC.MeanSquaredError()
+
+		i = ML.Input(8, name = 'inp')
+		h = ML.Hidden(3, activation = MA.reLU, name = "hid", saveOutputs = True )
+		o = ML.Regression(8, activation = MA.reLU, learningScenario = ls, costObject = cost, name = "out" )
+
+		ae = i > h > o
+
+		for e in xrange(2000) :
+			for i in xrange(0, len(data), miniBatchSize) :
+				ae.train(o, inp = data[i:i+miniBatchSize], target = data[i:i+miniBatchSize] )
+
+		res = ae.propagate(o, inp = data)[0]
+		for i in xrange(len(res)) :
+			self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
+
+	# @unittest.skip("skipping")
 	def test_composite(self) :
-		ls = MS.DefaultScenario(lr = 0.1, momentum = 0)
+		ls = MS.GradientDescent(lr = 0.1)
 		cost = MC.NegativeLogLikelihood()
 
 		inp = ML.Input(2, 'inp')
@@ -84,8 +112,8 @@ class MLPTests(unittest.TestCase):
 		inp > h2 > c
 		mlp = c > o
 	
-		self.xor_ins = N.array(self.xor_ins)
-		self.xor_outs = N.array(self.xor_outs)
+		self.xor_ins = numpy.array(self.xor_ins)
+		self.xor_outs = numpy.array(self.xor_outs)
 		for i in xrange(1000) :
 			ii = i%len(self.xor_ins)
 			mlp.train(o, inp = [ self.xor_ins[ ii ] ], target = [ self.xor_outs[ ii ] ])
@@ -96,4 +124,6 @@ class MLPTests(unittest.TestCase):
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[3] ] )[0], 0 )
 		
 if __name__ == '__main__' :
+	import Mariana.settings as MSET
+	MSET.VERBOSE = False
 	unittest.main()

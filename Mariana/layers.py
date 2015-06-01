@@ -6,7 +6,6 @@ import cPickle
 
 import theano, numpy, time
 import theano.tensor as tt
-#import Mariana.rules as MR
 import Mariana.activations as MA
 import Mariana.settings as MSET
 
@@ -18,7 +17,7 @@ class Layer_ABC(object) :
 
 	__metaclass__ = ABCMeta
 
-	def __init__(self, nbOutputs, saveOutputs = False, decorators = [], name = None) :
+	def __init__(self, nbOutputs, saveOutputs = MSET.SAVE_OUTPUTS_DEFAULT, decorators = [], name = None) :
 		
 		if name is not None :
 			self.name = name
@@ -130,7 +129,7 @@ class Layer_ABC(object) :
 
 	def getOutputs(self) :
 		try :
-			self.last_outputs.get_value()
+			return self.last_outputs.get_value()
 		except AttributeError :
 			raise AttributeError("Impossible to get the last ouputs of this layer, if you want them to be stored create with saveOutputs = True")
 
