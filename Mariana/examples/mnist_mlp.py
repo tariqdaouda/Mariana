@@ -34,7 +34,7 @@ def load_mnist() :
 if __name__ == "__main__" :
 	
 	#Let's define the network
-	ls = MS.DefaultScenario(lr = 0.01, momentum = 0)
+	ls = MS.GradientDescent(lr = 0.01)
 	cost = MC.NegativeLogLikelihood()
 
 	i = ML.Input(28*28, name = 'inp')
@@ -47,17 +47,21 @@ if __name__ == "__main__" :
 	#And then map sets to the inputs and outputs of our network
 	train_set, validation_set, test_set = load_mnist()
 
+	trainData = MDM.SynchronizedLists(images = train_set[0], numbers = train_set[1])
+	testData = MDM.SynchronizedLists(images = test_set[0], numbers = test_set[1])
+	validationData = MDM.SynchronizedLists(images = validation_set[0], numbers = validation_set[1])
+
 	trainMaps = MDM.DatasetMapper()
-	trainMaps.mapInput(train_set[0], i)
-	trainMaps.mapOutput(train_set[1].astype('int32'), o)
+	trainMaps.map(i, trainData.images)
+	trainMaps.map(o, trainData.numbers)
 
 	testMaps = MDM.DatasetMapper()
-	testMaps.mapInput(test_set[0], i)
-	testMaps.mapOutput(test_set[1].astype('int32'), o)
+	testMaps.map(i, testData.images)
+	testMaps.map(o, testData.numbers)
 
 	validationMaps = MDM.DatasetMapper()
-	validationMaps.mapInput(validation_set[0], i)
-	validationMaps.mapOutput(validation_set[1].astype('int32'), o)
+	validationMaps.map(i, validationData.images)
+	validationMaps.map(o, validationData.numbers)
 
 	earlyStop = MSTOP.GeometricEarlyStopping(testMaps, patience = 100, patienceIncreaseFactor = 1.1, significantImprovement = 0.00001, outputLayer = o)
 	epochWall = MSTOP.EpochWall(1000)
@@ -67,7 +71,7 @@ if __name__ == "__main__" :
 		testMaps = testMaps,
 		validationMaps = validationMaps,
 		stopCriteria = [earlyStop, epochWall],
-		trainMiniBatchSize = 20
+		trainMiniBatchSize = 1
 	)
 	
 	trainer.start("MLP", mlp, shuffleMinibatches = False)

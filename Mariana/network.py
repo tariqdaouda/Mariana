@@ -13,13 +13,13 @@ class OutputMap(object):
 
 	def printGraph(self, outputLayer) :
 		"""Print the theano graph of the function associated with a given output"""
-		self.outputFcts[outputLayer.name].printGraph()
+		self.outputFcts[outputLayer].printGraph()
 	
 	def addOutput(self, outputLayer, fct) :
-		self.outputFcts[outputLayer.name] = fct
+		self.outputFcts[outputLayer] = fct
 
 	def callTheanoFct(self, outputLayer, **kwargs) :
-		return self.outputFcts[outputLayer.name](**kwargs)
+		return self.outputFcts[outputLayer](**kwargs)
 
 	def __call__(self, outputLayer, **kwargs) :
 		return self.callTheanoFct(outputLayer, **kwargs)

@@ -20,7 +20,16 @@ class DefaultTrainer(object) :
 	SIMULTANEOUS_TRAINING = 1
 
 	"""Should serve for most purposes"""
-	def __init__(self, trainMaps, testMaps, validationMaps, trainMiniBatchSize, stopCriteria, testMiniBatchSize = "all", testFrequency = 1, saveOnException = True) :
+	def __init__(self,
+		trainMaps,
+		testMaps,
+		validationMaps,
+		trainMiniBatchSize,
+		stopCriteria,
+		testMiniBatchSize = "all",
+		validationMiniBatchSize = "all",
+		testFrequency = 1,
+		saveOnException = True) :
 		
 		self.maps = {}
 		self.maps["train"] = trainMaps
@@ -186,35 +195,32 @@ class DefaultTrainer(object) :
 		def _trainTest(aMap, modelFct, shuffleMinibatches, trainingOrder, miniBatchSize) :
 			scores = {}
 			if miniBatchSize == "all" :
-				for output in aMap.getOutputs() :
-					batchData = aMap.getAll()
-					kwargs = batchData[0] #inputs
-					kwargs.update({ "target" : batchData[1][output.name]} )
+				for output in aMap.outputLayers :
+					kwargs = dict( aMap.getAll() )
+					kwargs["target"] = kwargs[output.name]
+					del(kwargs[output.name])
 					res = modelFct(output, **kwargs)
 					scores[output.name] = res[0]
 			else :
-				if shuffleMinibatches :
-					aMap.shuffle()
 				
 				if trainingOrder == DefaultTrainer.SEQUENTIAL_TRAINING :
-					for output in aMap.getOutputs() :
+					for output in aMap.outputLayers :
 						for i in xrange(0, len(aMap), miniBatchSize) :
-							batchData = aMap.getBatches(i, miniBatchSize)
-							kwargs = batchData[0] #inputs
-							kwargs.update({ "target" : batchData[1][output.name]} )
-							res = modelFct(output, **kwargs)
-
+							batchData = aMap.getBatch(i, miniBatchSize)
+							batchData["target"] = batchData[output.name]
+							del(batchData[output.name])
+							res = modelFct(output, **batchData)
 							try :
 								scores[output.name].append(res[0])
 							except KeyError:
 								scores[output.name] = [res[0]]
 				elif trainingOrder == DefaultTrainer.SIMULTANEOUS_TRAINING :
 					for i in xrange(0, len(aMap), miniBatchSize) :
-						batchData = aMap.getBatches(i, miniBatchSize)
-						kwargs = batchData[0] #inputs
-						for output in aMap.getOutputs() :
-							kwargs.update({ "target" : batchData[1][output.name]} )
-							res = modelFct(output, **kwargs)
+						batchData = aMap.getBatch(i, miniBatchSize)
+						for output in aMap.outputLayers :
+							batchData["target"] = batchData[output.name]
+							del(batchData[output.name])
+							res = modelFct(output, **batchData)
 							
 							try :
 								scores[output.name].append(res[0])
@@ -275,6 +281,8 @@ class DefaultTrainer(object) :
 			for mapName in ["train", "test", "validation"] :
 				aMap = self.maps[mapName]
 				if len(aMap) > 0 :			
+					if shuffleMinibatches :
+						aMap.reroll()
 					if mapName == "train" :
 						modelFct = model.train
 					else :
