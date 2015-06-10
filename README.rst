@@ -16,14 +16,14 @@ you can think of, as well as for a super light and clean interface.
 There's no need for an MLP or a Perceptron or an Auto-Encoder class,
 because if you know what these things are, you can turn one into the other in a few seconds.
 
-Mariana is also completely agnostic regarding your datasets or the way you load your hyper-parameters.
-
 So in short:
   
   * no YAML
+  * completely modular and extendable
+  * use the trainer to encapsulate your training in a safe environement
   * write your models super fast
   * save your models and resume training
-  * export your models to DOT format to obtain clean and easy to communicate graphs
+  * export your models into DOT format to obtain clean and easy to communicate graphs
   * free your imagination and experiment
   * no requirements concerning the format of the datasets
 
