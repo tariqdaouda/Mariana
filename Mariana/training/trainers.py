@@ -163,7 +163,7 @@ class DefaultTrainer(object) :
 				_dieGracefully(exType, tb)
 				raise
 
-	def _run(self, name, model, recorder, trainingOrder = 0, reset = True, shuffleMinibatches = False, datasetName = "") :
+	def _run(self, name, model, recorder, trainingOrder = 0, reset = True, shuffle = False, datasetName = "") :
 		"""
 			trainingOrder possible values:
 				* DefaultTrainer.SEQUENTIAL_TRAINING: Each output will be trained indipendetly on it's own epoch
@@ -192,7 +192,7 @@ class DefaultTrainer(object) :
 						for hp in thingObj.hyperParameters :
 							dct["%s_%s" % (l.name, hp)] = getattr(thingObj, hp)
 
-		def _trainTest(aMap, modelFct, shuffleMinibatches, trainingOrder, miniBatchSize) :
+		def _trainTest(aMap, modelFct, shuffle, trainingOrder, miniBatchSize) :
 			scores = {}
 			if miniBatchSize == "all" :
 				for output in aMap.outputLayers :
@@ -281,7 +281,7 @@ class DefaultTrainer(object) :
 			for mapName in ["train", "test", "validation"] :
 				aMap = self.maps[mapName]
 				if len(aMap) > 0 :			
-					if shuffleMinibatches :
+					if shuffle :
 						aMap.reroll()
 					if mapName == "train" :
 						modelFct = model.train
@@ -291,7 +291,7 @@ class DefaultTrainer(object) :
 					self.store["scores"][mapName] = _trainTest(
 						aMap,
 						modelFct,
-						shuffleMinibatches,
+						shuffle,
 						trainingOrder,
 						self.miniBatchSizes[mapName]
 					)
