@@ -56,18 +56,18 @@ if __name__ == "__main__" :
 	#And then map sets to the inputs and outputs of our network
 	train_set, validation_set, test_set = load_mnist()
 
-	trainData = MDM.Series(images = train_set[0], numbers = train_set[1])
-	testData = MDM.Series(images = test_set[0], numbers = test_set[1])
-	validationData = MDM.Series(images = validation_set[0], numbers = validation_set[1])
 
+	trainData = MDM.Series(images = train_set[0], numbers = train_set[1])
 	trainMaps = MDM.DatasetMapper()
 	trainMaps.map(i, trainData.images)
 	trainMaps.map(o, trainData.numbers)
 
+	testData = MDM.Series(images = test_set[0], numbers = test_set[1])
 	testMaps = MDM.DatasetMapper()
 	testMaps.map(i, testData.images)
 	testMaps.map(o, testData.numbers)
 
+	validationData = MDM.Series(images = validation_set[0], numbers = validation_set[1])
 	validationMaps = MDM.DatasetMapper()
 	validationMaps.map(i, validationData.images)
 	validationMaps.map(o, validationData.numbers)
@@ -83,4 +83,4 @@ if __name__ == "__main__" :
 		trainMiniBatchSize = 20
 	)
 	
-	trainer.start("MLP", mlp, shuffleMinibatches = False)
+	trainer.start("MLP", mlp)
