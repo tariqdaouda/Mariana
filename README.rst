@@ -35,8 +35,8 @@ When communicating about neural networks people often draw sets of connected lay
 Full Examples
 =============
 
-Please have a look at **mnist_mlp.py** in the examples folder. It illustrates most of what this quickstart guide adresses.
-There's also **vanilla_mnist_perceptron_mlp.py**, wich demonstrate how to train an MLP (network with one hidden layer) or a Percetron on mnist
+Please have a look at **examples/mnist_mlp.py**. It illustrates most of what this quickstart guide adresses.
+There's also **examples/vanilla_mnist_perceptron_mlp.py**, wich demonstrate how to train an MLP (network with one hidden layer) or a Percetron on mnist
 without the use of a trainer.
 
 Short examples
