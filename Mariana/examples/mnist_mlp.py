@@ -83,4 +83,4 @@ if __name__ == "__main__" :
 		trainMiniBatchSize = 20
 	)
 	
-	trainer.start("MLP", mlp, shuffleMinibatches = False)
+	trainer.start("MLP", mlp)
