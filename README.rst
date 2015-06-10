@@ -1,5 +1,5 @@
 
-Mariana(Alpha)
+Mariana
 ==============
 
 Named after the deepest place on earth (Mariana trench), Mariana is a Machine Learning Framework built on top of Theano, that focuses on ease of use.
