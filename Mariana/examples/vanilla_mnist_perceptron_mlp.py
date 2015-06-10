@@ -13,7 +13,10 @@ import Mariana.training.stopcriteria as MSTOP
 
 """
 This is the equivalent the theano MLP from here: http://deeplearning.net/tutorial/mlp.html
-But using Mariana
+But Mariana style.
+
+The vanilla version does not use the a trainer or a dataset mapper. It should therefor be a bit faster,
+but you don't get all the niceties provided by the trainer.
 """
 
 def load_mnist() :
@@ -40,8 +43,8 @@ def MLP() :
 	import theano
 
 	i = ML.Input(28*28, name = 'inp')
-	h = ML.Hidden(500, activation = MA.tanh, decorators = [MD.GlorotTanhInit()], regularizations = [ MR.L1(0), MR.L2(0) ], name = "hid" )
-	o = ML.SoftmaxClassifier(10, decorators = [MD.ZerosInit()], learningScenario = ls, costObject = cost, name = "out", regularizations = [ MR.L1(0), MR.L2(0.000) ] )
+	h = ML.Hidden(500, activation = MA.tanh, decorators = [MD.GlorotTanhInit()], regularizations = [ MR.L1(0), MR.L2(0.0001) ], name = "hid" )
+	o = ML.SoftmaxClassifier(10, decorators = [MD.ZerosInit()], learningScenario = ls, costObject = cost, name = "out", regularizations = [ MR.L1(0), MR.L2(0.0001) ] )
 
 	mlp = i > h > o
 	mlp.init()
@@ -69,18 +72,18 @@ if __name__ == "__main__" :
 	while True :
 		trainScores = []
 		for i in xrange(0, len(train_set[0]), miniBatchSize) :
-			res = model.train(o, inp = train_set[0][i : i +20], target = train_set[1][i : i +20] )
+			res = model.train(o, inp = train_set[0][i : i +miniBatchSize], target = train_set[1][i : i +miniBatchSize] )
 			trainScores.append(res[0])
 	
 		trainScore = numpy.mean(trainScores)
 		res = model.test(o, inp = validation_set[0], target = validation_set[1] )
 		
 		print "---\nepoch", e
-		print "\ttrain score:", trainScore*100
+		print "\ttrain score:", trainScore
 		if bestValScore > res[0] :
 			bestValScore = res[0]
-			print "\tvalidation score:", res[0]*100, "+best+"
+			print "\tvalidation score:", res[0], "+best+"
 		else :
-			print "\tvalidation score:", res[0], "best:", bestValScore*100
+			print "\tvalidation score:", res[0], "best:", bestValScore
 		
 		e += 1

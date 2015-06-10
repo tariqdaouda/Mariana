@@ -14,7 +14,16 @@ import Mariana.training.stopcriteria as MSTOP
 
 """
 This is the equivalent the theano MLP from here: http://deeplearning.net/tutorial/mlp.html
-But using Mariana
+But Mariana style.
+
+This version uses a trainer/dataset mapper setup:
+* automatically saves the best model for each set (train, test, validation)
+* automatically saves the model if the training halts because of an error or if the process is killed
+* saves a log if the porcess dies unexpectedly
+* the whole training results are recorded for you in a file as well as hyper parameters values
+* allows you to define custom stop criteria
+* each epoch you get printed infos about the training, including best scores and at wich epoch they where achieved
+
 """
 
 def load_mnist() :
@@ -47,9 +56,9 @@ if __name__ == "__main__" :
 	#And then map sets to the inputs and outputs of our network
 	train_set, validation_set, test_set = load_mnist()
 
-	trainData = MDM.SynchronizedLists(images = train_set[0], numbers = train_set[1])
-	testData = MDM.SynchronizedLists(images = test_set[0], numbers = test_set[1])
-	validationData = MDM.SynchronizedLists(images = validation_set[0], numbers = validation_set[1])
+	trainData = MDM.Series(images = train_set[0], numbers = train_set[1])
+	testData = MDM.Series(images = test_set[0], numbers = test_set[1])
+	validationData = MDM.Series(images = validation_set[0], numbers = validation_set[1])
 
 	trainMaps = MDM.DatasetMapper()
 	trainMaps.map(i, trainData.images)
@@ -71,7 +80,7 @@ if __name__ == "__main__" :
 		testMaps = testMaps,
 		validationMaps = validationMaps,
 		stopCriteria = [earlyStop, epochWall],
-		trainMiniBatchSize = 1
+		trainMiniBatchSize = 20
 	)
 	
 	trainer.start("MLP", mlp, shuffleMinibatches = False)
