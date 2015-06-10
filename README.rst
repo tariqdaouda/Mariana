@@ -2,22 +2,21 @@
 Mariana(Alpha)
 ==============
 
-Named after the deepest place on earth (Mariana trench), Mariana is a machine learning framework on top of theano.
-Mariana is still in active developement, and there might be some bugs lurking in the dark. But I use it everyday, and bugs
-tend to be rapidely corrected. Please feel free to play with it.
+Named after the deepest place on earth (Mariana trench), Mariana is a Machine Learning Framework built on top of Theano, that focuses on ease of use.
 
 Why is it cool?
 ===============
 
-Mariana networks are graphs of independent layers and that allows for the craziest deepest architectures 
-you can think of, as well as for a super light and clear interface.
+**If you can draw it, you can write it.**
+
+Mariana provides an interface so simple and intuitive that writing models becomes a breeze.
+Networks are graphs of connected layers and that allows for the craziest deepest architectures 
+you can think of, as well as for a super light and clean interface.
+
 There's no need for an MLP or a Perceptron or an Auto-Encoder class,
 because if you know what these things are, you can turn one into the other in a few seconds.
 
-And that's the main objective behind Mariana, provide an interface so simple and intuitive that writing models
-becomes a breeze.
-
-Mariana is also completely agnostic regarding your datasets or the way you load your hyper-parameters. It's business is models and that's it.
+Mariana is also completely agnostic regarding your datasets or the way you load your hyper-parameters.
 
 So in short:
   
@@ -80,7 +79,7 @@ Importations first
 Can it run on GPU?
 ==================
 
-At the heart of Mariana are theano functions, so the answer is yes. The guys behind theano really did an awesome
+At the heart of Mariana are Theano functions, so the answer is yes. The guys behind Theano really did an awesome
 job of optimization, so it should be pretty fast, wether you're running on CPU or GPU.
 
 Example
