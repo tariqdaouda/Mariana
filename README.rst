@@ -55,7 +55,7 @@ Importations first
 	cost = MC.NegativeLogLikelihood()
 	
 	i = ML.Input(28*28)
-	h = ML.Hidden(300, activation = MA.reLU, decorators = [MD.BinomialTurnOff(0.2)], regularizations = [ MR.L1(0.0001) ])
+	h = ML.Hidden(300, activation = MA.reLU, decorators = [MD.BinomialDropout(0.2)], regularizations = [ MR.L1(0.0001) ])
 	o = ML.SoftmaxClassifier(9, learningScenario = ls, costObject = cost, regularizations = [ MR.L1(0.0001) ])
 	
 	MLP = i > h > o
