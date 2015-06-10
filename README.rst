@@ -109,7 +109,7 @@ This recorder will:
 Dataset maps
 ------------
 
-Mariana is dataset format agnostic. The way it works is that you map sets to specific input and output layers, cf. the mnist example.
+Mariana is dataset format agnostic and uses **DatasetMaps** to associate layers with the data the must receive, cf. **mnist_mlp.py** for an example.
 
 Decorators
 ==========
