@@ -32,6 +32,13 @@ A word about the **'>'**
 
 When communicating about neural networks people often draw sets of connected layers. That's the idea behind Mariana: layers are first defined, then connected using the **'>'** operator. 
 
+Full Examples
+=============
+
+Please have a look at **mnist_mlp.py** in the examples folder. It illustrates most of what this quickstart guide adresses.
+There's also **vanilla_mnist_perceptron_mlp.py**, wich demonstrate how to train an MLP (network with one hidden layer) or a Percetron on mnist
+without the use of a trainer.
+
 Short examples
 ===============
 
@@ -81,13 +88,6 @@ Can it run on GPU?
 
 At the heart of Mariana are Theano functions, so the answer is yes. The guys behind Theano really did an awesome
 job of optimization, so it should be pretty fast, wether you're running on CPU or GPU.
-
-Example
-=======
-
-Please have a look at **mnist_mlp.py** in the examples folder. It illustrates most of what this quickstart guide adresses.
-There's also **vanilla_mnist_perceptron_mlp.py**, wich demonstrate how to train an MLP (network with one hidden layer) or a Percetron on mnist
-without the use of a trainer.
 
 Using the trainer and loading datasets
 ========================================
