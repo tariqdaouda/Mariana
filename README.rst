@@ -14,7 +14,7 @@ Networks are graphs of connected layers and that allows for the craziest deepest
 you can think of, as well as for a super light and clean interface.
 
 There's no need for an MLP or a Perceptron or an Auto-Encoder class,
-because if you know what these things are, you can turn one into the other in a few seconds.
+because if you know what these things are, you can turn one into the other in a 2 seconds.
 
 So in short:
   
