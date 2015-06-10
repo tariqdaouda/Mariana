@@ -46,7 +46,8 @@ class TheanoFunction(object) :
 			return self.theano_fct(*self.tmpInputs.values())
 		except Exception as e :
 			sys.stderr.write("!!=> Error in function '%s' for layer '%s':\n" % (self.name, self.outputLayer.name))
-			sys.stderr.write("\t!!=> the arguments were:\n %s\n" % (kwargs))
+			if MSET.VERBOSE :
+				sys.stderr.write("\t!!=> the arguments were:\n %s\n" % (kwargs))
 			raise e
 
 	def __call__(self, **kwargs) :

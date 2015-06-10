@@ -1,324 +1,229 @@
 import Mariana.settings as MSET
-import numpy, random, time
+import numpy, random
 
-class ListSet(object) :
-	def __init__(self, values, name = None) :
-		self.values = values
-		if name is not None :
-			self.name = name
-		else :
-			self.name = time.clock() + random.randint(0, 100)
+class DatesetHandle(object) :
+	def __init__(self, dataset, subset) :
+		self.dataset = dataset
+		self.subset = subset
 
-	def getAll(self) :
-		return self.values
+	def __repr__(self) :
+		return "<Handle %s.%s>" % (self.dataset.__class__.__name__, self.subset)
+
+class Dataset_ABC(object) :
 	
-	def __getitem__(self, i) :
-		return self.values[i]
+	def get(self, subset, n) :
+		raise NotImplemented("Should be implemented in child")
+
+	def getAll(self, subset) :
+		raise NotImplemented("Should be implemented in child")
+
+	def reroll(self) :
+		raise NotImplemented("Should be implemented in child")
+
+	def _getHandle(self, subset) :
+		raise NotImplemented("Should be implemented in child")
 
 	def __len__(self) :
- 		return len(self.values)
+		raise NotImplemented("Should be implemented in child")
 
- 	def __repr__(self) :
- 		return "<Mariana list set len: %d>" % len(self)
+	def __getattr__(self, k) :
+		g = object.__getattribute__(self, "_getHandle")
+		res = g(k)
+		if res :
+			return res
+		raise AttributeError("No attribute or dataset by the name of '%s'" % k)
 
-class _InnerSet(object) :
-	"""An inner set of a ClassSuperset"""
+class Series(Dataset_ABC) :
+	"""Returns the examples sequentially. All lists must have the same length"""
+	def __init__(self, **kwargs) :
+		self.lists = {}
+		self.length = 0
+		for k, v in kwargs.iteritems() :
+			if self.length == 0 :
+				self.length = len(v)
+			else :
+				if len(v) != self.length :
+					raise ValueError("All lists must have the same length, previous list had a length of '%s', list '%s' has a length of '%s" % (self.length, k, len(v)))
+			self.lists[k] = numpy.asarray(v)
 
-	def __init__(self, values, classNumber) :
-		self.values = values
-		self.classNumber = classNumber
-		self.targets = numpy.ones(len(self.values), dtype = "int32") * self.classNumber
-		self.offset = 0
+	def reroll(self) :
+		pass
 
-	def randomPos(self, bufferLen) :
-		if bufferLen == len(self) :
-			self.offset = 0
-		elif bufferLen > len(self) :
-			raise ValueError("bufferLen can not be > len(self): %s > %s" % (bufferLen, len(self)))
-		else :
-			self.offset = random.randrange( 0, (len(self) - bufferLen) )
+	def get(self, subset, i, n) :
+		return self.lists[subset][i:i + n]
 
-	def getAll(self) :
-		return ( self.values[self.offset:], self.targets[self.offset:] )
+	def getAll(self, subset) :
+		return self.lists[subset]
 
-	def __len__(self) :
-		return len(self.values)
-
-	def __getitem__(self, i) :
-		if i.__class__ == slice :
-			s = slice( self.offset + i.start, self.offset + i.stop, i.step )
-			# print s, self.targets[s], i, len(self.values),  self.offset
-			return ( self.values[s], self.targets[s] )
-		return ( self.values[self.offset + i], self.targets[self.offset + i] )
-
-class ClassSuperset(object) :
-
-	def __init__(self, name = None) :
-		self.sets = []
-		self.likelihoods = []
-		
-		self.likelihoodsSum = 0
-
-		self.maxLen = 0
-		self.minLen = 0
-		self.totalLen = 0
-		self.smallestSetLen = 0
-
-		self.nbClasses = 0
-		self.runExamples = [] 
-		self.runTargets = []
-		self.runIds = []
-
-		self.currentInps = []
-		self.currentOuts = []
-
-		if name is None :
-			self.name = time.clock() + random.randint(0, 100)
-		else :
-			self.name = name
-
-	def setMinLen(self, v) :
-		if v > self.smallestSetLen :
-			raise ValueError("Min length cannot be smaller that le length of the smallest set: %d" % self.smallestSetLen)
-		self.minLen = v
-
-	def add(self, lst, likelihood = -1) :
-		aSet = _InnerSet(lst, self.nbClasses)
-		self.sets.append( aSet )
-		
-		self.totalLen += len(aSet)
-
-		if len(aSet) > self.maxLen :
-			self.maxLen = len(aSet)
-
-		if self.minLen == 0 or len(aSet) < self.minLen :
-			self.minLen = len(aSet)
-			self.smallestSetLen = self.minLen
-
-		self.nbClasses += 1
-
-		if likelihood > 0 :
-			self.likelihoodsSum += likelihood
-			if self.likelihoodsSum > 1 :
-				raise ValueError("The sum of the likelihoods cannot be > 1")
-
-			self.likelihoods.append(self.likelihoodsSum)
-
-	def shuffle(self) :
-		for s in self.sets :
-			s.randomPos(self.minLen)
-
-	def getAll(self) :
-		examples = []
-		targets = []
-
-		for s in self.sets :
-			g = s.getAll()
-			examples.extend(g[0])
-			targets.extend(g[1])
-
-		return (examples, targets)
-
-	def __getitem__(self, i) :
-		if self.likelihoodsSum == 0 :
-			for s in self.sets :
-				self.likelihoodsSum += 1./len(self.sets)#float(len(s)) / self.totalLen
-				self.likelihoods.append( self.likelihoodsSum )
-
-		elif self.likelihoodsSum > 0 and self.likelihoodsSum < 1 :
-				raise ValueError("All likelihoods must sum to 1, the current value is %s" % self.likelihoodsSum)
-
-		r = random.random()
-		for j in xrange(len(self.likelihoods)) :
-			if r <= self.likelihoods[j] :
-				return self.sets[j][i]
-		
-		raise ValueError("Invalid likelihoods : %s (sum: %s)" % (self.likelihoods, sum(self.likelihoods)) )
+	def _getHandle(self, subset) :
+		if subset in self.lists :
+			return DatesetHandle(self, subset)
+		return None
 
 	def __len__(self) :
- 		return self.minLen
+		return self.length
+
+	def __repr__(self) :
+		return "<%s len: %s, nbLists: %s>" % (self.__class__.__name__, self.length, len(self.lists))
+
+class RandomSeries(Series) :
+	"""This is very much like Series, but examples are randomly sampled"""
+	def __init__(self, **kwargs) :
+		Series.__init__(self, **kwargs)
+		self.reroll()
+
+	def reroll(self) :
+		indexes = numpy.random.randint(0, self.length, self.length)
+		for k in self.lists :
+			self.lists[k] = self.lists[k][indexes]
+
+class ClassSets(Dataset_ABC) :
+	"""Pass it one set for each class and it will take care of randomly sampling them with replacement.
+	All class sets must have at least two elements"""
+	def __init__(self, **kwargs) :
+		self.classSets = {}
+		
+		self.minLength = float('inf')
+		self.maxLength = 0
+		self.totalLength = 0
+		self.inputSize = 0
+		for k, v in kwargs.iteritems() :
+			if len(v) < self.minLength :
+				self.minLength = len(v)
+			if self.maxLength < len(v) :
+				self.maxLength = len(v)
+			self.classSets[k] = numpy.asarray(v)
+			if len(self.classSets[k].shape) < 2 :
+			 	self.classSets[k] = self.classSets[k].reshape(self.classSets[k].shape[0], 1)
+
+			self.totalLength += len(v)
+			
+			try :
+				inputSize = len(v[0])
+			except :
+				inputSize = 1
+
+			if self.inputSize == 0 :
+				self.inputSize = inputSize
+			elif self.inputSize != inputSize :
+				raise ValueError("All class elements must have the same size. Got '%s', while the previous value was '%s'" % ( len(v[0]), self.inputSize ))
+				
+		self.minLength = int(self.minLength)
+		if self.minLength < 2 :
+			raise ValueError('All class sets must have at least two elements')
+
+		subsetSize = self.totalLength-len(self.classSets) #-1 for each class set
+		self.subsets = {
+			"input" : numpy.zeros( (subsetSize, self.inputSize) ),
+			"classNumber" : numpy.zeros( (subsetSize, 1) ),
+			"onehot" : numpy.zeros( (subsetSize, len(self.classSets)) )
+		}
+
+		self.classNumbers = {}
+		self.onehots = {}
+		self.nbElements = {}
+		i = 0
+		for k, v in self.classSets.iteritems() :
+			self.nbElements[k] = len(self.classSets[k]) -1 #-1 to simulate a sampling with replacement
+			self.classNumbers[k] = i
+			self.onehots[k] = numpy.zeros(len(self.classSets))
+			self.onehots[k][i] = 1
+			i += 1
+
+		self._mustReroll = True
+
+	def reroll(self) :
+		offset = 0
+		for k, v in self.classSets.iteritems() :
+			start, end = offset, offset+self.nbElements[k]
+			indexes = numpy.random.randint(0, self.nbElements[k], self.nbElements[k])
+			self.subsets["input"][start : end] = v[indexes]
+			self.subsets["classNumber"][start : end] = self.classNumbers[k]
+			self.subsets["onehot"][start : end] = self.onehots[k]
+			offset += self.nbElements[k]
+
+		size = len(self.subsets["input"])
+		indexes = numpy.random.randint(0, size, size)
+		for k, v in self.subsets.iteritems() :
+			self.subsets[k] = self.subsets[k][indexes]
+
+		self._mustReroll = False
+
+	def setEvenLikelihoods(self) :
+		"""sample so that all classes have the same chances of appearing"""
+		for k, v in self.classSets.iteritems() :
+			self.nbElements[k] = self.minLength -1 #-1 to simulate a sampling with replacement
+
+		subsetSize = self.minLength-len(self.classSets) #-1 for each class set
+		self.subsets = {
+			"input" : numpy.zeros( (subsetSize, self.inputSize) ),
+			"classNumber" : numpy.zeros( (subsetSize, 1) ),
+			"onehot" : numpy.zeros( (subsetSize, len(self.classSets)) )
+		}
+
+		self._mustReroll = True
+
+	def get(self, subset, i, size) :
+		if self._mustReroll :
+			self.reroll()
+
+		return self.subsets[subset][i:i+size]
+
+	def getAll(self, subset) :
+		if self._mustReroll :
+			self.reroll()
+
+		return self.subsets[subset]
+
+	def _getHandle(self, subset) :
+		if subset in self.subsets :
+			return DatesetHandle(self, subset)
+
+	def __len__(self) :
+		return self.totalLength
 
 class DatasetMapper(object):
- 	"""docstring for DatasetMapper"""
-
- 	def __init__(self):
- 		self.inputSets = {}
- 		self.outputSets = {}
- 		self.layerNames = set()
- 		self.outputLayers = set()
- 		self.sets = {}
-
-		self.syncedLayers = {}
+	"""docstring for DatasetMapper"""
+	def __init__(self):
+		self.datasets = set()
+		self.maps = {}
+		self.inputLayers = []
+		self.outputLayers = []
+		self.minLength = float('inf')
 		
-		self.minLen = 0
-		self.runIds = []
-		self.mustInit = True
+		self.res = {}
 
-	def mapInput(self, lst, layer) :
-		if layer.name in self.layerNames :
-			raise ValueError("There is already a registered layer by the name of: '%s'" % (layer.name)) 
-
-		if lst.__class__ not in [ClassSuperset, ListSet] :
-			aSet = ListSet(lst)
-		else :
-			aSet = lst
-
-		if layer.type == MSET.TYPE_INPUT_LAYER :
-			self.inputSets[aSet.name] = layer
-		else :
-			raise ValueError("Only input layers are allowed")
- 
-		self.layerNames.add(layer.name)
-		self.sets[aSet.name] = aSet
-		
-		if self.minLen == 0 or len(aSet) < self.minLen :
-			self.minLen = len(aSet)
-
-	def mapOutput(self, lst, layer) :
-		if layer.name in self.layerNames :
-			raise ValueError("There is already a registered layer by the name of: '%s'" % (layer.name))
-
-		if lst.__class__ is not ClassSuperset :
-			aSet = ListSet(lst)
-		else :
-			aSet = lst
-
+	def map(self, layer, setHandle) :
 		if layer.type == MSET.TYPE_OUTPUT_LAYER :
-			self.outputSets[aSet.name] = layer
+			self.outputLayers.append(layer)
+		elif layer.type == MSET.TYPE_INPUT_LAYER :
+			self.inputLayers.append(layer)
 		else :
-			raise ValueError("Only output layers are allowed")
-		
-		self.layerNames.add(layer.name)
-		self.outputLayers.add(layer)
-		self.sets[aSet.name] = aSet
-		
-		if self.minLen == 0 or len(aSet) < self.minLen :
-			self.minLen = len(aSet)
+			raise ValueError("Only input and output layers can be mapped")
 
-	def syncLayers(self, refLayer, layer) :
-		"""Ensures that all layers in 'layers' receive the same data as refLayer"""
+		self.maps[layer] = setHandle
+		self.datasets.add(setHandle.dataset)
+		if len(setHandle.dataset) < self.minLength : 
+			self.minLength = len(setHandle.dataset)
 
-		if refLayer.name not in self.layerNames :
-			raise ValueError("There's no registered refLayer by the name '%s'" % refLayer.name)
-		
-		if layer.name in self.layerNames :
-			raise ValueError("There is already a registered layer by the name of: '%s'" % (layer.name))
-		
-		try :
-			self.syncedLayers[refLayer.name].append(layer)
-		except KeyError, IndexError:
-			self.syncedLayers[refLayer.name] = [layer]
-		
-		if layer.type == MSET.TYPE_OUTPUT_LAYER :
-			self.outputLayers.add(layer)
-		self.layerNames.add(layer.name)
+	def reroll(self) :
+		for d in self.datasets :
+			d.reroll()
 
-	def shuffle(self) :
-		if self.mustInit :
-			self._init()
+	def getBatch(self, i, size) :
+		if i > self.minLength :
+			raise IndexError("index i '%s', out of range '%s'" % (i, size))
 
-		for s in self.sets.itervalues() :
-			if s.__class__ is ClassSuperset : 
-				s.setMinLen(self.minLen)
-				s.shuffle()
-		
-		if len(self.runIds) == 0 :
-			self.runIds = range(self.minLen)
-		random.shuffle(self.runIds)
+		for layer, handle in self.maps.iteritems() :
+			self.res[layer.name] = handle.dataset.get(handle.subset, i, size)
 
-	def _init(self) :
-		self.runIds = range(self.minLen)
-		self.mustInit = False
-
- 	def getBatches(self, i, size) :
-		"""Returns a random set of examples for each class, all classes have an equal chance of apperance
-		regardless of their number of elements. If you want  the limit to be length of the whole set
- 		instead of a mini batch you can set size to "all".
- 		"""
-		if self.mustInit :
-			self._init()
-			
- 		inps = {}
-		outs = {}
-		ii = self.runIds[i]
-		for k, v in self.sets.iteritems() :
-			elmt = v[ii: ii+size]
-			if v.__class__ is ClassSuperset :
-				l = self.inputSets[k]
-				inps[l.name] = elmt[0]
-				l = self.outputSets[k]
-				outs[l.name] = elmt[1]
-			else :
-				try :
-					l = self.inputSets[k]
-					inps[l.name] = elmt
-				except :
-					l = self.outputSets[k]
-					outs[l.name] = elmt
-
-		for k, layers in self.syncedLayers.iteritems() :
-			for l in layers :
-				if l.type == MSET.TYPE_OUTPUT_LAYER :
-					try :
-						outs[l.name] = inps[k]
-					except KeyError :
-						outs[l.name] = outs[k]
-
-				elif l.type == MSET.TYPE_INPUT_LAYER :
-					try :
-						inps[l.name] = inps[k]
-					except KeyError :
-						outs[l.name] = outs[k]
-				else :
-					raise ValueError("Synced layer ''%s is neither an input nor an output layer" % l.name)
-		
-		return (inps, outs)
+		return self.res
 
 	def getAll(self) :
-		"""Returns the whole batch"""
-		if self.mustInit :
-			self._init()
-
-		inps = {}
-		outs = {}
-		
-		for k, v in self.sets.iteritems() :
-			elmt = v.getAll()
-			if v.__class__ is ClassSuperset :
-				l = self.inputSets[k]
-				inps[l.name] = elmt[0]
-				l = self.outputSets[k]
-				outs[l.name] = elmt[1]
-			else :
-				try :
-					l = self.inputSets[k]
-					inps[l.name] = elmt
-				except :
-					l = self.outputSets[k]
-					outs[l.name] = elmt
-		
-		for k, layers in self.syncedLayers.iteritems() :
-			for l in layers :
-				if l.type == MSET.TYPE_OUTPUT_LAYER :
-					try :
-						outs[l.name] = inps[k]
-					except KeyError :
-						outs[l.name] = outs[k]
-				elif l.type == MSET.TYPE_INPUT_LAYER :
-					try :
-						inps[l.name] = inps[k]
-					except KeyError :
-						outs[l.name] = outs[k]
-				else :
-					raise ValueError("Synced layer ''%s is neither an input nor an output layer" % l.name)
-		
-		return (inps, outs)
-
-	def getOutputs(self) :
- 		return self.outputLayers
- 	
- 	def __repr__(self) :
- 		return "<DatasetMapper len: %s, sets: %s, inputs: %s, outputs: %s>" % (self.minLen, len(self.sets), len(self.inputSets), len(self.outputSets))
+		for layer, handle in self.maps.iteritems() :
+			self.res[layer.name] = handle.dataset.getAll(handle.subset)
+		return self.res
 
 	def __len__(self) :
-		return self.minLen
+		return self.minLength
+
