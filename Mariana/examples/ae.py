@@ -7,6 +7,8 @@ import Mariana.costs as MC
 import Mariana.regularizations as MR
 import Mariana.scenari as MS
 
+"""A very basic auto encoder that learns to encode 8 bits into 3"""
+
 miniBatchSize = 2
 
 data = []

@@ -1,11 +1,19 @@
+__all__ = ["EndOfTraining", "StopCriterion_ABC", "EpochWall", "GeometricEarlyStopping"]
+
+class EndOfTraining(Exception) :
+	"""Exception raised when a training criteria is met"""
+	def __init__(self, stopCriterion) :
+		self.stopCriterion = stopCriterion
+		self.message = "End of training: %s" % stopCriterion.endMessage()
 
 class StopCriterion_ABC(object) :
+	"""This defines the interface that a StopCriterion must expose"""
 
 	def __init__(self, *args, **kwrags) :
 		self.name = self.__class__.__name__
 
 	def stop(self) :
-		"""The actual function that is called by start, and the one that must be implemented in children"""
+		"""The actual function that is called by the trainer, and the one that must be implemented in children"""
 		raise NotImplemented("Must be implemented in child")
 
 	def endMessage(self) :
@@ -28,7 +36,7 @@ class EpochWall(StopCriterion_ABC) :
 		return "Reached epoch wall %s" % self.maxEpochs
 
 class ScoreWall(StopCriterion_ABC) :
-	"""Stops training when a givven score is reached"""
+	"""Stops training when a given score is reached"""
 	def __init__(self, wallValue, datasetMap, outputLayer = None) :
 		"""if outputLayer is None, will consider the average of all outputs"""
 		StopCriterion_ABC.__init__(self)

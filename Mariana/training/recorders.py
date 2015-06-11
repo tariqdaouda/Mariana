@@ -1,8 +1,12 @@
 import sys, os
 from pyGeno.tools.parsers.CSVTools import CSVFile
 
-class Recorder_ABC(object) :
+__all__ = ["Recorder_ABC", "GGPlot2"]
 
+class Recorder_ABC(object) :
+	"""A recorder is meant to be plugged into a trainer to record the
+	advancement of the training. This is the interface a Recorder must expose."""
+	
 	def commit(self, store, model) :
 		"""Does something with the currenty state of the trainer's store and the model"""
 		raise NotImplemented("Should be implemented in child")
@@ -12,8 +16,9 @@ class Recorder_ABC(object) :
 		raise NotImplemented("Should be implemented in child")
 
 class GGPlot2(Recorder_ABC):
- 	"""This training recorder will create a nice CSV file fit for using with ggplot2. It will also print regular
- 	reports if you tell it to be verbose and save the best models"""
+ 	"""This training recorder will create a nice CSV file fit for using with ggplot2 and will update
+ 	it as the training goas. It will also save the best model for each set of the trainer, and print
+ 	regular reports if you tell it to be verbose"""
  	def __init__(self, filename, verbose = True):
 		
 		self.filename = filename.replace(".csv", "") + ".ggplot2.csv"
@@ -28,7 +33,7 @@ class GGPlot2(Recorder_ABC):
 		self.length = 0
 
 	def commit(self, store, model) :
-		"""Appends the current state of the store to the CSV """
+		"""Appends the current state of the store to the CSV. This one is meant to be called by the trainer"""
 		def _fillLine(csvFile, score, bestScore, setName, setLen, outputName, **csvValues) :
 			line = csvFile.newLine()
 			for k, v in csvValues.iteritems() :

@@ -7,9 +7,7 @@ import Mariana.costs as MC
 import Mariana.regularizations as MR
 import Mariana.scenari as MS
 
-import Mariana.training.trainers as MT
-import Mariana.training.datasetmaps as MDM
-import Mariana.training.stopcriteria as MSTOP
+from Mariana.examples.useful import load_mnist
 
 """
 This is the equivalent the theano MLP from here: http://deeplearning.net/tutorial/mlp.html
@@ -18,20 +16,6 @@ But Mariana style.
 The vanilla version does not use the a trainer or a dataset mapper. It should therefor be a bit faster,
 but you don't get all the niceties provided by the trainer.
 """
-
-def load_mnist() :
-	"""If i can't find it i will attempt to download it from LISA's place"""
-	import urllib, os, gzip, cPickle
-	dataset = 'mnist.pkl.gz'
-	if (not os.path.isfile(dataset)):
-		origin = (
-			'http://www.iro.umontreal.ca/~lisa/deep/data/mnist/mnist.pkl.gz'
-		)
-		print '==> Downloading data from %s' % origin
-		urllib.urlretrieve(origin, dataset)
-
-	f = gzip.open(dataset, 'rb')
-	return cPickle.load(f)
 
 def Perceptron() :
 	i = ML.Input(28*28, name = 'inp')

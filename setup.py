@@ -13,7 +13,7 @@ setup(
 
     version='0.1b0',
 
-    description="Crazy deep architectures",
+    description="Crazy deep architectures made easy",
     long_description=long_description,
     
     url='https://github.com/tariqdaouda/mariana',
