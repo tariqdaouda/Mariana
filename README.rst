@@ -112,13 +112,10 @@ Can it run on GPU?
 At the heart of Mariana are Theano functions, so the answer is yes. The guys behind Theano really did an awesome
 job of optimization, so it should be pretty fast, wether you're running on CPU or GPU.
 
-Using the trainer and loading datasets
-========================================
+Making life even easier: Trainers and Recorders
+===============================================
 
-Trainers and Recorders
-----------------------
-
-The trainer takes care of the whole training process. If the process dies unexpectedly during training it will also automatically save the last version of the model as well as logs explaining what happened. The trainer can also take as argument a list of stopCriterias, and be
+A trainer takes care of the whole training process. If the process dies unexpectedly during training it will also automatically save the last version of the model as well as logs explaining what happened. The trainer can also take as argument a list of stopCriterias, and be
 paired with a recorder whose job is to record the training evolution.
 For now there is only one recorder GGPlot2 (which is also the default recorder).
 
