@@ -103,7 +103,7 @@ Training, Testing and Propagating:
 	ae.init()
 	
 	#tied weights
-	o.W = h.W.T)
+	o.W = h.W.T
 
 
 Can it run on GPU?
