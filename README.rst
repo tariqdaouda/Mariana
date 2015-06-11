@@ -32,6 +32,15 @@ A word about the **'>'**
 
 When communicating about neural networks people often draw sets of connected layers. That's the idea behind Mariana: layers are first defined, then connected using the **'>'** operator. 
 
+Installation
+=============
+
+Clone it from git!::
+
+	git clone https://github.com/tariqdaouda/Mariana.git
+	cd Mariana
+	python setup.py develop
+
 Full Examples
 =============
 
