@@ -60,12 +60,12 @@ Importations first
 	ls = MS.GradientDescent(lr = 0.01)
 	cost = MC.NegativeLogLikelihood()
 	
-	i = ML.Input(28*28)
+	i = ML.Input(28*28, name = "inputLayer")
 	h = ML.Hidden(300, activation = MA.reLU, decorators = [MD.BinomialDropout(0.2)], regularizations = [ MR.L1(0.0001) ])
 	o = ML.SoftmaxClassifier(9, learningScenario = ls, costObject = cost, regularizations = [ MR.L1(0.0001) ])
 	
 	MLP = i > h > o
-
+	
 **This is an autoencoder with tied weights**
 
 .. code:: python
@@ -73,7 +73,7 @@ Importations first
 	ls = MS.GradientDescent(lr = 0.001)
 	cost = MC.MeanSquaredError()
 	
-	i = ML.Input(10)
+	i = ML.Input(10, name = "inputLayer")
 	h = ML.Hidden(2, activation = MA.tanh, decorators = [ MD.GlorotTanhInit() ])
 	o = ML.Regression(10, activation = MA.tanh, costObject = cost, learningScenario = ls)
 	
@@ -82,6 +82,20 @@ Importations first
 	
 	#tied weights
 	o.W = h.W.T
+
+Training, Testing and Propagating
+
+.. code:: python
+	
+	#train the model for output 'o' function will update parameters and return the current cost
+	print model.train(o, inputLayer = train_set[0][i : i +miniBatchSize], target = train_set[1][i : i +miniBatchSize] )
+
+	#the same as train but does not updated the parameters
+	print model.test(o, inputLayer = test_set[0][i : i +miniBatchSize], target = test_set[1][i : i +miniBatchSize] )
+	
+	#the propagate will return the output for the output layer 'o'
+	print model.propagate(o, inputLayer = test_set[0][i : i +miniBatchSize])
+
 
 Can it run on GPU?
 ==================
