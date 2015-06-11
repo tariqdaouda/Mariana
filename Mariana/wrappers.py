@@ -6,9 +6,20 @@ import Mariana.candies as MCAN
 import Mariana.settings as MSET
 
 class TheanoFunction(object) :
-	"This class encapsulates a Theano function"
+	"""
+	This class encapsulates a Theano function.
+	TheanoFunction objects should be defined as self attributes in the setCustomTheanoFunctions() function of output layers.
+	"""
 
 	def __init__(self, name, outputLayer, output_expressions, additional_input_expressions = {}, updates = [], **kwargs) :
+		"""
+		:param str name: name of the function
+		:param Output outputLayer: the output layer the function should be applied to
+		:param list output_expressions: list of the symbolic expressions you want as output
+		:param dict additional_input_expressions: additional inputs needed to compute the expressions
+		:param list updates: list of tuples (shared variable, symbolic expression of the update to be applied to it)
+		:param dict **kwargs: additional arguments to passed to the real theano function underneath
+		"""
 		self.name = name
 		self.outputLayer = outputLayer
 		

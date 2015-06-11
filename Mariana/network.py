@@ -2,6 +2,8 @@ from collections import OrderedDict
 from wrappers import TheanoFunction
 import Mariana.settings as MSET
 
+__all__= ["Network", "OutputMap"]
+
 class OutputMap(object):
 	"""
 	Encapsulates outputs as well as their theano functions.
@@ -32,9 +34,7 @@ class OutputMap(object):
 		return "<theano fct '%s' for output layer: '%s'>" % (self.name, os)
 
 class Network(object) :
-	"""All theano_x functions of the outputs are accessible through the network interface network.x().
-	Here x is called a model function. Ex: if an output layer has a theano function named theano_classify(),
-	calling net.classify(), will apply out.theano_classify(). The result will be a dictionary of { "output name" => result of the theano function}"""	
+	"""All **theano_x** functions of the outputs are accessible through the network interface **network.x(...)**."""
 	def __init__(self) :
 		self.inputs = OrderedDict()
 		self.layers = OrderedDict()

@@ -9,15 +9,20 @@ import theano.tensor as tt
 import Mariana.activations as MA
 import Mariana.settings as MSET
 
-from network import Network
-from wrappers import TheanoFunction
+import Mariana.network as MNET
+import Mariana.wrappers as MWRAP
+
+__all__ = ["Layer_ABC", "Output_ABC", "Classifier_ABC", "Input", "Hidden", "Composite", "SoftmaxClassifier", "Regression"]
+
+TYPE_INPUT_LAYER = 0
+TYPE_OUTPUT_LAYER = 1
 
 class Layer_ABC(object) :
-	"the abstract layer class"
+	"The interface that every layer should expose"
 
 	__metaclass__ = ABCMeta
 
-	def __init__(self, nbOutputs, saveOutputs = MSET.SAVE_OUTPUTS_DEFAULT, decorators = [], name = None) :
+	def __init__(self, size, saveOutputs = MSET.SAVE_OUTPUTS_DEFAULT, decorators = [], name = None) :
 		
 		if name is not None :
 			self.name = name
@@ -28,7 +33,7 @@ class Layer_ABC(object) :
 
 		self.nbInputs = None
 		self.inputs = None
-		self.nbOutputs = nbOutputs
+		self.nbOutputs = size
 		self.outputs = None # this is a symbolic var
 		if saveOutputs :
 			initLO = numpy.zeros(self.nbOutputs, dtype=theano.config.floatX)
@@ -47,6 +52,7 @@ class Layer_ABC(object) :
 		self._mustInit = True
 
 	def addDecorator(self, decorator) :
+		"""Add a decorator to the layer"""
 		self.decorators.append(decorator)
 
 	def getParams(self) :
@@ -105,7 +111,7 @@ class Layer_ABC(object) :
 			layer.network = me.network
 
 		if self.network is None :
-			self.network = Network(self)
+			self.network = MNET.Network(self)
 
 		if type(layerOrList) is ListType :
 			raise NotImplemented("List as argument is deprecated")
@@ -128,6 +134,7 @@ class Layer_ABC(object) :
 		me.network._mustInit = True
 
 	def getOutputs(self) :
+		"""Return the last outputs of the layer"""
 		try :
 			return self.last_outputs.get_value()
 		except AttributeError :
@@ -153,15 +160,16 @@ class Layer_ABC(object) :
 
 class Input(Layer_ABC) :
 	"An input layer"
-	def __init__(self, nbInputs, name = None, **kwargs) :
-		Layer_ABC.__init__(self, nbInputs, name = name, **kwargs)
+	def __init__(self, size, name = None, **kwargs) :
+		Layer_ABC.__init__(self, size, name = name, **kwargs)
 		self.kwargs = kwargs
-		self.type = MSET.TYPE_INPUT_LAYER
-		self.nbInputs = nbInputs
-		self.network = Network()
+		self.type = TYPE_INPUT_LAYER
+		self.nbInputs = size
+		self.network = MNET.Network()
 		self.network.addInput(self)
 
 	def getParams(self) :
+		"""return nothing"""
 		return []
 
 	def _setOutputs(self) :
@@ -177,7 +185,7 @@ class Input(Layer_ABC) :
 		return res
 
 class Composite(Layer_ABC):
-	"""A Composite layer is a layer that brings together the outputs of several other layers
+	"""A Composite layer concatenates the outputs of several other layers
 	for example is we have::
 		
 		c = Composite()
@@ -205,9 +213,9 @@ class Composite(Layer_ABC):
 		return '[label="%s: %s" shape=tripleoctogon]' % (self.name, self.nbOutputs)
 		
 class Hidden(Layer_ABC) :
-	"A basic hidden layer"
-	def __init__(self, nbOutputs, activation = getattr(MA, "reLU"), learningScenario = None, name = None, regularizations = [], **kwargs) :
-		Layer_ABC.__init__(self, nbOutputs, name = name, **kwargs)
+	"A hidden layer"
+	def __init__(self, size, activation = getattr(MA, "reLU"), learningScenario = None, name = None, regularizations = [], **kwargs) :
+		Layer_ABC.__init__(self, size, name = name, **kwargs)
 		self.W = None
 		self.b = None
 
@@ -250,6 +258,10 @@ class Hidden(Layer_ABC) :
 		for reg in self.regularizationObjects :
 			self.regularizations.append(reg.getFormula(self))
 
+	def getW(self) :
+		"""Return the weight values"""
+		return self.W.get_value()
+
 	def getParams(self) :
 		"""returns the layer parameters (Weights and bias)"""
 		return [self.W, self.b]
@@ -279,12 +291,11 @@ class Hidden(Layer_ABC) :
 		return o
 
 class Output_ABC(Hidden) :
-	"""An output layer"""
-	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
-		"""The output layer defines the learning rate (lr), as well as any other parameters related to the learning"""
-
-		Hidden.__init__(self, nbOutputs, activation = activation, name = name, **kwargs)
-		self.type = MSET.TYPE_OUTPUT_LAYER
+	"""The interface that every output layer should expose"""
+	def __init__(self, size, activation, learningScenario, costObject, name = None, **kwargs) :
+		
+		Hidden.__init__(self, size, activation = activation, name = name, **kwargs)
+		self.type = TYPE_OUTPUT_LAYER
 		self.target = None
 		self.dependencies = OrderedDict()
 		self.costObject = costObject
@@ -302,7 +313,7 @@ class Output_ABC(Hidden) :
 		self.dependencies = _bckTrk(self.dependencies, self)
 
 	def _setTheanoFunctions(self) :
-		"""Creates theano_train/theano_test/theano_propagate functions and calls _setCustomTheanoFunctions to 
+		"""Creates theano_train/theano_test/theano_propagate functions and calls setCustomTheanoFunctions to 
 		create user custom theano functions."""
 
 		self._backTrckDependencies()
@@ -329,14 +340,16 @@ class Output_ABC(Hidden) :
 
 		updates.extend(lastOutsUpdates)
 
-		self.train = TheanoFunction("train", self, [cost], { "target" : self.target }, updates = updates, allow_input_downcast=True)
-		self.test = TheanoFunction("test", self, [cost], { "target" : self.target }, updates = lastOutsUpdates, allow_input_downcast=True)
-		self.propagate = TheanoFunction("propagate", self, [self.outputs], updates = lastOutsUpdates, allow_input_downcast=True)
+		self.train = MWRAP.TheanoFunction("train", self, [cost], { "target" : self.target }, updates = updates, allow_input_downcast=True)
+		self.test = MWRAP.TheanoFunction("test", self, [cost], { "target" : self.target }, updates = lastOutsUpdates, allow_input_downcast=True)
+		self.propagate = MWRAP.TheanoFunction("propagate", self, [self.outputs], updates = lastOutsUpdates, allow_input_downcast=True)
 	
-		self._setCustomTheanoFunctions()
+		self.setCustomTheanoFunctions()
 
-	def _setCustomTheanoFunctions(self) :
-		"This is where you should put the definitions of your custom theano functions"
+	def setCustomTheanoFunctions(self) :
+		"""This is where you should put the definitions of your custom theano functions. Theano functions 
+		must be declared as self attributes using a wrappers.TheanoFunction object, cf. wrappers documentation.
+		"""
 		pass
 
 	def toHidden(self, **kwargs) :
@@ -350,29 +363,29 @@ class Output_ABC(Hidden) :
 		return '[label="%s: %sx%s" shape=invhouse]' % (self.name, self.nbInputs, self.nbOutputs)
 
 class Classifier_ABC(Output_ABC):
-		"An abstract Classifier"
-		def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
-			Output_ABC.__init__(self, nbOutputs, activation, learningScenario, costObject, name, **kwargs)
+	"The interface that every classifier should expose"
+	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
+		Output_ABC.__init__(self, nbOutputs, activation, learningScenario, costObject, name, **kwargs)
 
-		def _setCustomTheanoFunctions(self) :
-			"""Classifiers must define a 'classify' function that returns the result of the classification"""
-			raise NotImplemented("theano classify must be defined in child's _setCustomTheanoFunctions()")				
+	def setCustomTheanoFunctions(self) :
+		"""Classifiers must define a 'classify' function that returns the result of the classification"""
+		raise NotImplemented("theano classify must be defined in child's setCustomTheanoFunctions()")				
 
 class SoftmaxClassifier(Classifier_ABC) :
-	"""A softmax Classifier"""
+	"""A softmax (probabilistic) Classifier"""
 	def __init__(self, nbOutputs, learningScenario, costObject, name = None, **kwargs) :
 		Classifier_ABC.__init__(self, nbOutputs, activation = MA.softmax, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.target = tt.ivector(name = self.name + "_Target")
 
-	def _setCustomTheanoFunctions(self) :
+	def setCustomTheanoFunctions(self) :
 		"""defined theano_classify, that returns the argmax of the output"""
-		self.classify = TheanoFunction("classify", self, [ tt.argmax(self.outputs) ])
+		self.classify = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.outputs) ])
 
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=doublecircle]' % (self.name, self.nbOutputs)
 
 class Regression(Output_ABC) :
-	"""For regressions"""
+	"""For regressions, works great with a mean squared error cost"""
 	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
 		Output_ABC.__init__(self, nbOutputs, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.target = tt.matrix(name = self.name + "_Target")
@@ -401,9 +414,9 @@ class MaxPooling2D(Layer_ABC) :
 		self.outputs =  max_pool_2d(self.inputs, self.downScaleFactors)
 
 class Flatten(Layer_ABC) :
-	"""Flattens the output of a convolution to a given numer of dimentions"""
 
 	def __init__(self, outdim) :
+		"""Flattens the output of a convolution to a given numer of dimentions"""
 		self.outdim = outdim
 
 	def _setOutputs(self) :

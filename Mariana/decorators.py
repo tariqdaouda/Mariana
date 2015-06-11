@@ -3,9 +3,12 @@ import theano
 import theano.tensor as tt
 import Mariana.settings as MSET
 
-class Decorator(object) :
-	"""A decorator is modifier that is applied on the layer. Use them to define special kind of initialisations for the weight,
-	or transformations that you want to apply on your layers durig training"""
+__all__= ["Decorator_ABC", "GlorotTanhInit", "ZerosInit", "BinomialDropout", "WeightSparsity", "InputSparsity"]
+
+class Decorator_ABC(object) :
+	"""A decorator is a modifier that is applied on a layer. This class defines the interface that a decorator
+	must offer."""
+
 	def __init__(self, *args, **kwargs) :
 		self.hyperParameters = []
 		self.name = self.__class__.__name__
@@ -14,13 +17,13 @@ class Decorator(object) :
 		self.decorate(*args, **kwargs)
 
 	def decorate(self, layer) :
-		"""The function that all decorators must implement"""
+		"""The function that all decorator_ABCs must implement"""
 		raise NotImplemented("This one should be implemented in child")
 
-class GlorotTanhInit(Decorator) :
-	"""Set up the layer to apply the tanh initialisation suggested by Glorot et al. 2010"""
+class GlorotTanhInit(Decorator_ABC) :
+	"""Set up the layer to apply the tanh initialisation introduced by Glorot et al. 2010"""
 	def __init__(self, *args, **kwargs) :
-		Decorator.__init__(self, *args, **kwargs)
+		Decorator_ABC.__init__(self, *args, **kwargs)
 
 	def decorate(self, layer) :
 		rng = numpy.random.RandomState(MSET.RANDOM_SEED)
@@ -33,10 +36,10 @@ class GlorotTanhInit(Decorator) :
 		initWeights = numpy.asarray(initWeights, dtype=theano.config.floatX)
 		layer.W = theano.shared(value = initWeights, name = layer.W.name)
 
-class ZerosInit(Decorator) :
+class ZerosInit(Decorator_ABC) :
 	"""Initiales the weights at zeros"""
 	def __init__(self, *args, **kwargs) :
-		Decorator.__init__(self, *args, **kwargs)
+		Decorator_ABC.__init__(self, *args, **kwargs)
 
 	def decorate(self, layer) :
 		initWeights = numpy.zeros(
@@ -47,10 +50,10 @@ class ZerosInit(Decorator) :
 		initWeights = numpy.asarray(initWeights, dtype=theano.config.floatX)
 		layer.W = theano.shared(value = initWeights, name = layer.W.name)
 		
-class BinomialDropout(Decorator):
+class BinomialDropout(Decorator_ABC):
 	"""Use it to make things such as denoising autoencoders and dropout layers"""
 	def __init__(self, ratio, *args, **kwargs):
-		Decorator.__init__(self, *args, **kwargs)
+		Decorator_ABC.__init__(self, *args, **kwargs)
 
 		assert (ratio >= 0 and ratio <= 1) 
 		self.ratio = ratio
@@ -64,10 +67,10 @@ class BinomialDropout(Decorator):
 		# mask = tt.cast(mask, theano.config.floatX)
 		layer.outputs = layer.outputs * mask
 	
-class WeightSparsity(Decorator):
-	"""Stochatically sets a certain ratio of the weight to 0"""
+class WeightSparsity(Decorator_ABC):
+	"""Stochatically sets a certain ratio of the input weight to 0"""
 	def __init__(self, ratio, *args, **kwargs):
-		Decorator.__init__(self, *args, **kwargs)
+		Decorator_ABC.__init__(self, *args, **kwargs)
 
 		assert (ratio >= 0 and ratio <= 1) 
 		self.ratio = ratio
@@ -83,10 +86,10 @@ class WeightSparsity(Decorator):
 		
 		layer.W = theano.shared(value = initWeights, name = layer.W.name)
 
-class InputSparsity(Decorator):
+class InputSparsity(Decorator_ABC):
 	"""Stochatically sets a certain ratio of the input connections to 0"""
 	def __init__(self, ratio, *args, **kwargs):
-		Decorator.__init__(self, *args, **kwargs)
+		Decorator_ABC.__init__(self, *args, **kwargs)
 
 		assert (ratio >= 0 and ratio <= 1) 
 		self.ratio = ratio

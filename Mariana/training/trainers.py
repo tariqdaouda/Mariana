@@ -3,33 +3,37 @@ import numpy
 from collections import OrderedDict
 import theano.tensor as tt
 
-import Mariana.settings as MSET
-import Mariana.training.recoders as MREC
+import Mariana.layers as ML
+import Mariana.training.recorders as MREC
+import Mariana.training.stopcriteria as MSTOP
 import Mariana.candies as MCAN
 
-
-class EndOfTraining(Exception) :
-	"""Exception raised when a training criteria is met"""
-	def __init__(self, stopCriterion) :
-		self.stopCriterion = stopCriterion
-		self.message = "End of training: %s" % stopCriterion.endMessage()
-
 class DefaultTrainer(object) :
+	"""The default trainer should serve for most purposes"""
 
 	SEQUENTIAL_TRAINING = 0
 	SIMULTANEOUS_TRAINING = 1
+	ALL_SET = -1
 
-	"""Should serve for most purposes"""
 	def __init__(self,
 		trainMaps,
 		testMaps,
 		validationMaps,
 		trainMiniBatchSize,
 		stopCriteria,
-		testMiniBatchSize = "all",
-		validationMiniBatchSize = "all",
-		testFrequency = 1,
-		saveOnException = True) :
+		testMiniBatchSize = -1,
+		validationMiniBatchSize = -1,
+		saveIfMurdered = True) :
+		"""
+			:param DatasetMaps trainMaps: Layer mappings for the training set
+			:param DatasetMaps testtrainMaps: Layer mappings for the testing set
+			:param DatasetMaps validationMaps: Layer mappings for the validation set, use DefaultTrainer.ALL_SET for the whole set
+			:param int trainMiniBatchSize: The size of a training minibatch, use DefaultTrainer.ALL_SET for the whole set
+			:param list stopCriteria: List of StopCriterion objects 
+			:param int testMiniBatchSize: The size of a testing minibatch, use DefaultTrainer.ALL_SET for the whole set
+			:param int validationMiniBatchSize: The size of a validationMiniBatchSize minibatch
+			:param bool saveIfMurdered: Die gracefully in case of Exception or SIGTERM and save the current state of the model and logs
+		"""
 		
 		self.maps = {}
 		self.maps["train"] = trainMaps
@@ -43,8 +47,7 @@ class DefaultTrainer(object) :
 		}
 
 		self.stopCriteria = stopCriteria		
-		self.testFrequency = testFrequency
-		self.saveOnException = saveOnException
+		self.saveIfMurdered = saveIfMurdered
 		
 		self.reset()
 
@@ -54,7 +57,7 @@ class DefaultTrainer(object) :
 		}
 
 	def reset(self) :
-		'resets the beast'	
+		'reset the beast'	
 		self.recorder = None
 		self.currentEpoch = 0
 		
@@ -63,24 +66,20 @@ class DefaultTrainer(object) :
 		self.store["scores"] = {}
 		self.store["hyperParameters"] = {}
 		self.store["setSizes"] = {}
-
-	def getBestValidationModel(self) :
-		"""loads the best validation model from disk and returns it"""
-		f = open(self.bestValidationModelFile + ".mariana.pkl")
-		model = cPickle.load(f) 
-		f.close()
-		return model
-
-	def getBestTestModel(self) :
-		"""loads the best Test model from disk and returns it"""
-		f = open(self.bestTestModelFile + ".mariana.pkl")
-		model = cPickle.load(f)
-		f.close()
-		return model
 		
-	def start(self, runName, model, recorder = "default", **kwargs) :
-		"""Starts the training. If anything bad and unexpected happens during training, the Trainer
-		will attempt to save the model and logs. See _run documentation for a full list of possible arguments"""
+	def start(self, runName, model, recorder = "default", trainingOrder = 0, reset = True, shuffle = False, datasetName = "") :
+		"""
+			:param str runName: The name of this run
+			:param Recorder recorder: A recorder object
+			:param int trainingOrder:
+				* DefaultTrainer.SEQUENTIAL_TRAINING: Each output will be trained indipendetly on it's own epoch
+				* DefaultTrainer.SIMULTANEOUS_TRAINING: All outputs are trained within the same epoch with the same inputs
+				* Both are in O(m*n), where m is the number of mini batches and n the number of outputs
+			:param bool reset: Should the trainer be reset before starting the run
+			:param bool shuffle: Should the datasets be shuffled at each epoch
+			:param str datasetName: If provided, the name of the dataset will be stored as a hyper parameter
+		"""
+		
 		import json, signal
 
 		def _handler_sig_term(sig, frame) :
@@ -126,12 +125,12 @@ class DefaultTrainer(object) :
 		
 		self.currentEpoch = 0
 
-		if not self.saveOnException :
-			return self._run(runName, model, recorder, **kwargs)
+		if not self.saveIfMurdered :
+			return self._run(runName, model, recorder, trainingOrder, reset, shuffle, datasetName)
 		else :
 			try :
-				return self._run(runName, model, recorder, **kwargs)
-			except EndOfTraining as e :
+				return self._run(runName, model, recorder, trainingOrder, reset, shuffle, datasetName)
+			except MSTOP.EndOfTraining as e :
 				print e.message
 				death_time = time.ctime().replace(' ', '_')
 				filename = "finished_" + runName +  "_" + death_time
@@ -163,13 +162,7 @@ class DefaultTrainer(object) :
 				_dieGracefully(exType, tb)
 				raise
 
-	def _run(self, name, model, recorder, trainingOrder = 0, reset = True, shuffle = False, datasetName = "") :
-		"""
-			trainingOrder possible values:
-				* DefaultTrainer.SEQUENTIAL_TRAINING: Each output will be trained indipendetly on it's own epoch
-				* DefaultTrainer.SIMULTANEOUS_TRAINING: All outputs are trained within the same epoch with the same inputs
-				* Both or in O(m*n), where m is the number of mini batches and n the number of outputs
-		"""
+	def _run(self, name, model, recorder, trainingOrder, reset, shuffle, datasetName) :
 
 		def setHPs(layer, thing, dct) :
 			try :
@@ -194,7 +187,7 @@ class DefaultTrainer(object) :
 
 		def _trainTest(aMap, modelFct, shuffle, trainingOrder, miniBatchSize) :
 			scores = {}
-			if miniBatchSize == "all" :
+			if miniBatchSize == DefaultTrainer.ALL_SET :
 				for output in aMap.outputLayers :
 					kwargs = dict( aMap.getAll() )
 					kwargs["target"] = kwargs[output.name]
@@ -258,7 +251,7 @@ class DefaultTrainer(object) :
 				pass
 			setHPs(l, "learningScenario", hyperParameters)
 			setHPs(l, "decorators", hyperParameters)
-			if l.type == MSET.TYPE_OUTPUT_LAYER :
+			if l.type == ML.TYPE_OUTPUT_LAYER :
 				setHPs(l, "costObject", hyperParameters)
 
 		legend.extend(hyperParameters.keys())
@@ -295,7 +288,7 @@ class DefaultTrainer(object) :
 						trainingOrder,
 						self.miniBatchSizes[mapName]
 					)
-
+			
 			runtime = (time.time() - startTime)/60
 			
 			self.store["runInfos"].update( (
@@ -308,5 +301,11 @@ class DefaultTrainer(object) :
 			for crit in self.stopCriteria :
 				if crit.stop(self) :
 					raise EndOfTraining(crit)
+
+			for l in model.layers.itervalues() :
+				try :
+					l.learningScenario.update(self)
+				except AttributeError :
+					pass
 
 			self.currentEpoch += 1
