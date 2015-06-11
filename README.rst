@@ -102,7 +102,8 @@ Training, Testing and Propagating:
 	ae = i > h > o
 	ae.init()
 	
-	#tied weights
+	#tied weights, we need to force the initialisation of the weight first
+	ae.init()
 	o.W = h.W.T
 
 
