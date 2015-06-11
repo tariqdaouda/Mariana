@@ -126,10 +126,10 @@ class DefaultTrainer(object) :
 		self.currentEpoch = 0
 
 		if not self.saveIfMurdered :
-			return self._run(runName, model, recorder, **kwargs)
+			return self._run(runName, model, recorder, trainingOrder, reset, shuffle, datasetName)
 		else :
 			try :
-				return self._run(runName, model, recorder, **kwargs)
+				return self._run(runName, model, recorder, trainingOrder, reset, shuffle, datasetName)
 			except MSTOP.EndOfTraining as e :
 				print e.message
 				death_time = time.ctime().replace(' ', '_')
@@ -289,12 +289,6 @@ class DefaultTrainer(object) :
 						self.miniBatchSizes[mapName]
 					)
 			
-			for l in model.layers.itervalues() :
-				try :
-					l.learningScenario.update()
-				except AttributeError :
-					pass
-
 			runtime = (time.time() - startTime)/60
 			
 			self.store["runInfos"].update( (
@@ -307,5 +301,11 @@ class DefaultTrainer(object) :
 			for crit in self.stopCriteria :
 				if crit.stop(self) :
 					raise EndOfTraining(crit)
+
+			for l in model.layers.itervalues() :
+				try :
+					l.learningScenario.update(self)
+				except AttributeError :
+					pass
 
 			self.currentEpoch += 1

@@ -1,4 +1,4 @@
-import Mariana.settings as ML
+import Mariana.layers as ML
 import numpy, random
 
 __all__ = ["DatasetHandle", "Dataset_ABC", "Series", "RandomSeries", "ClassSets", "DatasetMapper"]
