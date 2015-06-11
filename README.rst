@@ -2,7 +2,9 @@
 Mariana
 ==============
 
-Named after the deepest place on earth (Mariana trench), Mariana is a Machine Learning Framework built on top of Theano, that focuses on ease of use.
+Named after the deepest place on earth (Mariana trench), Mariana is a Machine Learning Framework built on top of Theano, that focuses on ease of use. The full documentation is available here_:
+
+.. _here: http://www.tariqdaouda.com
 
 Why is it cool?
 ===============
