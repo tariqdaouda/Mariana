@@ -17,8 +17,8 @@ class Recorder_ABC(object) :
 
 class GGPlot2(Recorder_ABC):
  	"""This training recorder will create a nice CSV file fit for using with ggplot2 and will update
- 	it as the training goas. It will also save the best model for each set of the trainer, and print
- 	regular reports if you tell it to be verbose"""
+ 	it as the training gos. It will also save the best model for each set of the trainer, and print
+ 	regular reports if you tell it to be verbose."""
  	def __init__(self, filename, verbose = True):
 		
 		self.filename = filename.replace(".csv", "") + ".ggplot2.csv"

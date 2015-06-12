@@ -12,8 +12,8 @@ class StopCriterion_ABC(object) :
 	def __init__(self, *args, **kwrags) :
 		self.name = self.__class__.__name__
 
-	def stop(self) :
-		"""The actual function that is called by the trainer, and the one that must be implemented in children"""
+	def stop(self, trainer) :
+		"""The actual function that is called by the trainer at each epoch. Must be implemented in children"""
 		raise NotImplemented("Must be implemented in child")
 
 	def endMessage(self) :
@@ -27,7 +27,7 @@ class EpochWall(StopCriterion_ABC) :
 		self.maxEpochs = maxEpochs
 
 	def stop(self, trainer) :
-		if trainer.currentEpoch >= self.maxEpochs :
+		if trainer.store["runInfos"]["epoch"] >= self.maxEpochs :
 			return True
 		return False
 
@@ -112,7 +112,7 @@ class GeometricEarlyStopping(StopCriterion_ABC) :
 			self.bestScore = curr
 		
 		
-			self.wall = max(self.patience, trainer.currentEpoch * self.patienceIncreaseFactor)
+			self.wall = max(self.patience, trainer.store["runInfos"]["epoch"] * self.patienceIncreaseFactor)
 	
 		self.wall -= 1	
 		return False

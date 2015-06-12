@@ -9,6 +9,8 @@ class TheanoFunction(object) :
 	"""
 	This class encapsulates a Theano function.
 	TheanoFunction objects should be defined as self attributes in the setCustomTheanoFunctions() function of output layers.
+	It will also generate custom error messages whose verbosity depends on Mariana.settings.VERBOSE. Set it to False to get quieter
+	error messages. 
 	"""
 
 	def __init__(self, name, outputLayer, output_expressions, additional_input_expressions = {}, updates = [], **kwargs) :

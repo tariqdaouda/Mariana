@@ -5,17 +5,22 @@ __all__ = ["LearningScenario_ABC", "Fixed", "GradientDescent", "MomentumGradient
 
 class LearningScenario_ABC(object):
  	"""
- 	This is the interface all scenarii must expose
+ 	This is the interface all scenarii must expose. In order for the trainer/recorder to know which attributes are hyper-parameters,
+ 	this class must also include a list attribute **self.hyperParameters** containing the names all attributes that must be considered
+ 	as hyper-parameters.
  	"""
 	def __init__(self, *args, **kwargs):
 		self.name = self.__class__.__name__
+ 		self.hyperParameters = []
 
 	def getUpdates(self, layer, cost) :
 		"""return the updates for the parameters of layer. Must be implemented in child"""
 		raise NotImplemented("Must be implemented in child")
 
 	def update(self, trainer) :
-		"""reads the store of the trainer and does something to the parameters. By default this function does nothing"""
+		"""reads the store of the trainer (trainer.store) and does something to the hyper-parameters.
+		This function should be used to implement things such as decreasing the learning rate with the epochs.
+		Implementing this function is optional, by default it does nothing"""
 		pass
 
 class Fixed(LearningScenario_ABC):
@@ -28,7 +33,7 @@ class Fixed(LearningScenario_ABC):
 		return []
 
 class GradientDescent(LearningScenario_ABC):
-	"The GradientDescent scenarios has a fixed learning rate."
+	"The GradientDescent scenario has a fixed learning rate."
  	def __init__(self, lr):
  		super(LearningScenario_ABC, self).__init__()
  		self.name = self.__class__.__name__
@@ -45,7 +50,7 @@ class GradientDescent(LearningScenario_ABC):
 		return updates
 
 class MomentumGradientDescent(LearningScenario_ABC):
-	"The MomentumGradientDescent scenarios has a fixed learning rate and a fixed momentum."
+	"The MomentumGradientDescent scenario has a fixed learning rate and a fixed momentum."
  	def __init__(self, lr, momentum):
  		super(LearningScenario_ABC, self).__init__()
  		self.name = self.__class__.__name__

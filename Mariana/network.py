@@ -7,7 +7,7 @@ __all__= ["Network", "OutputMap"]
 class OutputMap(object):
 	"""
 	Encapsulates outputs as well as their theano functions.
-	The role of an output map object is to apply a function such as theano_train to the set of outputs that have it
+	The role of an output map object is to apply a function such as theano_train to the set of outputs it belongs to
 	"""
 	def __init__(self, name):
 		self.name = name

@@ -51,7 +51,8 @@ automatically save the last version of the model as well as logs explaining what
 Dataset maps
 ------------
 
-Mariana is dataset format agnostic and uses **DatasetMaps** to associate input and output layers with the data they must receive, cf. **examples/mnist_mlp.py** for an example. Here's a short example of how it works::
+Mariana is dataset format agnostic and uses **DatasetMaps** to associate input and output layers
+with the data they must receive (cf. mnist_mlp_ for a full example). Here's a short example of how it works::
 
 	i = ML.Input(...)
 	o = ML.Output(...)
@@ -62,13 +63,15 @@ Mariana is dataset format agnostic and uses **DatasetMaps** to associate input a
 	dm.map(i, trainSet.images)
 	dm.map(o, trainSet.classes)
 
+.. _mnist_mlp: https://github.com/tariqdaouda/Mariana/tree/master/Mariana/examples/mnist_mlp.py
+
 .. automodule:: Mariana.training.datasetmaps
    :members:
 
 Stop criteria
 --------------
 
-Stop criteria are simply there to tell to observe the trainer's store and tell it when it should stop by raising an EndOfTraining exception.
+Stop criteria observe the trainer's store and tell it when it should stop by raising an EndOfTraining exception.
 
 .. automodule:: Mariana.training.stopcriteria
    :members:
@@ -76,8 +79,7 @@ Stop criteria are simply there to tell to observe the trainer's store and tell i
 Recorders
 ---------
 
-Recorders are objetct meant to be plugged into trainers to record the advencement of the training. They take the .store of a trainer and
-do something smart and useful with it. As with everythin in Mariana feel free to write your own recoders.
+Recorders are objects meant to be plugged into trainers to record the advancement of the training. They take trainer as argument, look into it's **.store** attribute and do something smart and useful with it. As with everything else in Mariana feel free to write your own recorders.
 
 .. automodule:: Mariana.training.recorders
    :members:

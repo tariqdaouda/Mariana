@@ -1,10 +1,12 @@
 import theano
 import theano.tensor as tt
 
-__all__ = ["Cost_ABC", "Null", "NegativeLogLikelihood", "MeanSquaredError", "CategoricalCrossEntropy", "CrossEntropy", "BinaryCrossEntropy"]
+__all__ = ["Cost_ABC", "Null", "NegativeLogLikelihood", "MeanSquaredError", "CrossEntropy", "CategoricalCrossEntropy", "BinaryCrossEntropy"]
 
 class Cost_ABC(object) :
-	"""This is the interface a Cost must expose"""
+	"""This is the interface a Cost must expose. In order for the trainer/recorder to know which attributes are hyper-parameters,
+ 	this class must also include a list attribute **self.hyperParameters** containing the names all attributes that must be considered
+ 	as hyper-parameters."""
 
 	def __init__(self, *args, **kwargs) :
 		self.name = self.__class__.__name__
@@ -23,7 +25,7 @@ class Null(Cost_ABC) :
 		return outputs*0 + targets*0
 
 class NegativeLogLikelihood(Cost_ABC) :
-	"""cost fct for a probalistic intended to be used with a softmax output"""
+	"""For a probalistic, works great with a softmax output layer"""
 	def costFct(self, targets, outputs) :
 		cost = -tt.mean(tt.log(outputs)[tt.arange(targets.shape[0]), targets])
 		return cost
@@ -41,7 +43,7 @@ class CategoricalCrossEntropy(Cost_ABC) :
 		return cost
 		
 class CrossEntropy(Cost_ABC) :
-	"""Returns the average number of bits needed to identify an event."""
+	"""Returns the average number of bits separating the the target form the output."""
 	def costFct(self, targets, outputs) :
 		cost = - tt.sum(outputs * tt.log(targets) + (1 - outputs) * tt.log(1 - targets), axis=1)
 		return tt.mean(cost)

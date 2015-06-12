@@ -8,7 +8,140 @@ import Mariana.training.recorders as MREC
 import Mariana.training.stopcriteria as MSTOP
 import Mariana.candies as MCAN
 
-class DefaultTrainer(object) :
+__all__ = ["Trainer_ABC", "DefaultTrainer"]
+
+class Trainer_ABC(object) :
+	"""This is the general interface of trainer"""
+
+	def __init__(self) :
+		"""
+		The store is initialised to::
+
+			self.store = {
+				"runInfos" : {
+					"epoch" : 0,
+				},
+				"scores" : {},
+				"hyperParameters" : {},
+				"setSizes" : {},
+			}
+
+		"""
+		self.store = {
+			"runInfos" : {
+				"epoch" : 0,
+			},
+			"scores" : {},
+			"hyperParameters" : {},
+			"setSizes" : {},
+		}
+
+	def start(self, runName, model, recorder, *args, **kwargs) :
+		"""Starts the training and encapsulates it into a safe environement.
+		If the training stops because of an Exception or SIGTEM, the trainer
+		will save logs, the store, and the last version of the model.
+		"""
+
+		import json, signal, cPickle
+
+		def _handler_sig_term(sig, frame) :
+			_dieGracefully("SIGTERM", None)
+			sys.exit(sig)
+
+		def _dieGracefully(exType, tb = None) :
+			# traceback.print_tb(tb)
+			if type(exType) is types.StringType :
+				exName = exType
+			else :
+				exName = exType.__name__
+
+			death_time = time.ctime().replace(' ', '_')
+			filename = "dx-xb_" + runName + "_death_by_" + exName + "_" + death_time
+			sys.stderr.write("\n===\nDying gracefully from %s, and saving myself to:\n...%s\n===\n" % (exName, filename))
+			model.save(filename)
+			f = open(filename +  ".traceback.log", 'w')
+			f.write("Mariana training Interruption\n=============================\n")
+			f.write("\nDetails\n-------\n")
+			f.write("Name: %s\n" % runName)
+			f.write("pid: %s\n" % os.getpid())
+			f.write("Killed by: %s\n" % str(exType))
+			f.write("Time of death: %s\n" % death_time)
+			f.write("Model saved to: %s\n" % filename)
+			sstore = str(self.store).replace("'", '"')
+			f.write(
+				"store:\n%s" % json.dumps(
+					json.loads(sstore), sort_keys=True,
+					indent=4,
+					separators=(',', ': ')
+				)
+			)
+
+			if tb is not None :
+				f.write("\nTraceback\n---------\n")
+				f.write(str(traceback.extract_tb(tb)).replace("), (", "),\n(").replace("[(","[\n(").replace(")]",")\n]"))
+			f.flush()
+			f.close()
+			f = open(filename + ".store.pkl", "wb")
+			cPickle.dump(self.store, f)
+			f.close()
+
+		signal.signal(signal.SIGTERM, _handler_sig_term)
+		print "\n" + "Training starts."
+		MCAN.friendly("Process id", "The pid of this run is: %d" % os.getpid())
+
+		if recorder == "default" :
+			recorder = MREC.GGPlot2(runName, verbose = True)
+			MCAN.friendly(
+				"Default recorder",
+				"The trainer will recruit the default 'GGPlot2' recorder on verbose mode.\nResults will be saved into '%s'." % (recorder.filename)
+				)
+		
+		if not self.saveIfMurdered :
+			return self.run(runName, model, recorder, *args, **kwargs)
+		else :
+			try :
+				return self.run(runName, model, recorder, *args, **kwargs)
+			except MSTOP.EndOfTraining as e :
+				print e.message
+				death_time = time.ctime().replace(' ', '_')
+				filename = "finished_" + runName +  "_" + death_time
+				f = open(filename +  ".stopreason.txt", 'w')
+				f.write("Name: %s\n" % runName)
+				f.write("pid: %s\n" % os.getpid())
+				f.write("Time of death: %s\n" % death_time)
+				f.write("Epoch of death: %s\n" % self.store["runInfos"]["epoch"])
+				f.write("Stopped by: %s\n" % e.stopCriterion.name)
+				f.write("Reason: %s\n" % e.message)
+				sstore = str(self.store).replace("'", '"')
+				f.write(
+					"store:\n%s" % json.dumps(
+						json.loads(sstore), sort_keys=True,
+						indent=4,
+						separators=(',', ': ')
+					)
+				)
+
+				f.flush()
+				f.close()
+				model.save(filename)
+				f = open(filename + ".store.pkl", "wb")
+				cPickle.dump(self.store, f)
+				f.close()
+
+			except KeyboardInterrupt :
+				exType, ex, tb = sys.exc_info()
+				_dieGracefully(exType, tb)
+				raise
+			except :
+				exType, ex, tb = sys.exc_info()
+				_dieGracefully(exType, tb)
+				raise
+
+	def run(self, *args, **kwargs) :
+		"""Abtract function must be implemented in child. This function should implement the whole training process"""
+		raise NotImplemented("Must be implemented in child")
+
+class DefaultTrainer(Trainer_ABC) :
 	"""The default trainer should serve for most purposes"""
 
 	SEQUENTIAL_TRAINING = 0
@@ -35,11 +168,14 @@ class DefaultTrainer(object) :
 			:param bool saveIfMurdered: Die gracefully in case of Exception or SIGTERM and save the current state of the model and logs
 		"""
 		
-		self.maps = {}
-		self.maps["train"] = trainMaps
-		self.maps["test"] = testMaps
-		self.maps["validation"] = validationMaps
-		
+		Trainer_ABC.__init__(self)
+
+		self.maps = {
+			"train": trainMaps,
+			"test": testMaps,
+			"validation": validationMaps
+		}
+
 		self.miniBatchSizes = {
 			"train" : trainMiniBatchSize,
 			"test" : testMiniBatchSize,
@@ -49,25 +185,16 @@ class DefaultTrainer(object) :
 		self.stopCriteria = stopCriteria		
 		self.saveIfMurdered = saveIfMurdered
 		
-		self.reset()
-
-		self.trainingOrders = {
+		self.trainingOrdersHR = {
 			self.SIMULTANEOUS_TRAINING : "SIMULTANEOUS",
 			self.SEQUENTIAL_TRAINING : "SEQUENTIAL"
 		}
 
-	def reset(self) :
-		'reset the beast'	
-		self.recorder = None
-		self.currentEpoch = 0
-		
-		self.store = {}
-		self.store["runInfos"] = {}
-		self.store["scores"] = {}
-		self.store["hyperParameters"] = {}
-		self.store["setSizes"] = {}
-		
-	def start(self, runName, model, recorder = "default", trainingOrder = 0, reset = True, shuffle = False, datasetName = "") :
+	def start(self, runName, model, recorder = "default", trainingOrder = 0, shuffle = False, datasetName = "") :
+		"""starts the training, cf. run() for the a description of the arguments"""
+		Trainer_ABC.start( self, runName, model, recorder, trainingOrder, shuffle, datasetName )
+
+	def run(self, name, model, recorder, trainingOrder, shuffle, datasetName) :
 		"""
 			:param str runName: The name of this run
 			:param Recorder recorder: A recorder object
@@ -79,91 +206,6 @@ class DefaultTrainer(object) :
 			:param bool shuffle: Should the datasets be shuffled at each epoch
 			:param str datasetName: If provided, the name of the dataset will be stored as a hyper parameter
 		"""
-		
-		import json, signal
-
-		def _handler_sig_term(sig, frame) :
-			_dieGracefully("SIGTERM", None)
-			sys.exit(sig)
-
-		def _dieGracefully(exType, tb = None) :
-			# traceback.print_tb(tb)
-			if type(exType) is types.StringType :
-				exName = exType
-			else :
-				exName = exType.__name__
-
-			death_time = time.ctime().replace(' ', '_')
-			filename = "dx-xb_" + runName + "_death_by_" + exName + "_" + death_time
-			sys.stderr.write("\n===\nDying gracefully from %s, and saving myself to:\n...%s\n===\n" % (exName, filename))
-			model.save(filename)
-			f = open(filename +  ".traceback.log", 'w')
-			f.write("Mariana training Interruption\n=============================\n")
-			f.write("\nDetails\n-------\n")
-			f.write("Name: %s\n" % runName)
-			f.write("pid: %s\n" % os.getpid())
-			f.write("Killed by: %s\n" % str(exType))
-			f.write("Time of death: %s\n" % death_time)
-			f.write("Model saved to: %s\n" % filename)
-			
-			if tb is not None :
-				f.write("\nTraceback\n---------\n")
-				f.write(str(traceback.extract_tb(tb)).replace("), (", "),\n(").replace("[(","[\n(").replace(")]",")\n]"))
-			f.flush()
-			f.close()
-
-		signal.signal(signal.SIGTERM, _handler_sig_term)
-		print "\n" + "Training starts."
-		MCAN.friendly("Process id", "The pid of this run is: %d" % os.getpid())
-
-		if recorder == "default" :
-			recorder = MREC.GGPlot2(runName, verbose = True)
-			MCAN.friendly(
-				"Default recorder",
-				"The trainer will recruit the default 'GGPlot2' recorder on verbose mode.\nResults will be saved into '%s'." % (recorder.filename)
-				)
-		
-		self.currentEpoch = 0
-
-		if not self.saveIfMurdered :
-			return self._run(runName, model, recorder, trainingOrder, reset, shuffle, datasetName)
-		else :
-			try :
-				return self._run(runName, model, recorder, trainingOrder, reset, shuffle, datasetName)
-			except MSTOP.EndOfTraining as e :
-				print e.message
-				death_time = time.ctime().replace(' ', '_')
-				filename = "finished_" + runName +  "_" + death_time
-				f = open(filename +  ".stopreason.txt", 'w')
-				f.write("Name: %s\n" % runName)
-				f.write("pid: %s\n" % os.getpid())
-				f.write("Time of death: %s\n" % death_time)
-				f.write("Epoch of death: %s\n" % self.currentEpoch)
-				f.write("Stopped by: %s\n" % e.stopCriterion.name)
-				f.write("Reason: %s\n" % e.message)
-				sstore = str(self.store).replace("'", '"')
-				f.write(
-					json.dumps(
-						json.loads(sstore), sort_keys=True,
-						indent=4,
-						separators=(',', ': ')
-					)
-				)
-
-				f.flush()
-				f.close()
-				model.save(filename)
-			except KeyboardInterrupt :
-				exType, ex, tb = sys.exc_info()
-				_dieGracefully(exType, tb)
-				raise
-			except :
-				exType, ex, tb = sys.exc_info()
-				_dieGracefully(exType, tb)
-				raise
-
-	def _run(self, name, model, recorder, trainingOrder, reset, shuffle, datasetName) :
-
 		def setHPs(layer, thing, dct) :
 			try :
 				thingObj = getattr(l, thing)
@@ -235,11 +277,8 @@ class DefaultTrainer(object) :
 
 			return scores
 
-		if trainingOrder not in self.trainingOrders:
+		if trainingOrder not in self.trainingOrdersHR:
 			raise ValueError("Unknown training order: %s" % trainingOrder)
-
-		if reset :
-			self.reset()
 		
 		legend = ["name", "epoch", "runtime(min)", "dataset_name", "training_order"]
 		hyperParameters = OrderedDict()
@@ -259,7 +298,7 @@ class DefaultTrainer(object) :
 		
 		self.store["runInfos"]["name"] = name
 		self.store["runInfos"]["dataset_name"] = datasetName
-		self.store["runInfos"]["training_order"] = self.trainingOrders[trainingOrder]
+		self.store["runInfos"]["training_order"] = self.trainingOrdersHR[trainingOrder]
 		self.store["runInfos"]["pid"] = os.getpid()
 
 		for mapName in self.maps :
@@ -268,8 +307,7 @@ class DefaultTrainer(object) :
 		self.recorder = recorder
 		
 		startTime = time.time()
-		self.currentEpoch = 0
-
+		self.store["runInfos"]["epoch"] = 0
 		while True :
 			for mapName in ["train", "test", "validation"] :
 				aMap = self.maps[mapName]
@@ -292,7 +330,6 @@ class DefaultTrainer(object) :
 			runtime = (time.time() - startTime)/60
 			
 			self.store["runInfos"].update( (
-				("epoch", self.currentEpoch),
 				("runtime(min)", runtime),
 			) )
 	
@@ -308,4 +345,4 @@ class DefaultTrainer(object) :
 				except AttributeError :
 					pass
 
-			self.currentEpoch += 1
+			self.store["runInfos"]["epoch"] += 1

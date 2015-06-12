@@ -1,5 +1,24 @@
-Tips
+Tips and FAQs
 ===============
+
+
+What can you do with Mariana
+----------------------------
+
+Any type of deep, shallow, feed-forward, back-prop trained Neural Network should work. Convolutional Nets and Recurrent Nets are not supported yet but they will be.
+
+
+A word about the **'>'**
+-------------------------
+
+When communicating about neural networks people often draw sets of connected layers. That's the idea behind Mariana: layers are first defined, then connected using the **'>'** operator. 
+
+Can it run on GPU?
+------------------
+
+At the heart of Mariana are Theano functions, so the answer is yes. The guys behind Theano really did an awesome
+job of optimization, so it should be pretty fast, wether you're running on CPU or GPU.
+
 
 Less Verbosity
 ---------------
@@ -10,8 +29,25 @@ Less Verbosity
 
  	MSET.VERBOSE = False
 
-Changing the seed of random generators
----------------------------------------
+Modifiying hyper-parameters during training
+--------------------------------------------
+
+If you are not using a trainer you can simply change the values of the hyper-parameters of the learning scenario inside your loop.
+
+If you are using trainer, learning scenarii have an **update(self, trainer)** function that is called by the trainer at each epoch. Trainers have a **.store** dictionary attribute that stores values relative to the current epoch (for example the current epoch number is contained in **trainer.store["runInfos"]["epoch"]**). The role of this function is to modidy the attribute of the learning scenario according to the values in the store.
+You may need to create your own learning scenario, for that, simply write a class that inherits from an existing learning scenario or from the provided base class.
+
+Getting the outputs of intermediate layers
+-------------------------------------------
+
+By initialising a layer with the argument::
+
+  saveOutputs=True
+
+You tell Mariana to keep the last outputs of that layer stored, you can then access them using the layer's "getLastOutputs()"" function.
+
+Changing the seed random parameters generation
+----------------------------------------------
 
 .. code:: python
 
@@ -71,4 +107,4 @@ Networks can be exported to graphs in the DOT format:
   #to save it
   mlp.saveDOT("myMLP.dot")
 
-You can then visualize your graph with any DOT visualizer such a graphviz.
+You can then visualize the graph with any DOT visualizer such a graphviz.
