@@ -50,7 +50,7 @@ Please have a look at **examples/mnist_mlp.py**. It illustrates most of what thi
 There's also **examples/vanilla_mnist_perceptron_mlp.py**, wich demonstrate how to train an MLP (network with one hidden layer) or a Percetron on mnist
 without the use of a trainer.
 
-Short examples
+Short Snippets
 ===============
 
 Importations first
@@ -64,7 +64,7 @@ Importations first
 	import Mariana.regularizations as MR
 	import Mariana.scenari as MS
 
-**This is an MLP in Mariana, with dropout, L1 regularization and ReLUs**
+**The instant MLP with dropout, L1 regularization and ReLUs**
 
 .. code:: python
 
