@@ -337,7 +337,7 @@ class DefaultTrainer(Trainer_ABC) :
 			
 			for crit in self.stopCriteria :
 				if crit.stop(self) :
-					raise EndOfTraining(crit)
+					raise MSTOP.EndOfTraining(crit)
 
 			for l in model.layers.itervalues() :
 				try :
