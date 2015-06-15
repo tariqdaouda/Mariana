@@ -36,12 +36,15 @@ When communicating about neural networks people often draw sets of connected lay
 
 Installation
 =============
+First, make sure you have the latest version of Theano_.
 
 Clone it from git!::
 
 	git clone https://github.com/tariqdaouda/Mariana.git
 	cd Mariana
 	python setup.py develop
+
+.. _Theano: https://github.com/Theano/Theano
 
 Full Examples
 =============
