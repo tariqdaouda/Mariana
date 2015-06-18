@@ -43,7 +43,7 @@ class Trainer_ABC(object) :
 		will save logs, the store, and the last version of the model.
 		"""
 
-		import json, signal, cPickle
+		import simplejson, signal, cPickle
 
 		def _handler_sig_term(sig, frame) :
 			_dieGracefully("SIGTERM", None)
@@ -68,7 +68,7 @@ class Trainer_ABC(object) :
 			f.write("Killed by: %s\n" % str(exType))
 			f.write("Time of death: %s\n" % death_time)
 			f.write("Model saved to: %s\n" % filename)
-			sstore = str(self.store).replace("'", '"')
+			sstore = str(self.store).replace("'", '"').replace("True", 'true').replace("False", 'false')
 			f.write(
 				"store:\n%s" % json.dumps(
 					json.loads(sstore), sort_keys=True,
@@ -115,7 +115,7 @@ class Trainer_ABC(object) :
 				f.write("Epoch of death: %s\n" % self.store["runInfos"]["epoch"])
 				f.write("Stopped by: %s\n" % e.stopCriterion.name)
 				f.write("Reason: %s\n" % e.message)
-				sstore = str(self.store).replace("'", '"')
+				sstore = str(self.store).replace("'", '"').replace("True", 'true').replace("False", 'false')
 				f.write(
 					"store:\n%s" % json.dumps(
 						json.loads(sstore), sort_keys=True,

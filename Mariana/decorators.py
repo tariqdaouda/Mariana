@@ -37,7 +37,7 @@ class OutputDecorator_ABC(Decorator_ABC) :
 class BinomialDropout(OutputDecorator_ABC):
 	"""Use it to make things such as denoising autoencoders and dropout layers"""
 	def __init__(self, ratio, trainOnly = True, *args, **kwargs):
-		OutputDecorator_ABC.__init__(self, *args, **kwargs)
+		OutputDecorator_ABC.__init__(self, trainOnly, *args, **kwargs)
 
 		assert (ratio >= 0 and ratio <= 1) 
 		self.ratio = ratio
@@ -50,8 +50,10 @@ class BinomialDropout(OutputDecorator_ABC):
 		#cast to stay in GPU float limit
 		# mask = tt.cast(mask, theano.config.floatX)
 		layer.outputs = layer.outputs * mask
-		if not trainOnly :
+		layer.outputs /= self.ratio
+		if not self.trainOnly :
 			layer.test_outputs = layer.test_outputs * mask
+			layer.test_outputs /= self.ratio
 
 class GlorotTanhInit(Decorator_ABC) :
 	"""Set up the layer to apply the tanh initialisation introduced by Glorot et al. 2010"""
