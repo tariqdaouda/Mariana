@@ -265,7 +265,7 @@ class Hidden(Layer_ABC) :
 			self.test_outputs = self.activation(tt.dot(self.test_inputs, self.W) + self.b)
 		
 		self._decorate()
-	
+
 		for reg in self.regularizationObjects :
 			self.regularizations.append(reg.getFormula(self))
 
@@ -357,7 +357,6 @@ class Output_ABC(Hidden) :
 			if ( l.last_outputs is not None ) and ( l.outputs is not None ) :
 				self.lastOutsTestUpdates.append( (l.last_outputs, l.test_outputs ) )
 				updates.append( (l.last_outputs, l.outputs ) )
-
 
 		self.train = MWRAP.TheanoFunction("train", MWRAP.TYPE_TRAIN, self, [cost], { "target" : self.targets }, updates = updates, allow_input_downcast=True)
 		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [test_cost], { "target" : self.targets }, updates = self.lastOutsTestUpdates, allow_input_downcast=True)
