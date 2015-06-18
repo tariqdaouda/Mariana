@@ -204,7 +204,7 @@ class DefaultTrainer(Trainer_ABC) :
 				* Both are in O(m*n), where m is the number of mini batches and n the number of outputs
 			:param bool reset: Should the trainer be reset before starting the run
 			:param bool shuffle: Should the datasets be shuffled at each epoch
-			:param str datasetName: If provided, the name of the dataset will be stored as a hyper parameter
+			:param str datasetName: If provided, the name of the dataset will be stored as a hyper-parameter
 		"""
 		def setHPs(layer, thing, dct) :
 			try :
@@ -279,7 +279,7 @@ class DefaultTrainer(Trainer_ABC) :
 
 		if trainingOrder not in self.trainingOrdersHR:
 			raise ValueError("Unknown training order: %s" % trainingOrder)
-		
+
 		legend = ["name", "epoch", "runtime(min)", "dataset_name", "training_order"]
 		hyperParameters = OrderedDict()
 		for l in model.layers.itervalues() :
