@@ -7,6 +7,7 @@ import Mariana.layers as ML
 import Mariana.training.recorders as MREC
 import Mariana.training.stopcriteria as MSTOP
 import Mariana.candies as MCAN
+import Mariana.settings as MSET
 
 __all__ = ["Trainer_ABC", "DefaultTrainer"]
 
@@ -86,15 +87,17 @@ class Trainer_ABC(object) :
 			f.close()
 
 		signal.signal(signal.SIGTERM, _handler_sig_term)
-		print "\n" + "Training starts."
-		MCAN.friendly("Process id", "The pid of this run is: %d" % os.getpid())
+		if MSET.VERBOSE :
+			print "\n" + "Training starts."		
+			MCAN.friendly("Process id", "The pid of this run is: %d" % os.getpid())
 
 		if recorder == "default" :
 			recorder = MREC.GGPlot2(runName, verbose = True)
-			MCAN.friendly(
-				"Default recorder",
-				"The trainer will recruit the default 'GGPlot2' recorder on verbose mode.\nResults will be saved into '%s'." % (recorder.filename)
-				)
+			if MSET.VERBOSE :
+				MCAN.friendly(
+					"Default recorder",
+					"The trainer will recruit the default 'GGPlot2' recorder on verbose mode.\nResults will be saved into '%s'." % (recorder.filename)
+					)
 		
 		if not self.saveIfMurdered :
 			return self.run(runName, model, recorder, *args, **kwargs)

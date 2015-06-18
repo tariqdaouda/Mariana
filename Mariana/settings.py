@@ -1,7 +1,7 @@
 #Personal tribute to nomad soul
 OMICRON_SIGNATURE = ">|\/| /-\ |-> | /-\ |\| /-\>"
 
-VERBOSE = True
+VERBOSE = False
 
 #The random used for initialising weights
 RANDOM_SEED = 1409
