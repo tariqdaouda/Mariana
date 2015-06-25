@@ -380,7 +380,6 @@ class Output_ABC(Hidden) :
 				updates.append( (l.last_outputs, l.outputs ) )
 				self.lastOutsTestUpdates.append( (l.last_outputs, l.test_outputs ) )
 
-		print updates
 		self.train = MWRAP.TheanoFunction("train", MWRAP.TYPE_TRAIN, self, [cost], { "target" : self.targets }, updates = updates, allow_input_downcast=True)
 		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [test_cost], { "target" : self.targets }, updates = self.lastOutsTestUpdates, allow_input_downcast=True)
 		self.propagate = MWRAP.TheanoFunction("propagate", MWRAP.TYPE_TEST, self, [self.test_outputs], updates = self.lastOutsTestUpdates, allow_input_downcast=True)
@@ -438,7 +437,6 @@ class Regression(Output_ABC) :
 		return '[label="%s: %s" shape=egg]' % (self.name, self.nbOutputs)
 
 #work in progress
-#theano.tensor.signal.conv2d
 class Convolution2D(Hidden) :
 
 	def __init__(self, nbMaps, height, width, *theanoArgs, **theanoKwArgs) :
@@ -450,7 +448,7 @@ class Convolution2D(Hidden) :
 		self.theanoKwArgs = self.theanoKwArgs
 
 	def _setOutputs(self) :
-		self.outputs = self.activation(conv2d(self.inputs, self.W, *self.theanoArgs, **self.theanoKwArgs))
+		self.outputs = self.activation(tt.signal.conv2d(self.inputs, self.W, *self.theanoArgs, **self.theanoKwArgs))
 
 class MaxPooling2D(Layer_ABC) :
 	
