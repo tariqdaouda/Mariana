@@ -380,6 +380,7 @@ class Output_ABC(Hidden) :
 				updates.append( (l.last_outputs, l.outputs ) )
 				self.lastOutsTestUpdates.append( (l.last_outputs, l.test_outputs ) )
 
+		print updates
 		self.train = MWRAP.TheanoFunction("train", MWRAP.TYPE_TRAIN, self, [cost], { "target" : self.targets }, updates = updates, allow_input_downcast=True)
 		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [test_cost], { "target" : self.targets }, updates = self.lastOutsTestUpdates, allow_input_downcast=True)
 		self.propagate = MWRAP.TheanoFunction("propagate", MWRAP.TYPE_TEST, self, [self.test_outputs], updates = self.lastOutsTestUpdates, allow_input_downcast=True)
