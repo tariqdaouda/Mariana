@@ -6,7 +6,7 @@
 Mariana: Deep Neural Networks should be Easy to Write
 =====================================================
 
-Named after the deepest place on earth (Mariana trench), Mariana is a Machine Learning Framework built on top of Theano_, that focuses on ease of use.  Mariana lives on github_.
+Named after the deepest place on earth (Mariana trench), Mariana is a Python Machine Learning Framework built on top of Theano_, that focuses on ease of use.  Mariana lives on github_.
 
 .. _Theano: http://www.deeplearning.net/software/theano/
 .. _github: https://github.com/tariqdaouda/Mariana/
