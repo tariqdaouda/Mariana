@@ -59,6 +59,7 @@ if __name__ == "__main__" :
 		trainScores = []
 		for i in xrange(0, len(train_set[0]), miniBatchSize) :
 			res = model.train(o, inp = train_set[0][i : i +miniBatchSize], target = train_set[1][i : i +miniBatchSize] )
+			ls.lr = 100
 			trainScores.append(res[0])
 	
 		trainScore = numpy.mean(trainScores)
