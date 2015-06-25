@@ -17,10 +17,12 @@ class LearningScenario_ABC(object):
 		"""return the updates for the parameters of layer. Must be implemented in child"""
 		raise NotImplemented("Must be implemented in child")
 
-	def update(self, trainer) :
+	def update(self, trainerStore) :
 		"""reads the store of the trainer (trainer.store) and does something to the hyper-parameters.
 		This function should be used to implement things such as decreasing the learning rate with the epochs.
-		Implementing this function is optional, by default it does nothing"""
+		Implementing this function is optional, by default it does nothing. The prefered method is to 
+		declare hyper-parameters as theano shared variables, define theano functions that update their values,
+		and finaly call those functions here."""
 		pass
 
 class Fixed(LearningScenario_ABC):
@@ -42,10 +44,9 @@ class GradientDescent(LearningScenario_ABC):
 
  	def getUpdates(self, layer, cost) :
  		updates = []
- 		if self.lr > 0 :
-	 		for param in layer.getParams() :
-	 			gparam = tt.grad(cost, param)
-		 		updates.append((param, param - self.lr * gparam))
+		for param in layer.getParams() :
+			gparam = tt.grad(cost, param)
+ 			updates.append((param, param - self.lr * gparam))
 
 		return updates
 

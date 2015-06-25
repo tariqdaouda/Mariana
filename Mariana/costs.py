@@ -16,16 +16,13 @@ class Cost_ABC(object) :
 		"""The cost function. Must be implemented in child"""
 		raise NotImplemented("Must be implemented in child")
 
-	def getCost(self, outputLayer) :
-		return self.costFct(outputLayer.target, outputLayer.outputs)
-
 class Null(Cost_ABC) :
 	"""No cost at all"""
 	def costFct(self, targets, outputs) :
 		return outputs*0 + targets*0
 
 class NegativeLogLikelihood(Cost_ABC) :
-	"""For a probalistic, works great with a softmax output layer"""
+	"""For a probalistic output, works great with a softmax output layer"""
 	def costFct(self, targets, outputs) :
 		cost = -tt.mean(tt.log(outputs)[tt.arange(targets.shape[0]), targets])
 		return cost

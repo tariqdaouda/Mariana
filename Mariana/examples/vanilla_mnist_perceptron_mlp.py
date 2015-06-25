@@ -17,21 +17,19 @@ The vanilla version does not use the a trainer or a dataset mapper. It should th
 but you don't get all the niceties provided by the trainer.
 """
 
-def Perceptron() :
+def Perceptron(ls, cost) :
 	i = ML.Input(28*28, name = 'inp')
 	o = ML.SoftmaxClassifier(10, learningScenario = ls, costObject = cost, name = "out", regularizations = [ MR.L1(0), MR.L2(0) ] )
 
 	return i > o
 
-def MLP() :
-	import theano
-
+def MLP(ls, cost) :
+	
 	i = ML.Input(28*28, name = 'inp')
 	h = ML.Hidden(500, activation = MA.tanh, decorators = [MD.GlorotTanhInit()], regularizations = [ MR.L1(0), MR.L2(0.0001) ], name = "hid" )
 	o = ML.SoftmaxClassifier(10, decorators = [MD.ZerosInit()], learningScenario = ls, costObject = cost, name = "out", regularizations = [ MR.L1(0), MR.L2(0.0001) ] )
 
 	mlp = i > h > o
-	mlp.init()
 	
 	return mlp
 	
@@ -43,7 +41,7 @@ if __name__ == "__main__" :
 
 	train_set, validation_set, validation_set = load_mnist()
 
-	model = MLP()
+	model = MLP(ls, cost)
 	o = model.outputs.values()[0]
 
 	h = model.layers["hid"]
@@ -53,6 +51,10 @@ if __name__ == "__main__" :
 	
 	e = 0
 	bestValScore = numpy.inf
+	model.init()
+	print "===>", numpy.mean(h.W.get_value())
+	print "===>>", numpy.mean(o.W.get_value())
+
 	while True :
 		trainScores = []
 		for i in xrange(0, len(train_set[0]), miniBatchSize) :
@@ -70,4 +72,7 @@ if __name__ == "__main__" :
 		else :
 			print "\tvalidation score:", res[0], "best:", bestValScore
 		
+		print "\t===>", numpy.mean(h.W.get_value())
+		print "\t===>>", numpy.mean(o.W.get_value())
+
 		e += 1

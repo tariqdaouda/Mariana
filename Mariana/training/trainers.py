@@ -7,6 +7,7 @@ import Mariana.layers as ML
 import Mariana.training.recorders as MREC
 import Mariana.training.stopcriteria as MSTOP
 import Mariana.candies as MCAN
+import Mariana.settings as MSET
 
 __all__ = ["Trainer_ABC", "DefaultTrainer"]
 
@@ -42,7 +43,7 @@ class Trainer_ABC(object) :
 		will save logs, the store, and the last version of the model.
 		"""
 
-		import json, signal, cPickle
+		import simplejson, signal, cPickle
 
 		def _handler_sig_term(sig, frame) :
 			_dieGracefully("SIGTERM", None)
@@ -67,7 +68,7 @@ class Trainer_ABC(object) :
 			f.write("Killed by: %s\n" % str(exType))
 			f.write("Time of death: %s\n" % death_time)
 			f.write("Model saved to: %s\n" % filename)
-			sstore = str(self.store).replace("'", '"')
+			sstore = str(self.store).replace("'", '"').replace("True", 'true').replace("False", 'false')
 			f.write(
 				"store:\n%s" % json.dumps(
 					json.loads(sstore), sort_keys=True,
@@ -86,15 +87,17 @@ class Trainer_ABC(object) :
 			f.close()
 
 		signal.signal(signal.SIGTERM, _handler_sig_term)
-		print "\n" + "Training starts."
-		MCAN.friendly("Process id", "The pid of this run is: %d" % os.getpid())
+		if MSET.VERBOSE :
+			print "\n" + "Training starts."		
+			MCAN.friendly("Process id", "The pid of this run is: %d" % os.getpid())
 
 		if recorder == "default" :
 			recorder = MREC.GGPlot2(runName, verbose = True)
-			MCAN.friendly(
-				"Default recorder",
-				"The trainer will recruit the default 'GGPlot2' recorder on verbose mode.\nResults will be saved into '%s'." % (recorder.filename)
-				)
+			if MSET.VERBOSE :
+				MCAN.friendly(
+					"Default recorder",
+					"The trainer will recruit the default 'GGPlot2' recorder on verbose mode.\nResults will be saved into '%s'." % (recorder.filename)
+					)
 		
 		if not self.saveIfMurdered :
 			return self.run(runName, model, recorder, *args, **kwargs)
@@ -112,7 +115,7 @@ class Trainer_ABC(object) :
 				f.write("Epoch of death: %s\n" % self.store["runInfos"]["epoch"])
 				f.write("Stopped by: %s\n" % e.stopCriterion.name)
 				f.write("Reason: %s\n" % e.message)
-				sstore = str(self.store).replace("'", '"')
+				sstore = str(self.store).replace("'", '"').replace("True", 'true').replace("False", 'false')
 				f.write(
 					"store:\n%s" % json.dumps(
 						json.loads(sstore), sort_keys=True,
@@ -204,7 +207,7 @@ class DefaultTrainer(Trainer_ABC) :
 				* Both are in O(m*n), where m is the number of mini batches and n the number of outputs
 			:param bool reset: Should the trainer be reset before starting the run
 			:param bool shuffle: Should the datasets be shuffled at each epoch
-			:param str datasetName: If provided, the name of the dataset will be stored as a hyper parameter
+			:param str datasetName: If provided, the name of the dataset will be stored as a hyper-parameter
 		"""
 		def setHPs(layer, thing, dct) :
 			try :
@@ -279,7 +282,7 @@ class DefaultTrainer(Trainer_ABC) :
 
 		if trainingOrder not in self.trainingOrdersHR:
 			raise ValueError("Unknown training order: %s" % trainingOrder)
-		
+
 		legend = ["name", "epoch", "runtime(min)", "dataset_name", "training_order"]
 		hyperParameters = OrderedDict()
 		for l in model.layers.itervalues() :
@@ -341,7 +344,7 @@ class DefaultTrainer(Trainer_ABC) :
 
 			for l in model.layers.itervalues() :
 				try :
-					l.learningScenario.update(self)
+					l.learningScenario.update(self.store)
 				except AttributeError :
 					pass
 
