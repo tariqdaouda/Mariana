@@ -52,9 +52,7 @@ if __name__ == "__main__" :
 	e = 0
 	bestValScore = numpy.inf
 	model.init()
-	print "===>", numpy.mean(h.W.get_value())
-	print "===>>", numpy.mean(o.W.get_value())
-
+	
 	while True :
 		trainScores = []
 		for i in xrange(0, len(train_set[0]), miniBatchSize) :
@@ -72,7 +70,4 @@ if __name__ == "__main__" :
 		else :
 			print "\tvalidation score:", res[0], "best:", bestValScore
 		
-		print "\t===>", numpy.mean(h.W.get_value())
-		print "\t===>>", numpy.mean(o.W.get_value())
-
 		e += 1
