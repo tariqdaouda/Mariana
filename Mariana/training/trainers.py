@@ -344,7 +344,7 @@ class DefaultTrainer(Trainer_ABC) :
 
 			for l in model.layers.itervalues() :
 				try :
-					l.learningScenario.update(self)
+					l.learningScenario.update(self.store)
 				except AttributeError :
 					pass
 

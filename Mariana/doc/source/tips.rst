@@ -32,9 +32,7 @@ Less Verbosity
 Modifiying hyper-parameters during training
 --------------------------------------------
 
-If you are not using a trainer you can simply change the values of the hyper-parameters of the learning scenario inside your loop.
-
-If you are using trainer, learning scenarii have an **update(self, trainer)** function that is called by the trainer at each epoch. Trainers have a **.store** dictionary attribute that stores values relative to the current epoch (for example the current epoch number is contained in **trainer.store["runInfos"]["epoch"]**). The role of this function is to modidy the attribute of the learning scenario according to the values in the store.
+Learning scenarii have an **update(self, trainer)** function that is called by the trainer at each epoch. Trainers have a **.store** dictionary attribute that stores values relative to the current epoch (for example the current epoch number is contained in **trainer.store["runInfos"]["epoch"]**). The role of this function is to modify the attribute of the learning scenario according to the values in the store.
 You may need to create your own learning scenario, for that, simply write a class that inherits from an existing learning scenario or from the provided base class.
 
 Getting the outputs of intermediate layers
