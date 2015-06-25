@@ -6,6 +6,7 @@ import cPickle
 
 import theano, numpy, time
 import theano.tensor as tt
+
 import Mariana.activations as MA
 import Mariana.settings as MSET
 
@@ -41,7 +42,7 @@ class Layer_ABC(object) :
 
 		if saveOutputs :
 			initLO = numpy.zeros(self.nbOutputs, dtype=theano.config.floatX)
-			self.last_outputs = theano.shared(value = numpy.matrix(initLO) ) # this will be a shared variable with the last values of outputs
+			self.last_outputs = theano.shared(value = numpy.matrix(initLO)) # this will be a shared variable with the last values of outputs
 		else :
 			self.last_outputs = None
 
@@ -54,6 +55,7 @@ class Layer_ABC(object) :
 		self._inputRegistrations = set()
 		
 		self._mustInit = True
+		self._decorating = False
 
 	def addDecorator(self, decorator) :
 		"""Add a decorator to the layer"""
@@ -98,8 +100,10 @@ class Layer_ABC(object) :
 	
 	def _decorate(self) :
 		"""applies decorators"""
+		self._decorating = True
 		for d in self.decorators :
 			d.decorate(self)
+		self._decorating = False
 
 	def _setNbInputs(self, layer) :
 		"""Sets the size of input that the layer receives"""
@@ -147,6 +151,10 @@ class Layer_ABC(object) :
 		except AttributeError :
 			raise AttributeError("Impossible to get the last ouputs of this layer, if you want them to be stored create with saveOutputs = True")
 
+	def _dot_representation(self) :
+		"returns the representation of the node in the graph DOT format"
+		return '[label="%s: %sx%s"]' % (self.name, self.nbInputs, self.nbOutputs)
+
 	def __gt__(self, pathOrLayer) :
 		"""Alias to connect, make it possible to write things such as layer1 > layer2"""
 		return self.connect(pathOrLayer)
@@ -158,12 +166,26 @@ class Layer_ABC(object) :
 	def __repr__(self) :
 		return "(Mariana %s '%s': %sx%s )" % (self.__class__.__name__, self.name, self.nbInputs, self.nbOutputs)
 
-	def _dot_representation(self) :
-		"returns the representation of the node in the graph DOT format"
-		return '[label="%s: %sx%s"]' % (self.name, self.nbInputs, self.nbOutputs)
-
 	def __len__(self) :
 		return self.nbOutputs
+
+	def __setattr__(self, k, v) :
+
+		try :
+			deco = self._decorating
+		except AttributeError:
+			object.__setattr__(self, k, v)
+			return
+
+		if deco :
+			var = getattr(self, k)
+			try :
+				var.set_value(numpy.asarray(v, dtype=theano.config.floatX), borrow = True)
+				return
+			except AttributeError :
+				pass
+
+		object.__setattr__(self, k, v)
 
 class Input(Layer_ABC) :
 	"An input layer"
@@ -265,7 +287,7 @@ class Hidden(Layer_ABC) :
 			self.test_outputs = self.activation(tt.dot(self.test_inputs, self.W) + self.b)
 		
 		self._decorate()
-
+		
 		for reg in self.regularizationObjects :
 			self.regularizations.append(reg.getFormula(self))
 
@@ -355,8 +377,8 @@ class Output_ABC(Hidden) :
 		self.lastOutsTestUpdates = []
 		for l in self.network.layers.itervalues() :
 			if ( l.last_outputs is not None ) and ( l.outputs is not None ) :
-				self.lastOutsTestUpdates.append( (l.last_outputs, l.test_outputs ) )
 				updates.append( (l.last_outputs, l.outputs ) )
+				self.lastOutsTestUpdates.append( (l.last_outputs, l.test_outputs ) )
 
 		self.train = MWRAP.TheanoFunction("train", MWRAP.TYPE_TRAIN, self, [cost], { "target" : self.targets }, updates = updates, allow_input_downcast=True)
 		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [test_cost], { "target" : self.targets }, updates = self.lastOutsTestUpdates, allow_input_downcast=True)
@@ -415,12 +437,13 @@ class Regression(Output_ABC) :
 		return '[label="%s: %s" shape=egg]' % (self.name, self.nbOutputs)
 
 #work in progress
+#theano.tensor.signal.conv2d
 class Convolution2D(Hidden) :
 
 	def __init__(self, nbMaps, height, width, *theanoArgs, **theanoKwArgs) :
-		self.nbMaps = 32
-		self.height = 3
-		self.width = 3
+		self.nbMaps = self.nbMaps
+		self.height = self.height
+		self.width = self.width
 		self.border_mode = border_mode
 		self.theanoArgs = theanoArgs
 		self.theanoKwArgs = self.theanoKwArgs

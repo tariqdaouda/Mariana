@@ -6,8 +6,16 @@ import Mariana.settings as MSET
 __all__= ["Decorator_ABC", "OutputDecorator_ABC", "BinomialDropout", "GlorotTanhInit", "ZerosInit", "WeightSparsity", "InputSparsity"]
 
 class Decorator_ABC(object) :
-	"""A decorator is a modifier that is applied on a layer. This class defines the interface that a decorator
-	must offer."""
+	"""A decorator is a modifier that is applied on a layer. This class defines the interface that a decorator must offer.
+	Due to some of Mariana's black magic, it is possible to modify shared variable the same way as any regular variable::
+
+		layer.W = numpy.zeros(
+				(layer.nbInputs, layer.nbOutputs),
+				dtype = theano.config.floatX
+			)
+
+	Mariana will take care of the ugly stuff such as the casting, and making sure that the variable reference in the graph does not change.
+	"""
 
 	def __init__(self, *args, **kwargs) :
 		self.hyperParameters = []
@@ -44,17 +52,18 @@ class BinomialDropout(OutputDecorator_ABC):
 		self.seed = time.time()
 		self.hyperParameters.extend(["ratio"])
 
-	def decorate(self, layer) :
+	def _decorate(self, outputs) :
 		rnd = tt.shared_randomstreams.RandomStreams()
-		mask = rnd.binomial(n = 1, p = (1-self.ratio), size = layer.outputs.shape)
-		#cast to stay in GPU float limit
+		mask = rnd.binomial(n = 1, p = (1-self.ratio), size = outputs.shape)
+		# cast to stay in GPU float limit
 		# mask = tt.cast(mask, theano.config.floatX)
-		layer.outputs = layer.outputs * mask
-		layer.outputs /= self.ratio
+		return (outputs * mask) / self.ratio
+		
+	def decorate(self, layer) :
+		layer.outputs = self._decorate(layer.outputs)
 		if not self.trainOnly :
-			layer.test_outputs = layer.test_outputs * mask
-			layer.test_outputs /= self.ratio
-
+			layer.test_outputs = self._decorate(layer.test_outputs)
+			
 class GlorotTanhInit(Decorator_ABC) :
 	"""Set up the layer to apply the tanh initialisation introduced by Glorot et al. 2010"""
 	def __init__(self, *args, **kwargs) :
@@ -62,14 +71,11 @@ class GlorotTanhInit(Decorator_ABC) :
 
 	def decorate(self, layer) :
 		rng = numpy.random.RandomState(MSET.RANDOM_SEED)
-		initWeights = rng.uniform(
+		layer.W = rng.uniform(
 					low = -numpy.sqrt(6. / (layer.nbInputs + layer.nbOutputs)),
 					high = numpy.sqrt(6. / (layer.nbInputs + layer.nbOutputs)),
 					size = (layer.nbInputs, layer.nbOutputs)
 				)
-
-		initWeights = numpy.asarray(initWeights, dtype=theano.config.floatX)
-		layer.W = theano.shared(value = initWeights, name = layer.W.name)
 
 class ZerosInit(Decorator_ABC) :
 	"""Initiales the weights at zeros"""
@@ -77,14 +83,11 @@ class ZerosInit(Decorator_ABC) :
 		Decorator_ABC.__init__(self, *args, **kwargs)
 
 	def decorate(self, layer) :
-		initWeights = numpy.zeros(
+		layer.W = numpy.zeros(
 					(layer.nbInputs, layer.nbOutputs),
 					dtype = theano.config.floatX
 				)
 
-		initWeights = numpy.asarray(initWeights, dtype=theano.config.floatX)
-		layer.W = theano.shared(value = initWeights, name = layer.W.name)
-	
 class WeightSparsity(Decorator_ABC):
 	"""Stochatically sets a certain ratio of the input weight to 0"""
 	def __init__(self, ratio, *args, **kwargs):
