@@ -60,11 +60,11 @@ if __name__ == "__main__":
 	epochWall = MSTOP.EpochWall(1000)
 
 	trainer = MT.DefaultTrainer(
-	    trainMaps=trainMaps,
-	    testMaps=testMaps,
-	    validationMaps=validationMaps,
-	    stopCriteria=[earlyStop, epochWall],
-	    trainMiniBatchSize=20
+		trainMaps=trainMaps,
+		testMaps=testMaps,
+		validationMaps=validationMaps,
+		stopCriteria=[earlyStop, epochWall],
+		trainMiniBatchSize=20
 	)
 
 	trainer.start("MLP", mlp)
