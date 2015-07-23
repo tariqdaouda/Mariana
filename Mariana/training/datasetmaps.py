@@ -154,7 +154,6 @@ class ClassSets(Dataset_ABC) :
 			elif self.inputSize != inputSize :
 				raise ValueError("All class elements must have the same size. Got '%s', while the previous value was '%s'" % ( len(v[0]), self.inputSize ))
 				
-		self.minLength = int(self.minLength)
 		if self.minLength < 2 :
 			raise ValueError('All class sets must have at least two elements')
 
@@ -176,19 +175,18 @@ class ClassSets(Dataset_ABC) :
 			self.onehots[k][i] = 1
 			i += 1
 
-		self.length = self.totalLength
 		self._mustReroll = True
 
 	def reroll(self) :
 		"""shuffle subsets"""
 		offset = 0
 		for k, v in self.classSets.iteritems() :
-			start, end = offset, offset+self.nbElements[k]
-			indexes = numpy.random.randint(0, self.nbElements[k], self.nbElements[k])
+			start, end = offset, offset+self.minLength
+			indexes = numpy.random.randint(0, self.nbElements[k], self.minLength)
 			self.subsets["input"][start : end] = v[indexes]
 			self.subsets["classNumber"][start : end] = self.classNumbers[k]
 			self.subsets["onehot"][start : end] = self.onehots[k]
-			offset += self.nbElements[k]
+			offset += self.minLength
 
 		size = len(self.subsets["input"])
 		indexes = numpy.random.randint(0, size, size)
@@ -235,7 +233,7 @@ class ClassSets(Dataset_ABC) :
 			return DatasetHandle(self, subset)
 
 	def __len__(self) :
-		return self.totalLength
+		return self.minLength
 
 class DatasetMapper(object):
 	"""a DatasetMapper maps Input and Output layer to the data they must receive.

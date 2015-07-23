@@ -245,19 +245,20 @@ class DefaultTrainer(Trainer_ABC) :
 					res = modelFct(output, **kwargs)
 					scores[output.name] = res[0]
 			else :
-				
+				data = range(100)
 				if trainingOrder == DefaultTrainer.SEQUENTIAL_TRAINING :
 					for output in aMap.outputLayers :
 						for i in xrange(0, len(aMap), miniBatchSize) :
 							batchData = aMap.getBatch(i, miniBatchSize)
 							batchData["target"] = batchData[output.name]
 							del(batchData[output.name])
-							# print batchData
 							res = modelFct(output, **batchData)
+							data[i%len(data)] = (i, len(batchData["inp"]), res[0])
 							try :
 								scores[output.name].append(res[0])
 							except KeyError:
 								scores[output.name] = [res[0]]
+							
 				elif trainingOrder == DefaultTrainer.SIMULTANEOUS_TRAINING :
 					for i in xrange(0, len(aMap), miniBatchSize) :
 						batchData = aMap.getBatch(i, miniBatchSize)
@@ -343,7 +344,7 @@ class DefaultTrainer(Trainer_ABC) :
 			) )
 	
 			self.recorder.commit(self.store, model)
-			
+			# stop
 			for crit in self.stopCriteria :
 				if crit.stop(self) :
 					raise MSTOP.EndOfTraining(crit)
