@@ -113,12 +113,19 @@ class RandomSeries(Series) :
 
 class ClassSets(Dataset_ABC) :
 	"""Pass it one set for each class and it will take care of randomly sampling them with replacement.
-	All class sets must have at least two elements"""
+	All class sets must have at least two elements. The subsets exposed by a ClassSets are:
+		
+		* .input, for the raw inputs
+		* .classNumber, each class is represent by an int
+		* .onehot, onehot representation of classes
+
+		"""
 	def __init__(self, **kwargs) :
 		"""
 		Expects arguments in the following form::
 		
-				trainSet = ClassSets(cars = train_set[0], bikes = train_set[1])"""
+				trainSet = ClassSets(cars = train_set[0], bikes = train_set[1])
+		"""
 
 		self.classSets = {}
 		
@@ -154,7 +161,7 @@ class ClassSets(Dataset_ABC) :
 		subsetSize = self.totalLength-len(self.classSets) #-1 for each class set
 		self.subsets = {
 			"input" : numpy.zeros( (subsetSize, self.inputSize) ),
-			"classNumber" : numpy.zeros( (subsetSize, 1) ),
+			"classNumber" : numpy.zeros( subsetSize ),
 			"onehot" : numpy.zeros( (subsetSize, len(self.classSets)) )
 		}
 
@@ -190,23 +197,23 @@ class ClassSets(Dataset_ABC) :
 
 		self._mustReroll = False
 
-	def setEvenLikelihoods(self) :
-		"""Set the sampling so that all classes have the same chances of appearing.
-		This will also change the the selngth of self to be length of the smaller subset
-		instead of being the sum of lengths of all subsets."""
+	# def setEvenLikelihoods(self) :
+	# 	"""Set the sampling so that all classes have the same chances of appearing.
+	# 	This will also change the the length of self to be length of the smaller subset
+	# 	instead of being the sum of lengths of all subsets."""
 
-		for k, v in self.classSets.iteritems() :
-			self.nbElements[k] = self.minLength -1 #-1 to simulate a sampling with replacement
+	# 	for k, v in self.classSets.iteritems() :
+	# 		self.nbElements[k] = self.minLength -1 #-1 to simulate a sampling with replacement
 
-		subsetSize = self.minLength-len(self.classSets) #-1 for each class set
-		self.subsets = {
-			"input" : numpy.zeros( (subsetSize, self.inputSize) ),
-			"classNumber" : numpy.zeros( (subsetSize, 1) ),
-			"onehot" : numpy.zeros( (subsetSize, len(self.classSets)) )
-		}
+	# 	subsetSize = self.minLength-len(self.classSets) #-1 for each class set
+	# 	self.subsets = {
+	# 		"input" : numpy.zeros( (subsetSize, self.inputSize) ),
+	# 		"classNumber" : numpy.zeros( subsetSize ),
+	# 		"onehot" : numpy.zeros( (subsetSize, len(self.classSets)) )
+	# 	}
 
-		self.length = self.minLength
-		self._mustReroll = True
+	# 	self.length = self.minLength
+	# 	self._mustReroll = True
 
 	def get(self, subset, i, size) :
 		"""Returns n element from a subset, starting from position i"""

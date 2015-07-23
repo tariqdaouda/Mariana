@@ -69,13 +69,16 @@ class Trainer_ABC(object) :
 			f.write("Time of death: %s\n" % death_time)
 			f.write("Model saved to: %s\n" % filename)
 			sstore = str(self.store).replace("'", '"').replace("True", 'true').replace("False", 'false')
-			f.write(
-				"store:\n%s" % json.dumps(
-					json.loads(sstore), sort_keys=True,
-					indent=4,
-					separators=(',', ': ')
+			try :
+				f.write(
+					"store:\n%s" % json.dumps(
+						json.loads(sstore), sort_keys=True,
+						indent=4,
+						separators=(',', ': ')
+					)
 				)
-			)
+			except ValueError :
+				print "invalid json", sstore
 
 			if tb is not None :
 				f.write("\nTraceback\n---------\n")
@@ -156,14 +159,14 @@ class DefaultTrainer(Trainer_ABC) :
 		testMaps,
 		validationMaps,
 		trainMiniBatchSize,
-		stopCriteria,
+		stopCriteria = [],
 		testMiniBatchSize = -1,
 		validationMiniBatchSize = -1,
 		saveIfMurdered = True) :
 		"""
 			:param DatasetMaps trainMaps: Layer mappings for the training set
 			:param DatasetMaps testtrainMaps: Layer mappings for the testing set
-			:param DatasetMaps validationMaps: Layer mappings for the validation set, use DefaultTrainer.ALL_SET for the whole set
+			:param DatasetMaps validationMaps: Layer mappings for the validation set, if you do not wich to set one, pass None as argument
 			:param int trainMiniBatchSize: The size of a training minibatch, use DefaultTrainer.ALL_SET for the whole set
 			:param list stopCriteria: List of StopCriterion objects 
 			:param int testMiniBatchSize: The size of a testing minibatch, use DefaultTrainer.ALL_SET for the whole set
@@ -176,8 +179,10 @@ class DefaultTrainer(Trainer_ABC) :
 		self.maps = {
 			"train": trainMaps,
 			"test": testMaps,
-			"validation": validationMaps
 		}
+
+		if validationMaps is not None :
+			self.maps["validation"] = validationMaps
 
 		self.miniBatchSizes = {
 			"train" : trainMiniBatchSize,
@@ -247,6 +252,7 @@ class DefaultTrainer(Trainer_ABC) :
 							batchData = aMap.getBatch(i, miniBatchSize)
 							batchData["target"] = batchData[output.name]
 							del(batchData[output.name])
+							# print batchData
 							res = modelFct(output, **batchData)
 							try :
 								scores[output.name].append(res[0])
@@ -312,9 +318,9 @@ class DefaultTrainer(Trainer_ABC) :
 		startTime = time.time()
 		self.store["runInfos"]["epoch"] = 0
 		while True :
-			for mapName in ["train", "test", "validation"] :
-				aMap = self.maps[mapName]
-				if len(aMap) > 0 :			
+			for mapName, aMap in self.maps.iteritems() :
+				# aMap = [mapName]
+				if len(aMap) > 0 :
 					if shuffle :
 						aMap.reroll()
 					if mapName == "train" :
