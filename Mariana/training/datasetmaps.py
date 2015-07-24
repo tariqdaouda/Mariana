@@ -134,16 +134,10 @@ class ClassSets(Dataset_ABC) :
 		self.totalLength = 0
 		self.inputSize = 0
 		for k, v in kwargs.iteritems() :
-			if len(v) < self.minLength :
-				self.minLength = len(v)
-			if self.maxLength < len(v) :
-				self.maxLength = len(v)
 			self.classSets[k] = numpy.asarray(v)
 			if len(self.classSets[k].shape) < 2 :
 			 	self.classSets[k] = self.classSets[k].reshape(self.classSets[k].shape[0], 1)
 
-			self.totalLength += len(v)
-			
 			try :
 				inputSize = len(v[0])
 			except :
@@ -157,23 +151,30 @@ class ClassSets(Dataset_ABC) :
 		if self.minLength < 2 :
 			raise ValueError('All class sets must have at least two elements')
 
+		self.classNumbers = {}
+		self.onehots = {}
+		self.nbElements = {}
+		i = 0
+		for k, v in self.classSets.iteritems() :
+			length = len(v)-1 #-1 to simulate a sampling with replacement
+			if length < self.minLength :
+				self.minLength = length
+			if self.maxLength < length :
+				self.maxLength = length
+			self.totalLength += length
+			
+			self.nbElements[k] = length
+			self.classNumbers[k] = i
+			self.onehots[k] = numpy.zeros(len(self.classSets))
+			self.onehots[k][i] = 1
+			i += 1
+
 		subsetSize = self.totalLength-len(self.classSets) #-1 for each class set
 		self.subsets = {
 			"input" : numpy.zeros( (subsetSize, self.inputSize) ),
 			"classNumber" : numpy.zeros( subsetSize ),
 			"onehot" : numpy.zeros( (subsetSize, len(self.classSets)) )
 		}
-
-		self.classNumbers = {}
-		self.onehots = {}
-		self.nbElements = {}
-		i = 0
-		for k, v in self.classSets.iteritems() :
-			self.nbElements[k] = len(self.classSets[k]) -1 #-1 to simulate a sampling with replacement
-			self.classNumbers[k] = i
-			self.onehots[k] = numpy.zeros(len(self.classSets))
-			self.onehots[k][i] = 1
-			i += 1
 
 		self._mustReroll = True
 
