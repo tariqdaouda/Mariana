@@ -79,7 +79,7 @@ class GeometricEarlyStopping(StopCriterion_ABC) :
 		
 		self.outputLayer = outputLayer
 		self.datasetMap = datasetMap
-		self.datasetName = None
+		self.mapName = None
 		self.patience = patience
 		self.patienceIncreaseFactor = patienceIncreaseFactor
 		self.wall = patience
@@ -91,27 +91,25 @@ class GeometricEarlyStopping(StopCriterion_ABC) :
 		if self.wall <= 0 :
 			return True
 
-		if self.datasetName is None :
+		if self.mapName is None :
 			found = False
 			for name, m in trainer.maps.iteritems() :
 				if m is self.datasetMap :
-					self.datasetName = name
+					self.mapName = name
 					found = True
 					break
 			if not found :
 				raise ValueError("the trainer does not know the supplied dataset map")
 
 		if self.outputLayer is None :
-			curr = trainer.store["scores"][self.datasetName]["average"]
+			curr = trainer.store["scores"][self.mapName]["average"]
 		else :
-			curr = trainer.store["scores"][self.datasetName][self.outputLayer.name]
+			curr = trainer.store["scores"][self.mapName][self.outputLayer.name]
 			
 		if self.bestScore is None :
 			self.bestScore = curr
-		elif curr < (self.bestScore + self.significantImprovement) :
+		elif curr < (self.bestScore - self.significantImprovement) :
 			self.bestScore = curr
-		
-		
 			self.wall = max(self.patience, trainer.store["runInfos"]["epoch"] * self.patienceIncreaseFactor)
 	
 		self.wall -= 1	
