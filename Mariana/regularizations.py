@@ -16,7 +16,7 @@ class L1(SingleLayerRegularizer_ABC) :
 	"""
 	Will add this to the cost
 	.. math::
-		
+
 			factor * abs(Weights)
 	"""
 
@@ -27,9 +27,9 @@ class L2(SingleLayerRegularizer_ABC) :
 	"""
 	Will add this to the cost
 	.. math::
-		
+
 			factor * (Weights)^2
 	"""
 
 	def getFormula(self, layer) :
-		return self.factor * ( abs(layer.W).sum() )
+		return self.factor * ( (layer.W * layer.W).sum() )
