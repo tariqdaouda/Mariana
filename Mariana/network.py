@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from wrappers import TheanoFunction
 import Mariana.settings as MSET
+import types
 
 __all__= ["Network", "OutputMap"]
 
@@ -9,8 +10,9 @@ class OutputMap(object):
 	Encapsulates outputs as well as their theano functions.
 	The role of an output map object is to apply a function such as theano_train to the set of outputs it belongs to
 	"""
-	def __init__(self, name):
+	def __init__(self, name, network):
 		self.name = name
+		self.network = network
 		self.outputFcts = {}
 
 	def printGraph(self, outputLayer) :
@@ -21,7 +23,12 @@ class OutputMap(object):
 		self.outputFcts[outputLayer] = fct
 
 	def callTheanoFct(self, outputLayer, **kwargs) :
-		return self.outputFcts[outputLayer](**kwargs)
+		if type(outputLayer) is types.StringType :
+			ol = self.network.outputs[outputLayer]
+		else :
+			ol = outputLayer
+
+		return self.outputFcts[ol](**kwargs)
 
 	def __call__(self, outputLayer, **kwargs) :
 		return self.callTheanoFct(outputLayer, **kwargs)
@@ -130,7 +137,7 @@ class Network(object) :
 				for k, v in o.__dict__.iteritems() :
 					if ( v.__class__ is TheanoFunction ) or issubclass(v.__class__, TheanoFunction) :
 						if k not in self.outputMaps :
-							self.outputMaps[k] = OutputMap(k)
+							self.outputMaps[k] = OutputMap(k, self)
 						self.outputMaps[k].addOutput(o, v)
 			
 			# print self.outputMaps, self.outputs.values()

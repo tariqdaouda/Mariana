@@ -57,12 +57,10 @@ class BinomialDropout(OutputDecorator_ABC):
 		mask = rnd.binomial(n = 1, p = (1-self.ratio), size = outputs.shape)
 		# cast to stay in GPU float limit
 		# mask = tt.cast(mask, theano.config.floatX)
-		return (outputs * mask) / self.ratio
+		return (outputs * mask) #/ self.ratio
 		
 	def decorate(self, layer) :
 		layer.outputs = self._decorate(layer.outputs)
-		if not self.trainOnly :
-			layer.test_outputs = self._decorate(layer.test_outputs)
 			
 class GlorotTanhInit(Decorator_ABC) :
 	"""Set up the layer to apply the tanh initialisation introduced by Glorot et al. 2010"""
