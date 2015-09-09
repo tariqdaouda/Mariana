@@ -3,10 +3,10 @@ import theano
 import sys
 
 import Mariana.candies as MCAN
-import Mariana.settings as MSET
 
 TYPE_TEST = 'test'
 TYPE_TRAIN = 'train'
+DEVICE_IS_GPU = theano.config.device.find("gpu") > -1
 
 class TheanoFunction(object) :
 	"""
@@ -25,6 +25,8 @@ class TheanoFunction(object) :
 		:param list updates: list of tuples (shared variable, symbolic expression of the update to be applied to it)
 		:param dict **kwargs: additional arguments to passed to the real theano function underneath
 		"""
+		self.cast_warning_told = False
+
 		self.name = name
 		self.outputLayer = outputLayer
 		self.applicationType = applicationType.lower()
@@ -55,8 +57,7 @@ class TheanoFunction(object) :
 		else:
 			device = "CPU"
 
-		if MSET.VERBOSE :
-			MCAN.friendly("Run device", "I will use the [-%s-] to run the *%s* type function '%s' of layer '%s'!" % (device, self.applicationType, name, outputLayer.name))
+		MCAN.friendly("Run device", "I will use the [-%s-] to run the *%s* type function '%s' of layer '%s'!" % (device, self.applicationType, name, outputLayer.name))
 
 	def printGraph(self) :
 		"""Print the theano graph of the function"""
@@ -64,14 +65,23 @@ class TheanoFunction(object) :
 
 	def run(self, **kwargs) :
 		for k in kwargs :
-			self.tmpInputs[k] = kwargs[k]
+			if DEVICE_IS_GPU and kwargs[k].dtype.name != config.theano.floatX :
+				if self.cast_warning_told :
+					MCAN.friendly("Casting: Trying to save the day",
+						"""The GPU max size for a flot is 32, your data for '%s' in function '%s' is '%s'.
+I will try to cast the inputs at every iterration before computation.
+Please cast your data to '%s' next time, that would certainly speed up the whole computation"""  % (k, self.name, kwargs[k].dtype.name, config.theano.floatX))
+					self.cast_warning_told = True
+
+				self.tmpInputs[k] = kwargs[k].astype(config.theano.floatX, kwargs[k])
+			else :
+				self.tmpInputs[k] = kwargs[k]
 
 		try :
-			return self.theano_fct(*self.tmpInputs.values())
-		except Exception as e :
+			return self.theano_fct(*self.tmpInputs.values())	
+		except TypeError :
 			sys.stderr.write("!!=> Error in function '%s' for layer '%s':\n" % (self.name, self.outputLayer.name))
-			if MSET.VERBOSE :
-				sys.stderr.write("\t!!=> the arguments were:\n %s\n" % (kwargs))
+			sys.stderr.write("\t!!=> the arguments were:\n %s\n" % (kwargs))
 			raise e
 
 	def __call__(self, **kwargs) :

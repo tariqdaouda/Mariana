@@ -21,6 +21,7 @@ class L1(SingleLayerRegularizer_ABC) :
 	"""
 
 	def getFormula(self, layer) :
+		# print "ssss L1" 
 		return self.factor * ( abs(layer.W).sum() )
 
 class L2(SingleLayerRegularizer_ABC) :
@@ -32,4 +33,5 @@ class L2(SingleLayerRegularizer_ABC) :
 	"""
 
 	def getFormula(self, layer) :
+		# print "pppp L2" 
 		return self.factor * ( (layer.W * layer.W).sum() )

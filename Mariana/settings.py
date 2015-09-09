@@ -2,6 +2,10 @@
 OMICRON_SIGNATURE = ">|\/| /-\ |-> | /-\ |\| /-\>"
 
 VERBOSE = False
+SAVE_MESSAGE_LOG = False
+SAVE_MESSAGE_LOG_FILE = "Mariana_logs.txt"
+if SAVE_MESSAGE_LOG_FILE :
+	MESSAGE_LOG_FILE = open(SAVE_MESSAGE_LOG_FILE, "w")
 
 #The random used for initialising weights
 RANDOM_SEED = 1234
