@@ -95,10 +95,14 @@ class Trainer_ABC(object) :
 		MCAN.friendly("Process id", "The pid of this run is: %d" % os.getpid())
 
 		if recorder == "default" :
-			recorder = MREC.GGPlot2(runName, verbose = True)
+			params = {
+				"printRate" : 1,
+				"writeRate" : 1
+			}
+			recorder = MREC.GGPlot2(runName, **params)
 			MCAN.friendly(
 				"Default recorder",
-				"The trainer will recruit the default 'GGPlot2' recorder on verbose mode.\nResults will be saved into '%s'." % (recorder.filename)
+				"The trainer will recruit the default 'GGPlot2' recorder with the following arguments:\n\t %s.\nResults will be saved into '%s'." % (params, recorder.filename)
 				)
 	
 		if not self.saveIfMurdered :

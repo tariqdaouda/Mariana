@@ -17,12 +17,16 @@ class Recorder_ABC(object) :
 
 class GGPlot2(Recorder_ABC):
  	"""This training recorder will create a nice CSV file fit for using with ggplot2 and will update
- 	it as the training gos. It will also save the best model for each set of the trainer, and print
- 	regular reports if you tell it to be verbose."""
- 	def __init__(self, filename, verbose = True):
+ 	it as the training goes. It will also save the best model for each set of the trainer, and print
+ 	regular reports on the console.
+
+ 	:param int printRate: The rate at which the status is printed on the console. If set to <= to 0, will never print.
+ 	:param int write: The rate at which the status is written on disk
+ 	"""
+
+ 	def __init__(self, filename, printRate=1, writeRate=1):
 		
 		self.filename = filename.replace(".csv", "") + ".ggplot2.csv"
-		self.verbose = verbose
 	
  		self.bestScores = {}
 		self.currentScores = {}
@@ -31,6 +35,9 @@ class GGPlot2(Recorder_ABC):
 		self.csvFile = None
 
 		self.length = 0
+
+		self.printRate = printRate
+		self.writeRate = writeRate
 
 	def commit(self, store, model) :
 		"""Appends the current state of the store to the CSV. This one is meant to be called by the trainer"""
@@ -52,7 +59,7 @@ class GGPlot2(Recorder_ABC):
 			self.csvLegend.extend( ["score", "best_score", "best_score_commit", "set", "output"] )
 
 			self.csvFile = CSVFile(legend = self.csvLegend)
-			self.csvFile.streamToFile( self.filename, writeRate = 1 )
+			self.csvFile.streamToFile( self.filename, writeRate = self.writeRate )
 
 		for theSet, scores in store["scores"].iteritems() :
 			self.currentScores[theSet] = {}
@@ -77,7 +84,7 @@ class GGPlot2(Recorder_ABC):
 				)
 	
 	
-		if self.verbose :
+		if self.printRate > 0 and (self.length%self.printRate) == 0:
 			self.printCurrentState()
 
 	def printCurrentState(self) :
