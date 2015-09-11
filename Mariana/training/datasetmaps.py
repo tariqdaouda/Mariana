@@ -156,7 +156,7 @@ class ClassSets(Dataset_ABC) :
 		self.nbElements = {}
 		i = 0
 		for k, v in self.classSets.iteritems() :
-			length = len(v)-1 #-1 to simulate a sampling with replacement
+			length = len(v)
 			if length < self.minLength :
 				self.minLength = length
 			if self.maxLength < length :
@@ -169,7 +169,7 @@ class ClassSets(Dataset_ABC) :
 			self.onehots[k][i] = 1
 			i += 1
 
-		subsetSize = self.totalLength-len(self.classSets) #-1 for each class set
+		subsetSize = self.totalLength
 		self.subsets = {
 			"input" : numpy.zeros( (subsetSize, self.inputSize) ),
 			"classNumber" : numpy.zeros( subsetSize ),
@@ -195,24 +195,6 @@ class ClassSets(Dataset_ABC) :
 			self.subsets[k] = self.subsets[k][indexes]
 
 		self._mustReroll = False
-
-	# def setEvenLikelihoods(self) :
-	# 	"""Set the sampling so that all classes have the same chances of appearing.
-	# 	This will also change the the length of self to be length of the smaller subset
-	# 	instead of being the sum of lengths of all subsets."""
-
-	# 	for k, v in self.classSets.iteritems() :
-	# 		self.nbElements[k] = self.minLength -1 #-1 to simulate a sampling with replacement
-
-	# 	subsetSize = self.minLength-len(self.classSets) #-1 for each class set
-	# 	self.subsets = {
-	# 		"input" : numpy.zeros( (subsetSize, self.inputSize) ),
-	# 		"classNumber" : numpy.zeros( subsetSize ),
-	# 		"onehot" : numpy.zeros( (subsetSize, len(self.classSets)) )
-	# 	}
-
-	# 	self.length = self.minLength
-	# 	self._mustReroll = True
 
 	def get(self, subset, i, size) :
 		"""Returns n element from a subset, starting from position i"""

@@ -55,7 +55,7 @@ class BinomialDropout(OutputDecorator_ABC):
 	def _decorate(self, outputs) :
 		rnd = tt.shared_randomstreams.RandomStreams()
 		mask = rnd.binomial(n = 1, p = (1-self.ratio), size = outputs.shape)
-		cast to stay in GPU float limit
+		# cast to stay in GPU float limit
 		mask = tt.cast(mask, theano.config.floatX)
 		return (outputs * mask) #/ self.ratio
 		

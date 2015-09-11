@@ -65,21 +65,22 @@ class TheanoFunction(object) :
 
 	def run(self, **kwargs) :
 		for k in kwargs :
-			if DEVICE_IS_GPU and kwargs[k].dtype.name != config.theano.floatX :
-				if self.cast_warning_told :
+			# print DEVICE_IS_GPU, kwargs[k].dtype.name, theano.config.floatX, kwargs[k].dtype.name != theano.config.floatX 
+			if DEVICE_IS_GPU and kwargs[k].dtype.name != theano.config.floatX :
+				if not self.cast_warning_told :
 					MCAN.friendly("Casting: Trying to save the day",
 						"""The GPU max size for a flot is 32, your data for '%s' in function '%s' is '%s'.
 I will try to cast the inputs at every iterration before computation.
-Please cast your data to '%s' next time, that would certainly speed up the whole computation"""  % (k, self.name, kwargs[k].dtype.name, config.theano.floatX))
+Please cast your data to '%s' next time, that would certainly speed up the whole computation"""  % (k, self.name, kwargs[k].dtype.name, theano.config.floatX))
 					self.cast_warning_told = True
 
-				self.tmpInputs[k] = kwargs[k].astype(config.theano.floatX, kwargs[k])
+				self.tmpInputs[k] = kwargs[k].astype(theano.config.floatX)
 			else :
 				self.tmpInputs[k] = kwargs[k]
 
 		try :
 			return self.theano_fct(*self.tmpInputs.values())	
-		except TypeError :
+		except Exception as e :
 			sys.stderr.write("!!=> Error in function '%s' for layer '%s':\n" % (self.name, self.outputLayer.name))
 			sys.stderr.write("\t!!=> the arguments were:\n %s\n" % (kwargs))
 			raise e

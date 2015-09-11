@@ -1,4 +1,4 @@
-import sys
+import sys, time
 import Mariana.settings as MSET
 
 def friendly(subject, msg, flush = True) :
@@ -10,8 +10,8 @@ def friendly(subject, msg, flush = True) :
 		print s
 		if flush :
 			sys.stdout.flush()
-			
+
 	if MSET.SAVE_MESSAGE_LOG :
-		MSET.MESSAGE_LOG_FILE.write("\ntimestamp:%s, human time:%s\n%s" % (time.time, time.ctime(), s))
+		MSET.MESSAGE_LOG_FILE.write("\ntimestamp:%s, human time:%s\n%s" % (time.time(), time.ctime(), s))
 		if flush :
 			MSET.MESSAGE_LOG_FILE.flush()
