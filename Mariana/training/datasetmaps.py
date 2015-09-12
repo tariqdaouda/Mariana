@@ -229,8 +229,6 @@ class DatasetMapper(object):
 		self.inputLayers = []
 		self.outputLayers = []
 		self.minLength = float('inf')
-		
-		self.res = {}
 
 	def map(self, layer, setHandle) :
 		"""
@@ -263,25 +261,46 @@ class DatasetMapper(object):
 		for d in self.datasets :
 			d.reroll()
 
-	def getBatch(self, i, size) :
+	def getBatch(self, i, size, layerList=None) :
 		"""
 		Returns a dictionary::
 			
 				layer.name => elements
+
+		:param list layerList: The list of layers for which to return data. If None, will return for all layers.
 		"""
 		if i > self.minLength :
 			raise IndexError("index i '%s', out of range '%s'" % (i, size))
 
-		for layer, handle in self.maps.iteritems() :
-			self.res[layer.name] = handle.dataset.get(handle.subset, i, size)
+		res = {}
+		if layerList is None :
+			layers = self.maps.keys()
+		else :
+			layers = layerList
 
-		return self.res
+		for layer in layers :
+			handle = self.maps[layer]
+			res[layer.name] = handle.dataset.get(handle.subset, i, size)
 
-	def getAll(self) :
-		"""Same as getBatch() but returns the totality of the subset for each layer"""
-		for layer, handle in self.maps.iteritems() :
-			self.res[layer.name] = handle.dataset.getAll(handle.subset)
-		return self.res
+		return res
+
+	def getAll(self, layerList=None) :
+		"""Same as getBatch() but returns the totality of the subset for each layer
+
+		:param list layerList: The list of layers for which to return data. If None, will return for all layers.
+		"""
+
+		if layerList is None :
+			layers = self.maps.keys()
+		else :
+			layers = layerList
+
+		res = {}
+		for layer in layers :
+			handle = self.maps[layer]
+			res[layer.name] = handle.dataset.getAll(handle.subset)
+		
+		return res
 
 	def __len__(self) :
 		return self.minLength

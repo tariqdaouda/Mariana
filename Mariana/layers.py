@@ -112,7 +112,8 @@ class Layer_ABC(object) :
 		self.nbInputs = layer.nbOutputs
 
 	def connect(self, layerOrList) :
-		"""Connect the layer to another one"""
+		"""Connect the layer to another one. Using the '>' operator to connect to layers is actually calls this function.
+		This function returns the resulting network"""
 		def _connectLayer(me, layer) :
 			me.feedsInto[layer.name] = layer
 			layer.feededBy[me.name] = me

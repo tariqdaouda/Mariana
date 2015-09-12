@@ -238,34 +238,40 @@ class DefaultTrainer(Trainer_ABC) :
 						for hp in thingObj.hyperParameters :
 							dct["%s_%s" % (l.name, hp)] = getattr(thingObj, hp)
 
-		def _trainTest(aMap, modelFct, shuffle, trainingOrder, miniBatchSize) :
+		def _trainTest(aMap, modelFct, shuffle, trainingOrder, miniBatchSize, inputLayers) :
 			scores = {}
+			layerList = inputLayers
 			if miniBatchSize == DefaultTrainer.ALL_SET :
 				for output in aMap.outputLayers :
-					kwargs = dict( aMap.getAll() )
+					layerList.append(output)
+					kwargs = dict( aMap.getAll(layerList = layerList) )
 					kwargs["target"] = kwargs[output.name]
 					del(kwargs[output.name])
 					res = modelFct(output, **kwargs)
 					scores[output.name] = res[0]
+					layerList.pop(-1)
 			else :
-				data = range(100)
 				if trainingOrder == DefaultTrainer.SEQUENTIAL_TRAINING :
 					for output in aMap.outputLayers :
 						for i in xrange(0, len(aMap), miniBatchSize) :
-							batchData = aMap.getBatch(i, miniBatchSize)
+							layerList.append(output)
+							batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
+							
 							batchData["target"] = batchData[output.name]
 							del(batchData[output.name])
 							res = modelFct(output, **batchData)
-							data[i%len(data)] = (i, len(batchData["inp"]), res[0])
 							try :
 								scores[output.name].append(res[0])
 							except KeyError:
 								scores[output.name] = [res[0]]
-							
+							layerList.pop(-1)
+
 				elif trainingOrder == DefaultTrainer.SIMULTANEOUS_TRAINING :
 					for i in xrange(0, len(aMap), miniBatchSize) :
-						batchData = aMap.getBatch(i, miniBatchSize)
+						layerList.append(output)
+						batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
 						for output in aMap.outputLayers :
+							layerList.append(output)
 							batchData["target"] = batchData[output.name]
 							del(batchData[output.name])
 							res = modelFct(output, **batchData)
@@ -273,7 +279,8 @@ class DefaultTrainer(Trainer_ABC) :
 							try :
 								scores[output.name].append(res[0])
 							except KeyError:
-								scores[output.name] = [res[0]]		
+								scores[output.name] = [res[0]]
+							layerList.pop(-1)
 				else :
 					raise ValueError("Unknown training order: %s" % trainingOrder)
 
@@ -321,9 +328,9 @@ class DefaultTrainer(Trainer_ABC) :
 		
 		startTime = time.time()
 		self.store["runInfos"]["epoch"] = 0
+		inputLayers = model.inputs.values()
 		while True :
 			for mapName, aMap in self.maps.iteritems() :
-				# aMap = [mapName]
 				if len(aMap) > 0 :
 					if shuffle :
 						aMap.reroll()
@@ -337,9 +344,9 @@ class DefaultTrainer(Trainer_ABC) :
 						modelFct,
 						shuffle,
 						trainingOrder,
-						self.miniBatchSizes[mapName]
+						self.miniBatchSizes[mapName],
+						inputLayers
 					)
-			
 			runtime = (time.time() - startTime)/60
 			
 			self.store["runInfos"].update( (
@@ -347,7 +354,6 @@ class DefaultTrainer(Trainer_ABC) :
 			) )
 	
 			self.recorder.commit(self.store, model)
-			# stop
 			for crit in self.stopCriteria :
 				if crit.stop(self) :
 					raise MSTOP.EndOfTraining(crit)

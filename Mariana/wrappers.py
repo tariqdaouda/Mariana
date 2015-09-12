@@ -69,9 +69,9 @@ class TheanoFunction(object) :
 			if DEVICE_IS_GPU and kwargs[k].dtype.name != theano.config.floatX :
 				if not self.cast_warning_told :
 					MCAN.friendly("Casting: Trying to save the day",
-						"""The GPU max size for a flot is 32, your data for '%s' in function '%s' is '%s'.
+						"""The GPU max size for a flaot is 32, your data for '%s' in function '%s' is '%s'.
 I will try to cast the inputs at every iterration before computation.
-Please cast your data to '%s' next time, that would certainly speed up the whole computation"""  % (k, self.name, kwargs[k].dtype.name, theano.config.floatX))
+Please cast your data to '%s' next time, that would certainly speed up the whole computation."""  % (k, self.name, kwargs[k].dtype.name, theano.config.floatX))
 					self.cast_warning_told = True
 
 				self.tmpInputs[k] = kwargs[k].astype(theano.config.floatX)

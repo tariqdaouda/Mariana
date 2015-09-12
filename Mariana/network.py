@@ -58,11 +58,6 @@ class Network(object) :
 
 	def addEdge(self, layer1, layer2) :
 		"""Add a connection between two layers"""
-		# if layer1.name in self.layers :
-		# 	raise ValueError("There's already a layer named '%s' in the network" % layer1.name)
-		# if layer2.name in self.layers :
-		# 	raise ValueError("There's already a layer named '%s' in the network" % layer2.name)
-
 		self.layers[layer1.name] = layer1
 		self.layers[layer2.name] = layer2
 		self.edges.add( (layer1, layer2))
@@ -122,8 +117,7 @@ class Network(object) :
 
 		if self._mustInit :
 			print "\n" + MSET.OMICRON_SIGNATURE
-			# print "\tcompiling..."
-
+		
 			for inp in self.inputs.itervalues() :
 				inp._init()
 
@@ -139,9 +133,7 @@ class Network(object) :
 						if k not in self.outputMaps :
 							self.outputMaps[k] = OutputMap(k, self)
 						self.outputMaps[k].addOutput(o, v)
-			
-			# print self.outputMaps, self.outputs.values()
-
+	
 	def help(self) :
 		"""prints the list of available model functions, such as train, test,..."""
 		os = []
