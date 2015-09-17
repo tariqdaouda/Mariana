@@ -353,12 +353,17 @@ class Output_ABC(Hidden) :
 
 		self.dependencies = _bckTrk(self.dependencies, self)
 
+	def _preTrainInit(self) :
+		""""""
+		pass
+
 	def _setTheanoFunctions(self) :
 		"""Creates theano_train/theano_test/theano_propagate functions and calls setCustomTheanoFunctions to 
 		create user custom theano functions."""
 
 		self._backTrckDependencies()
-		
+		self._preTrainInit()
+
 		cost = self.costObject.costFct(self.targets, self.outputs)
 		test_cost = self.costObject.costFct(self.targets, self.test_outputs)
 		
@@ -437,34 +442,47 @@ class Regression(Output_ABC) :
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=egg]' % (self.name, self.nbOutputs)
 
+class Autoencode(Output_ABC) :
+	""""""
+	def __init__(self, layer, activation, learningScenario, costObject, name = None, **kwargs) :
+		Output_ABC.__init__(self, layer.nbOutputs, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
+		self.layer = layer
+
+	def _preTrainInit(self):
+		self.targets = self.layer.outputs#tt.matrix(name = self.name + "_Target")
+		print self.layer
+
+	def _dot_representation(self) :
+		return '[label="%s: %s" shape=egg]' % (self.name, self.nbOutputs)
+
 #work in progress
-class Convolution2D(Hidden) :
+# class Convolution2D(Hidden) :
 
-	def __init__(self, nbMaps, height, width, *theanoArgs, **theanoKwArgs) :
-		self.nbMaps = self.nbMaps
-		self.height = self.height
-		self.width = self.width
-		self.border_mode = border_mode
-		self.theanoArgs = theanoArgs
-		self.theanoKwArgs = self.theanoKwArgs
+# 	def __init__(self, nbMaps, height, width, *theanoArgs, **theanoKwArgs) :
+# 		self.nbMaps = self.nbMaps
+# 		self.height = self.height
+# 		self.width = self.width
+# 		self.border_mode = border_mode
+# 		self.theanoArgs = theanoArgs
+# 		self.theanoKwArgs = self.theanoKwArgs
 
-	def _setOutputs(self) :
-		self.outputs = self.activation(tt.signal.conv2d(self.inputs, self.W, *self.theanoArgs, **self.theanoKwArgs))
+# 	def _setOutputs(self) :
+# 		self.outputs = self.activation(tt.signal.conv2d(self.inputs, self.W, *self.theanoArgs, **self.theanoKwArgs))
 
-class MaxPooling2D(Layer_ABC) :
+# class MaxPooling2D(Layer_ABC) :
 	
-	def __init__(self, downScaleFactors) :
-		"""downScaleFactors is the factor by which to downscale vertical and horizontal dimentions. (2,2) will halve the image in each dimension."""
-		self.downScaleFactors = downScaleFactors
+# 	def __init__(self, downScaleFactors) :
+# 		"""downScaleFactors is the factor by which to downscale vertical and horizontal dimentions. (2,2) will halve the image in each dimension."""
+# 		self.downScaleFactors = downScaleFactors
 
-	def _setOutputs(self) :
-		self.outputs =  max_pool_2d(self.inputs, self.downScaleFactors)
+# 	def _setOutputs(self) :
+# 		self.outputs =  max_pool_2d(self.inputs, self.downScaleFactors)
 
-class Flatten(Layer_ABC) :
+# class Flatten(Layer_ABC) :
 
-	def __init__(self, outdim) :
-		"""Flattens the output of a convolution to a given numer of dimentions"""
-		self.outdim = outdim
+# 	def __init__(self, outdim) :
+# 		"""Flattens the output of a convolution to a given numer of dimentions"""
+# 		self.outdim = outdim
 
-	def _setOutputs(self) :
-		self.outputs = T.flatten(self.inputs, self.outdim)
+# 	def _setOutputs(self) :
+# 		self.outputs = T.flatten(self.inputs, self.outdim)

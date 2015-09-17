@@ -50,7 +50,7 @@ class TheanoFunction(object) :
 		self.outputs = output_expressions
 		self.updates = updates
 		
-		self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs, updates = self.updates, **kwargs)
+		self.theano_fct = theano.function(inputs = list(set(self.inputs.values())), outputs = self.outputs, updates = self.updates, **kwargs)
 
 		if any([x.__class__.__name__.lower().find("gpu") for x in self.theano_fct.maker.fgraph.toposort()]):
 			device = "GPU"
@@ -66,12 +66,12 @@ class TheanoFunction(object) :
 	def run(self, **kwargs) :
 		for k in kwargs :
 			# print DEVICE_IS_GPU, kwargs[k].dtype.name, theano.config.floatX, kwargs[k].dtype.name != theano.config.floatX 
-			if DEVICE_IS_GPU and kwargs[k].dtype.name != theano.config.floatX :
+			if DEVICE_IS_GPU and kwargs[k].dtype != theano.config.floatX :
 				if not self.cast_warning_told :
 					MCAN.friendly("Casting: Trying to save the day",
 						"""The GPU max size for a flaot is 32, your data for '%s' in function '%s' is '%s'.
 I will try to cast the inputs at every iterration before computation.
-Please cast your data to '%s' next time, that would certainly speed up the whole computation."""  % (k, self.name, kwargs[k].dtype.name, theano.config.floatX))
+Please cast your data to '%s' next time, that would certainly speed up the whole computation."""  % (k, self.name, kwargs[k].dtype, theano.config.floatX))
 					self.cast_warning_told = True
 
 				self.tmpInputs[k] = kwargs[k].astype(theano.config.floatX)

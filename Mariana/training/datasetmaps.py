@@ -1,5 +1,5 @@
 import Mariana.layers as ML
-import numpy, random
+import numpy, random, theano
 
 __all__ = ["DatasetHandle", "Dataset_ABC", "Series", "RandomSeries", "ClassSets", "DatasetMapper"]
 
@@ -171,8 +171,8 @@ class ClassSets(Dataset_ABC) :
 
 		subsetSize = self.totalLength
 		self.subsets = {
-			"input" : numpy.zeros( (subsetSize, self.inputSize) ),
-			"classNumber" : numpy.zeros( subsetSize ),
+			"input" : numpy.zeros((subsetSize, self.inputSize)),
+			"classNumber" : numpy.zeros(subsetSize),
 			"onehot" : numpy.zeros( (subsetSize, len(self.classSets)) )
 		}
 
