@@ -450,7 +450,7 @@ class Autoencode(Output_ABC) :
 
 	def _preTrainInit(self):
 		self.targets = self.layer.outputs#tt.matrix(name = self.name + "_Target")
-		print self.layer
+		# print self.layer
 
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=egg]' % (self.name, self.nbOutputs)

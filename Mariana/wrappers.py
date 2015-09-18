@@ -64,6 +64,7 @@ class TheanoFunction(object) :
 		theano.printing.debugprint(self.theano_fct)
 
 	def run(self, **kwargs) :
+		# print kwargs
 		for k in kwargs :
 			# print DEVICE_IS_GPU, kwargs[k].dtype.name, theano.config.floatX, kwargs[k].dtype.name != theano.config.floatX 
 			if DEVICE_IS_GPU and kwargs[k].dtype != theano.config.floatX :
