@@ -4,7 +4,7 @@ Mariana
 
 Named after the deepest place on earth (Mariana trench), Mariana is a Python Machine Learning Framework built on top of Theano, that focuses on ease of use. The full documentation is available here_.
 
-.. _here: http://www.tariqdaouda.com
+.. _here: http://bioinfo.iric.ca/~daoudat/Mariana/
 
 Why is it cool?
 ===============
@@ -12,27 +12,27 @@ Why is it cool?
 **If you can draw it, you can write it.**
 
 Mariana provides an interface so simple and intuitive that writing models becomes a breeze.
-Networks are graphs of connected layers and that allows for the craziest deepest architectures 
+Networks are graphs of connected layers and that allows for the craziest deepest architectures
 you can think of, as well as for a super light and clean interface.
 
 There's no need for an MLP or a Perceptron or an Auto-Encoder class,
 because if you know what these things are, you can turn one into the other in a 2 seconds.
 
 So in short:
-  
-  * no YAML
-  * completely modular and extendable
-  * use the trainer to encapsulate your training in a safe environement
-  * write your models super fast
-  * save your models and resume training
-  * export your models into DOT format to obtain clean and easy to communicate graphs
-  * free your imagination and experiment
-  * no requirements concerning the format of the datasets
+
+* no YAML
+* completely modular and extendable
+* trainers can be used to encapsulate your training in a safe environement
+* models can be written super fast
+* easily save your models and resume training
+* export your models into DOT format to obtain clean and easy to communicate graphs
+* free your imagination and experiment
+* no requirements concerning the format of the datasets
 
 A word about the **'>'**
 ======================
 
-When communicating about neural networks people often draw sets of connected layers. That's the idea behind Mariana: layers are first defined, then connected using the **'>'** operator. 
+When communicating about neural networks people often draw sets of connected layers. That's the idea behind Mariana: layers are first defined, then connected using the **'>'** operator.
 
 Installation
 =============
@@ -50,7 +50,7 @@ Full Examples
 =============
 
 Please have a look at **examples/mnist_mlp.py**. It illustrates most of what this quickstart guide adresses.
-There's also **examples/vanilla_mnist_perceptron_mlp.py**, wich demonstrate how to train an MLP (network with one hidden layer) or a Percetron on mnist
+There's also **examples/vanilla_mnist_perceptron_mlp.py**, wich demonstrate how to train an MLP (network with one hidden layer) or a Perceptron on the MNIST database
 without the use of a trainer.
 
 Short Snippets
@@ -73,23 +73,23 @@ Importations first
 
 	ls = MS.GradientDescent(lr = 0.01)
 	cost = MC.NegativeLogLikelihood()
-	
+
 	i = ML.Input(28*28, name = "inputLayer")
 	h = ML.Hidden(300, activation = MA.reLU, decorators = [MD.BinomialDropout(0.2)], regularizations = [ MR.L1(0.0001) ])
 	o = ML.SoftmaxClassifier(9, learningScenario = ls, costObject = cost, regularizations = [ MR.L1(0.0001) ])
-	
+
 	MLP = i > h > o
 
 Training, Testing and Propagating:
 
 .. code:: python
-	
+
 	#train the model for output 'o' function will update parameters and return the current cost
 	print MLP.train(o, inputLayer = train_set[0][i : i +miniBatchSize], target = train_set[1][i : i +miniBatchSize] )
 
 	#the same as train but does not updated the parameters
 	print MLP.test(o, inputLayer = test_set[0][i : i +miniBatchSize], target = test_set[1][i : i +miniBatchSize] )
-	
+
 	#the propagate will return the output for the output layer 'o'
 	print MLP.propagate(o, inputLayer = test_set[0][i : i +miniBatchSize])
 
@@ -99,14 +99,14 @@ Training, Testing and Propagating:
 
 	ls = MS.GradientDescent(lr = 0.001)
 	cost = MC.MeanSquaredError()
-	
+
 	i = ML.Input(10, name = "inputLayer")
 	h = ML.Hidden(2, activation = MA.tanh, decorators = [ MD.GlorotTanhInit() ])
 	o = ML.Regression(10, activation = MA.tanh, costObject = cost, learningScenario = ls)
-	
+
 	ae = i > h > o
 	ae.init()
-	
+
 	#tied weights, we need to force the initialisation of the weight first
 	ae.init()
 	o.W = h.W.T
@@ -116,20 +116,20 @@ Can it run on GPU?
 ==================
 
 At the heart of Mariana are Theano functions, so the answer is yes. The guys behind Theano really did an awesome
-job of optimization, so it should be pretty fast, wether you're running on CPU or GPU.
+job of optimization, so it should be pretty fast, whether you're running on CPU or GPU.
 
 Making life even easier: Trainers and Recorders
 ===============================================
 
 A trainer takes care of the whole training process. If the process dies unexpectedly during training it will also automatically save the last version of the model as well as logs explaining what happened. The trainer can also take as argument a list of stopCriterias, and be
 paired with a recorder whose job is to record the training evolution.
-For now there is only one recorder GGPlot2 (which is also the default recorder).
+For now there is only one recorder : GGPlot2 (default recorder).
 
 This recorder will:
 
-	* Output the training results for each epoch, highliting every time a new best score is achieved
-	* Automatically save the model each time a new best score is achieved
-	* Create and update a *CSV file* in a GGPlot2 friendly format that contains the whole historic of the training as well as information such as runtime and hyperparameter values.
+* Output the training results for each epoch, highliting every time a new best score is achieved
+* Automatically save the model each time a new best score is achieved
+* Create and update a *CSV file* in a GGPlot2 friendly format that contains the entire history of the training as well as information such as runtime and hyperparameter values.
 
 Dataset maps
 ------------
@@ -139,13 +139,13 @@ Mariana is dataset format agnostic and uses **DatasetMaps** to associate layers 
 Decorators
 ==========
 
-Mariana layers can take decarators as arguments that modify the layer's behaviour. Decorators can be used for example, to mask parts of the output to the next layers (ex: for dropout or denoising auto-encoders),
-or to specify custom weight initialisations.
+Mariana layers can take decorators as arguments that modify the layer's behaviour. Decorators can be used for example, to mask parts of the output to the next layers (ex: for dropout or denoising auto-encoders),
+or to specify custom weight initializations.
 
 Costs and regularizations
 =========================
 
-Each output layers can have its own cost. Regularizations are also specified on per layer basis, so you can for example enforce a L1 regularisation on a single layer of the model.
+Each output layers can have its own cost. Regularizations are also specified on a per layer basis, so you can for example enforce a L1 regularisation on a single layer of the model.
 
 Saving and resuming training
 ============================
@@ -161,7 +161,7 @@ Loading is a simple unpickling:
 .. code:: python
 
   import cPickle
-  
+
   mlp = cPickle.load(open("myMLP.mariana.pkl"))
   mlp.train(...)
 
@@ -197,7 +197,7 @@ Visualizing networks
 To get a DOT format representation of your network:
 
 .. code:: python
-  
+
   #to simply print it
   print mlp.toDOT()
 
