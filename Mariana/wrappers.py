@@ -1,8 +1,9 @@
 from collections import OrderedDict
-import theano
+import theano, sys, numpy
 import sys
 
 import Mariana.candies as MCAN
+import Mariana.settings as MSET
 
 TYPE_TEST = 'test'
 TYPE_TRAIN = 'train'
@@ -32,7 +33,7 @@ class TheanoFunction(object) :
 		self.applicationType = applicationType.lower()
 
 		self.inputs = OrderedDict()
-		self.tmpInputs = OrderedDict()
+		# self.tmpInputs = OrderedDict()
 		for inp in self.outputLayer.network.inputs.itervalues() :
 			if self.applicationType == TYPE_TEST :
 				self.inputs[inp.name] = inp.test_outputs
@@ -43,8 +44,8 @@ class TheanoFunction(object) :
 
 		self.inputs.update(additional_input_expressions)
 		
-		for i in self.inputs :
-			self.tmpInputs[i] = None
+		# for i in self.inputs :
+		# 	self.tmpInputs[i] = None
 		
 		self.additional_input_expressions = additional_input_expressions
 		self.outputs = output_expressions
@@ -64,27 +65,39 @@ class TheanoFunction(object) :
 		theano.printing.debugprint(self.theano_fct)
 
 	def run(self, **kwargs) :
-		# print kwargs
-		for k in kwargs :
-			# print DEVICE_IS_GPU, kwargs[k].dtype.name, theano.config.floatX, kwargs[k].dtype.name != theano.config.floatX 
-			if DEVICE_IS_GPU and kwargs[k].dtype != theano.config.floatX :
-				if not self.cast_warning_told :
-					MCAN.friendly("Casting: Trying to save the day",
-						"""The GPU max size for a flaot is 32, your data for '%s' in function '%s' is '%s'.
-I will try to cast the inputs at every iterration before computation.
-Please cast your data to '%s' next time, that would certainly speed up the whole computation."""  % (k, self.name, kwargs[k].dtype, theano.config.floatX))
-					self.cast_warning_told = True
 
-				self.tmpInputs[k] = kwargs[k].astype(theano.config.floatX)
-			else :
-				self.tmpInputs[k] = kwargs[k]
+		def _autocast(kwargs) :
+			res = {}
+			for k in kwargs :
+				res[k] = numpy.asarray(kwargs[k], dtype = theano.config.floatX)
+			return res
+
+		def _die(fctName, outputlayer, kwargs, exc) :
+			sys.stderr.write("!!=> Error in function '%s' for layer '%s':\n" % (fctName, outputLayer.name))
+			sys.stderr.write("\t!!=> the arguments were:\n %s\n" % (kwargs))
+			raise exc
 
 		try :
-			return self.theano_fct(*self.tmpInputs.values())	
+			return self.theano_fct(*kwargs.values())	
+		except TypeError as e :
+			if MSET.AUTOCAST :
+				if not self.cast_warning_told :
+					MCAN.friendly("Casting: Trying to save the day",
+					"""The GPU max size for a flaot is 32, your data for '%s' in function '%s' is '%s'.
+	I will try to cast the inputs at every iterration before computation.
+	Please cast your data to '%s' next time, that would certainly speed up the whole computation."""  % (k, self.name, kwargs[k].dtype.name, theano.config.floatX))
+					self.cast_warning_told = True
+				
+				_autocast(kwargs)
+			else :
+				_die(self.name, self.outputlayer, kwargs, e)
+	
+			try :
+				return self.theano_fct(*_autocast(kwargs).values())
+			except Exception as e :
+				_die(self.name, self.outputlayer, kwargs, e)
 		except Exception as e :
-			sys.stderr.write("!!=> Error in function '%s' for layer '%s':\n" % (self.name, self.outputLayer.name))
-			sys.stderr.write("\t!!=> the arguments were:\n %s\n" % (kwargs))
-			raise e
+			_die(self.name, self.outputlayer, kwargs, e)
 
 	def __call__(self, **kwargs) :
 		return self.run(**kwargs)
