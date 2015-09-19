@@ -72,7 +72,7 @@ class TheanoFunction(object) :
 				res[k] = numpy.asarray(kwargs[k], dtype = theano.config.floatX)
 			return res
 
-		def _die(fctName, outputlayer, kwargs, exc) :
+		def _die(fctName, outputLayer, kwargs, exc) :
 			sys.stderr.write("!!=> Error in function '%s' for layer '%s':\n" % (fctName, outputLayer.name))
 			sys.stderr.write("\t!!=> the arguments were:\n %s\n" % (kwargs))
 			raise exc
@@ -83,21 +83,21 @@ class TheanoFunction(object) :
 			if MSET.AUTOCAST :
 				if not self.cast_warning_told :
 					MCAN.friendly("Casting: Trying to save the day",
-					"""The GPU max size for a flaot is 32, your data for '%s' in function '%s' is '%s'.
+					"""The GPU max size is float32.
 	I will try to cast the inputs at every iterration before computation.
-	Please cast your data to '%s' next time, that would certainly speed up the whole computation."""  % (k, self.name, kwargs[k].dtype.name, theano.config.floatX))
+	Please cast your data to '%s' next time, that would certainly speed up the whole computation."""  % (theano.config.floatX))
 					self.cast_warning_told = True
 				
 				_autocast(kwargs)
 			else :
-				_die(self.name, self.outputlayer, kwargs, e)
+				_die(self.name, self.outputLayer, kwargs, e)
 	
 			try :
 				return self.theano_fct(*_autocast(kwargs).values())
 			except Exception as e :
-				_die(self.name, self.outputlayer, kwargs, e)
+				_die(self.name, self.outputLayer, kwargs, e)
 		except Exception as e :
-			_die(self.name, self.outputlayer, kwargs, e)
+			_die(self.name, self.outputLayer, kwargs, e)
 
 	def __call__(self, **kwargs) :
 		return self.run(**kwargs)

@@ -341,7 +341,10 @@ class Output_ABC(Hidden) :
 		self.costObject = costObject
 		self.learningScenario = learningScenario
 		self.lastOutsTestUpdates = None
-	
+		self.cost = None
+		self.test_cost = None
+		self.updates = None
+
 	def _backTrckDependencies(self) :
 		"""Finds all the hidden layers the ouput layer is influenced by"""
 		def _bckTrk(deps, layer) :		
@@ -364,30 +367,30 @@ class Output_ABC(Hidden) :
 		self._backTrckDependencies()
 		self._preTrainInit()
 
-		cost = self.costObject.costFct(self.targets, self.outputs)
-		test_cost = self.costObject.costFct(self.targets, self.test_outputs)
+		self.cost = self.costObject.costFct(self.targets, self.outputs)
+		self.test_cost = self.costObject.costFct(self.targets, self.test_outputs)
 		
 		for l in self.dependencies.itervalues() :
 			if l.__class__  is not Composite :
 				for reg in l.regularizations :
-					cost += reg
+					self.cost += reg
 
-		updates = self.learningScenario.getUpdates(self, cost)
+		self.updates = self.learningScenario.getUpdates(self, self.cost)
 		
 		for l in self.dependencies.itervalues() :
 			try :
-				updates.extend(l.learningScenario.getUpdates(l, cost))
+				self.updates.extend(l.learningScenario.getUpdates(l, self.cost))
 			except AttributeError :
-				updates.extend(self.learningScenario.getUpdates(l, cost))
+				self.updates.extend(self.learningScenario.getUpdates(l, self.cost))
 			
 		self.lastOutsTestUpdates = []
 		for l in self.network.layers.itervalues() :
 			if ( l.last_outputs is not None ) and ( l.outputs is not None ) :
-				updates.append( (l.last_outputs, l.outputs ) )
+				self.updates.append( (l.last_outputs, l.outputs ) )
 				self.lastOutsTestUpdates.append( (l.last_outputs, l.test_outputs ) )
 
-		self.train = MWRAP.TheanoFunction("train", MWRAP.TYPE_TRAIN, self, [cost], { "target" : self.targets }, updates = updates, allow_input_downcast=True)
-		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [test_cost], { "target" : self.targets }, updates = self.lastOutsTestUpdates, allow_input_downcast=True)
+		self.train = MWRAP.TheanoFunction("train", MWRAP.TYPE_TRAIN, self, [self.cost], { "target" : self.targets }, updates = self.updates, allow_input_downcast=True)
+		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [self.test_cost], { "target" : self.targets }, updates = self.lastOutsTestUpdates, allow_input_downcast=True)
 		self.propagate = MWRAP.TheanoFunction("propagate", MWRAP.TYPE_TEST, self, [self.test_outputs], updates = self.lastOutsTestUpdates, allow_input_downcast=True)
 	
 		self.setCustomTheanoFunctions()
@@ -450,6 +453,9 @@ class Autoencode(Output_ABC) :
 
 	def _preTrainInit(self):
 		self.targets = self.layer.outputs#tt.matrix(name = self.name + "_Target")
+
+	def setCustomTheanoFunctions(self) :
+		self.train = MWRAP.TheanoFunction("train", MWRAP.TYPE_TRAIN, self, [self.cost], {}, updates = self.updates, allow_input_downcast=True)
 		# print self.layer
 
 	def _dot_representation(self) :
