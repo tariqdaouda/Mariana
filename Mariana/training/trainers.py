@@ -245,8 +245,8 @@ class DefaultTrainer(Trainer_ABC) :
 				for output in aMap.outputLayers :
 					layerList.append(output)
 					kwargs = dict( aMap.getAll(layerList = layerList) )
-					kwargs["target"] = kwargs[output.name]
-					del(kwargs[output.name])
+					# kwargs["target"] = kwargs[output.name]
+					# del(kwargs[output.name])
 					res = modelFct(output, **kwargs)
 					scores[output.name] = res[0]
 					layerList.pop(-1)
@@ -272,8 +272,8 @@ class DefaultTrainer(Trainer_ABC) :
 						batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
 						for output in aMap.outputLayers :
 							layerList.append(output)
-							batchData["target"] = batchData[output.name]
-							del(batchData[output.name])
+							# batchData["target"] = batchData[output.name]
+							# del(batchData[output.name])
 							res = modelFct(output, **batchData)
 							
 							try :

@@ -230,28 +230,50 @@ class DatasetMapper(object):
 		self.outputLayers = []
 		self.minLength = float('inf')
 
-	def map(self, layer, setHandle) :
+	def mapInput(self, layer, setHandle) :
 		"""
 		Maps an input or an output layer to Dataset's subset::
 			
-				i = InputLayer(...)
-				o = OutputLayer(...)
+			i = InputLayer(...)
 
-				trainSet = RandomSeries(images = train_set[0], classes = train_set[1])
-				
-				DatasetMapper = dm
-				dm.map(i, trainSet.images)
-				dm.map(o, trainSet.classes)
+			trainSet = RandomSeries(images = train_set[0], classes = train_set[1])
+			
+			DatasetMapper = dm
+			dm.map(i, trainSet.images)
 		"""
 		
-		if layer.type == ML.TYPE_OUTPUT_LAYER :
-			self.outputLayers.append(layer)
-		elif layer.type == ML.TYPE_INPUT_LAYER :
-			self.inputLayers.append(layer)
-		else :
-			raise ValueError("Only input and output layers can be mapped")
+		self.inputLayers.append(layer)
+		self.maps[layer] = ( (layer.name, setHandle), )
 
-		self.maps[layer] = setHandle
+		self.datasets.add(setHandle.dataset)
+		if len(setHandle.dataset) < self.minLength : 
+			self.minLength = len(setHandle.dataset)
+
+	def mapOutput(self, layer, setHandle, inputName = 'targets') :
+		"""
+		Maps an input or an output layer to Dataset's subset::
+			
+			o = OutputLayer(...)
+
+			trainSet = RandomSeries(images = train_set[0], classes = train_set[1])
+			
+			DatasetMapper = dm
+			dm.map(o, trainSet.classes, "targets")
+		
+		inputName: train and test functions often need addictional inputs such as the targets. With this
+		parameter you can associate one of these additional inputs (as defined in a theano function) to
+		a dataset. This argument is optional, the default value is 'targets' which should work for all 
+		out of the box Mariana stuff. 
+		"""
+		
+		self.outputLayers.append(layer)
+		k = (inputName, setHandle)
+
+		try
+			self.maps[layer].append(k)
+		except IndexError :
+			self.maps[layer] = [ k ]
+		
 		self.datasets.add(setHandle.dataset)
 		if len(setHandle.dataset) < self.minLength : 
 			self.minLength = len(setHandle.dataset)
@@ -279,8 +301,9 @@ class DatasetMapper(object):
 			layers = layerList
 
 		for layer in layers :
-			handle = self.maps[layer]
-			res[layer.name] = handle.dataset.get(handle.subset, i, size)
+			for name, handle in self.maps[layer] :
+				# handle = self.maps[layer]
+				res[name] = handle.dataset.get(handle.subset, i, size)
 
 		return res
 
@@ -297,9 +320,10 @@ class DatasetMapper(object):
 
 		res = {}
 		for layer in layers :
-			handle = self.maps[layer]
-			res[layer.name] = handle.dataset.getAll(handle.subset)
-		
+			for name, handle in self.maps[layer] :
+				# handle = self.maps[layer]
+				res[name] = handle.dataset.getAll(handle.subset)
+
 		return res
 
 	def __len__(self) :
