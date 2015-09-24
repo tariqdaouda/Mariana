@@ -204,8 +204,8 @@ class Input(Layer_ABC) :
 
 	def _setOutputs(self) :
 		"initialises the output to be the same as the inputs"
-		self.outputs = tt.matrix(name = self.name + "_X")
-		self.test_outputs = tt.matrix(name = self.name + "_X")
+		self.outputs = tt.matrix(name = self.name)
+		self.test_outputs = tt.matrix(name = self.name)
 		self._decorate()
 
 	def _dot_representation(self) :
@@ -389,8 +389,8 @@ class Output_ABC(Hidden) :
 				self.updates.append( (l.last_outputs, l.outputs ) )
 				self.lastOutsTestUpdates.append( (l.last_outputs, l.test_outputs ) )
 
-		self.train = MWRAP.TheanoFunction("train", MWRAP.TYPE_TRAIN, self, [self.cost], { "target" : self.targets }, updates = self.updates, allow_input_downcast=True)
-		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [self.test_cost], { "target" : self.targets }, updates = self.lastOutsTestUpdates, allow_input_downcast=True)
+		self.train = MWRAP.TheanoFunction("train", MWRAP.TYPE_TRAIN, self, [self.cost], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
+		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [self.test_cost], { "targets" : self.targets }, updates = self.lastOutsTestUpdates, allow_input_downcast=True)
 		self.propagate = MWRAP.TheanoFunction("propagate", MWRAP.TYPE_TEST, self, [self.test_outputs], updates = self.lastOutsTestUpdates, allow_input_downcast=True)
 	
 		self.setCustomTheanoFunctions()
@@ -427,7 +427,7 @@ class SoftmaxClassifier(Classifier_ABC) :
 	"""A softmax (probabilistic) Classifier"""
 	def __init__(self, nbOutputs, learningScenario, costObject, name = None, **kwargs) :
 		Classifier_ABC.__init__(self, nbOutputs, activation = MA.softmax, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
-		self.targets = tt.ivector(name = self.name + "_Target")
+		self.targets = tt.ivector(name = "targets")
 
 	def setCustomTheanoFunctions(self) :
 		"""defined theano_classify, that returns the argmax of the output"""
@@ -440,7 +440,7 @@ class Regression(Output_ABC) :
 	"""For regressions, works great with a mean squared error cost"""
 	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
 		Output_ABC.__init__(self, nbOutputs, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
-		self.targets = tt.matrix(name = self.name + "_Target")
+		self.targets = tt.matrix(name = "targets")
 
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=egg]' % (self.name, self.nbOutputs)
@@ -452,10 +452,11 @@ class Autoencode(Output_ABC) :
 		self.layer = layer
 
 	def _preTrainInit(self):
-		self.targets = self.layer.outputs#tt.matrix(name = self.name + "_Target")
+		self.targets = self.layer.outputs#tt.matrix(name = "targets")
 
 	def setCustomTheanoFunctions(self) :
 		self.train = MWRAP.TheanoFunction("train", MWRAP.TYPE_TRAIN, self, [self.cost], {}, updates = self.updates, allow_input_downcast=True)
+		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [self.test_cost], {}, updates = self.lastOutsTestUpdates, allow_input_downcast=True)
 		# print self.layer
 
 	def _dot_representation(self) :

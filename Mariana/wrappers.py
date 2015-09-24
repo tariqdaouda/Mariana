@@ -33,7 +33,6 @@ class TheanoFunction(object) :
 		self.applicationType = applicationType.lower()
 
 		self.inputs = OrderedDict()
-		# self.tmpInputs = OrderedDict()
 		for inp in self.outputLayer.network.inputs.itervalues() :
 			if self.applicationType == TYPE_TEST :
 				self.inputs[inp.name] = inp.test_outputs
@@ -43,10 +42,10 @@ class TheanoFunction(object) :
 				raise AttributeError('Unknow applicationType %s' % applicationType)
 
 		self.inputs.update(additional_input_expressions)
-		
-		# for i in self.inputs :
-		# 	self.tmpInputs[i] = None
-		
+		self.fctInputs = OrderedDict()
+		for i in self.inputs :
+			self.fctInputs[i] = None
+
 		self.additional_input_expressions = additional_input_expressions
 		self.outputs = output_expressions
 		self.updates = updates
@@ -77,8 +76,9 @@ class TheanoFunction(object) :
 			sys.stderr.write("\t!!=> the arguments were:\n %s\n" % (kwargs))
 			raise exc
 
+		self.fctInputs.update(kwargs)
 		try :
-			return self.theano_fct(*kwargs.values())	
+			return self.theano_fct(*self.fctInputs.values())
 		except TypeError as e :
 			if MSET.AUTOCAST :
 				if not self.cast_warning_told :

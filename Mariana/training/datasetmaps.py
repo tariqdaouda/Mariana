@@ -269,9 +269,9 @@ class DatasetMapper(object):
 		self.outputLayers.append(layer)
 		k = (inputName, setHandle)
 
-		try
+		try :
 			self.maps[layer].append(k)
-		except IndexError :
+		except KeyError :
 			self.maps[layer] = [ k ]
 		
 		self.datasets.add(setHandle.dataset)
