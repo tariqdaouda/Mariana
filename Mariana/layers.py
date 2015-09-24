@@ -13,7 +13,7 @@ import Mariana.settings as MSET
 import Mariana.network as MNET
 import Mariana.wrappers as MWRAP
 
-__all__ = ["Layer_ABC", "Output_ABC", "Classifier_ABC", "Input", "Hidden", "Composite", "SoftmaxClassifier", "Regression"]
+__all__ = ["Layer_ABC", "Output_ABC", "Classifier_ABC", "Input", "Hidden", "Composite", "SoftmaxClassifier", "Regression", "Autoencode"]
 
 TYPE_INPUT_LAYER = 0
 TYPE_OUTPUT_LAYER = 1

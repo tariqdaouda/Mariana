@@ -7,7 +7,7 @@ import Mariana.settings as MSET
 
 TYPE_TEST = 'test'
 TYPE_TRAIN = 'train'
-DEVICE_IS_GPU = theano.config.device.find("gpu") > -1
+DEVICE_IS_GPU = (theano.config.device.find("gpu") > -1)
 
 class TheanoFunction(object) :
 	"""
