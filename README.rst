@@ -54,7 +54,7 @@ Update::
 Important notice
 -----------------
 
-If you run into a problem please try to update theano first by doing a **git pull** in theano's folder.
+If you run into a problem please try to update Theano first by doing a **git pull** in theano's folder.
 
 Full Examples
 =============
