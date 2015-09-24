@@ -33,7 +33,6 @@ class TheanoFunction(object) :
 		self.applicationType = applicationType.lower()
 
 		self.inputs = OrderedDict()
-		# self.tmpInputs = OrderedDict()
 		for inp in self.outputLayer.network.inputs.itervalues() :
 			if self.applicationType == TYPE_TEST :
 				self.inputs[inp.name] = inp.test_outputs
@@ -43,15 +42,15 @@ class TheanoFunction(object) :
 				raise AttributeError('Unknow applicationType %s' % applicationType)
 
 		self.inputs.update(additional_input_expressions)
-		
-		# for i in self.inputs :
-		# 	self.tmpInputs[i] = None
-		
+		self.fctInputs = OrderedDict()
+		for i in self.inputs :
+			self.fctInputs[i] = None
+
 		self.additional_input_expressions = additional_input_expressions
 		self.outputs = output_expressions
 		self.updates = updates
 		
-		self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs, updates = self.updates, **kwargs)
+		self.theano_fct = theano.function(inputs = list(set(self.inputs.values())), outputs = self.outputs, updates = self.updates, **kwargs)
 
 		if any([x.__class__.__name__.lower().find("gpu") for x in self.theano_fct.maker.fgraph.toposort()]):
 			device = "GPU"
@@ -65,38 +64,40 @@ class TheanoFunction(object) :
 		theano.printing.debugprint(self.theano_fct)
 
 	def run(self, **kwargs) :
+
 		def _autocast(kwargs) :
 			res = {}
 			for k in kwargs :
 				res[k] = numpy.asarray(kwargs[k], dtype = theano.config.floatX)
 			return res
 
-		def _die(fctName, outputlayer, kwargs, exc) :
+		def _die(fctName, outputLayer, kwargs, exc) :
 			sys.stderr.write("!!=> Error in function '%s' for layer '%s':\n" % (fctName, outputLayer.name))
 			sys.stderr.write("\t!!=> the arguments were:\n %s\n" % (kwargs))
 			raise exc
 
+		self.fctInputs.update(kwargs)
 		try :
-			return self.theano_fct(*kwargs.values())	
+			return self.theano_fct(*self.fctInputs.values())
 		except TypeError as e :
 			if MSET.AUTOCAST :
 				if not self.cast_warning_told :
 					MCAN.friendly("Casting: Trying to save the day",
-					"""The GPU max size for a flaot is 32, your data for '%s' in function '%s' is '%s'.
+					"""The GPU max size is float32.
 	I will try to cast the inputs at every iterration before computation.
-	Please cast your data to '%s' next time, that would certainly speed up the whole computation."""  % (k, self.name, kwargs[k].dtype.name, theano.config.floatX))
+	Please cast your data to '%s' next time, that would certainly speed up the whole computation."""  % (theano.config.floatX))
 					self.cast_warning_told = True
 				
 				_autocast(kwargs)
 			else :
-				_die(self.name, self.outputlayer, kwargs, e)
+				_die(self.name, self.outputLayer, kwargs, e)
 	
 			try :
 				return self.theano_fct(*_autocast(kwargs).values())
 			except Exception as e :
-				_die(self.name, self.outputlayer, kwargs, e)
+				_die(self.name, self.outputLayer, kwargs, e)
 		except Exception as e :
-			_die(self.name, self.outputlayer, kwargs, e)
+			_die(self.name, self.outputLayer, kwargs, e)
 
 	def __call__(self, **kwargs) :
 		return self.run(**kwargs)
