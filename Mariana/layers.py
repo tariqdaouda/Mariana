@@ -356,8 +356,8 @@ class Output_ABC(Hidden) :
 
 		self.dependencies = _bckTrk(self.dependencies, self)
 
-	def _preTrainInit(self) :
-		""""""
+	def _userInit(self) :
+		"""Here you can specify custom intialisations of your layer. This called just before the layer is initialised. By default does nothing"""
 		pass
 
 	def _setTheanoFunctions(self) :
@@ -365,7 +365,7 @@ class Output_ABC(Hidden) :
 		create user custom theano functions."""
 
 		self._backTrckDependencies()
-		self._preTrainInit()
+		self._userInit()
 
 		self.cost = self.costObject.costFct(self.targets, self.outputs)
 		self.test_cost = self.costObject.costFct(self.targets, self.test_outputs)
@@ -446,18 +446,19 @@ class Regression(Output_ABC) :
 		return '[label="%s: %s" shape=egg]' % (self.name, self.nbOutputs)
 
 class Autoencode(Output_ABC) :
-	""""""
+	"""An auto encoding layer. This one takes another layer as inputs and tries to reconstruct its activations.
+	You could achieve the same result with a Regresison layer, but this one has the advantage of not needing to be fed specific inputs"""
+
 	def __init__(self, layer, activation, learningScenario, costObject, name = None, **kwargs) :
 		Output_ABC.__init__(self, layer.nbOutputs, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.layer = layer
 
-	def _preTrainInit(self):
-		self.targets = self.layer.outputs#tt.matrix(name = "targets")
+	def _userInit(self):
+		self.targets = self.layer.outputs
 
 	def setCustomTheanoFunctions(self) :
 		self.train = MWRAP.TheanoFunction("train", MWRAP.TYPE_TRAIN, self, [self.cost], {}, updates = self.updates, allow_input_downcast=True)
 		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [self.test_cost], {}, updates = self.lastOutsTestUpdates, allow_input_downcast=True)
-		# print self.layer
 
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=egg]' % (self.name, self.nbOutputs)
