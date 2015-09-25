@@ -1,3 +1,4 @@
+
 import numpy
 
 import Mariana.activations as MA
@@ -17,6 +18,8 @@ for i in xrange(8) :
 	zeros[i] = 1
 	data.append(zeros)
 
+data = numpy.asarray(data)
+
 ls = MS.GradientDescent(lr = 0.1)
 cost = MC.MeanSquaredError()
 
@@ -28,7 +31,8 @@ ae = i > h > o
 
 for e in xrange(1000) :
 	for i in xrange(0, len(data), miniBatchSize) :
-		ae.train(o, inp = data[i:i+miniBatchSize], target = data[i:i+miniBatchSize] )
+		#print data[i:i+miniBatchSize]
+		ae.train(o, inp = data[i:i+miniBatchSize], targets = data[i:i+miniBatchSize] )
 
 res = ae.propagate(o, inp = data)[0]
 for i, r in enumerate(res) :

@@ -43,18 +43,18 @@ if __name__ == "__main__":
 
 	trainData = MDM.Series(images=train_set[0], numbers=train_set[1])
 	trainMaps = MDM.DatasetMapper()
-	trainMaps.map(i, trainData.images)
-	trainMaps.map(o, trainData.numbers)
+	trainMaps.mapInput(i, trainData.images)
+	trainMaps.mapOutput(o, trainData.numbers)
 
 	testData = MDM.Series(images=test_set[0], numbers=test_set[1])
 	testMaps = MDM.DatasetMapper()
-	testMaps.map(i, testData.images)
-	testMaps.map(o, testData.numbers)
+	testMaps.mapInput(i, testData.images)
+	testMaps.mapOutput(o, testData.numbers)
 
 	validationData = MDM.Series(images=validation_set[0], numbers=validation_set[1])
 	validationMaps = MDM.DatasetMapper()
-	validationMaps.map(i, validationData.images)
-	validationMaps.map(o, validationData.numbers)
+	validationMaps.mapInput(i, validationData.images)
+	validationMaps.mapOutput(o, validationData.numbers)
 
 	earlyStop = MSTOP.GeometricEarlyStopping(testMaps, patience=100, patienceIncreaseFactor=1.1, significantImprovement=0.00001, outputLayer=o)
 	epochWall = MSTOP.EpochWall(1000)
