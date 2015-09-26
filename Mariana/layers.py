@@ -436,7 +436,7 @@ class SoftmaxClassifier(Classifier_ABC) :
 		self.classify = MWRAP.TheanoFunction("classify", MWRAP.TYPE_TEST, self, [ tt.argmax(self.test_outputs) ], updates = self.updates_lastOutputs)
 
 	def _dot_representation(self) :
-		return '[label="%s: %s" shape=doublecircle]' % (self.name, self.nbOutputs)
+		return '[label="SoftM %s: %s" shape=doublecircle]' % (self.name, self.nbOutputs)
 
 class Regression(Output_ABC) :
 	"""For regressions, works great with a mean squared error cost"""
@@ -446,7 +446,7 @@ class Regression(Output_ABC) :
 		self.test_targets = tt.matrix(name = "targets")
 
 	def _dot_representation(self) :
-		return '[label="%s: %s" shape=egg]' % (self.name, self.nbOutputs)
+		return '[label="Reg %s: %s" shape=circle]' % (self.name, self.nbOutputs)
 
 class Autoencode(Output_ABC) :
 	"""An auto encoding layer. This one takes another layer as inputs and tries to reconstruct its activations.
@@ -465,7 +465,7 @@ class Autoencode(Output_ABC) :
 		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [self.test_cost], {}, updates = self.updates_lastOutputs, allow_input_downcast=True)
 
 	def _dot_representation(self) :
-		return '[label="%s: AE(%s)" shape=egg]' % (self.name, self.layer.name)
+		return '[label="%s: AE(%s)" shape=circle]' % (self.name, self.layer.name)
 
 #work in progress
 # class Convolution2D(Hidden) :

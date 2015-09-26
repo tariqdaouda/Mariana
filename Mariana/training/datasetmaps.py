@@ -301,9 +301,9 @@ class DatasetMapper(object):
 			layers = layerList
 
 		for layer in layers :
-			for name, handle in self.maps[layer] :
-				# handle = self.maps[layer]
-				res[name] = handle.dataset.get(handle.subset, i, size)
+			if layer in self.maps :
+				for name, handle in self.maps[layer] :
+					res[name] = handle.dataset.get(handle.subset, i, size)
 
 		return res
 
@@ -320,9 +320,9 @@ class DatasetMapper(object):
 
 		res = {}
 		for layer in layers :
-			for name, handle in self.maps[layer] :
-				# handle = self.maps[layer]
-				res[name] = handle.dataset.getAll(handle.subset)
+			if layer in self.maps :
+				for name, handle in self.maps[layer] :
+					res[name] = handle.dataset.getAll(handle.subset)
 
 		return res
 

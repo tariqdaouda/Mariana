@@ -238,11 +238,11 @@ class DefaultTrainer(Trainer_ABC) :
 						for hp in thingObj.hyperParameters :
 							dct["%s_%s" % (l.name, hp)] = getattr(thingObj, hp)
 
-		def _trainTest(aMap, modelFct, shuffle, trainingOrder, miniBatchSize, inputLayers) :
+		def _trainTest(aMap, modelFct, shuffle, trainingOrder, miniBatchSize, inputLayers, outputLayers) :
 			scores = {}
 			layerList = inputLayers
 			if miniBatchSize == DefaultTrainer.ALL_SET :
-				for output in aMap.outputLayers :
+				for output in outputLayers :
 					layerList.append(output)
 					kwargs = dict( aMap.getAll(layerList = layerList) )
 					res = modelFct(output, **kwargs)
@@ -250,7 +250,7 @@ class DefaultTrainer(Trainer_ABC) :
 					layerList.pop(-1)
 			else :
 				if trainingOrder == DefaultTrainer.SEQUENTIAL_TRAINING :
-					for output in aMap.outputLayers :
+					for output in outputLayers :
 						for i in xrange(0, len(aMap), miniBatchSize) :
 							layerList.append(output)
 							batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
@@ -265,7 +265,7 @@ class DefaultTrainer(Trainer_ABC) :
 				elif trainingOrder == DefaultTrainer.SIMULTANEOUS_TRAINING :
 					for i in xrange(0, len(aMap), miniBatchSize) :
 						batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
-						for output in aMap.outputLayers :
+						for output in outputLayers :
 							layerList.append(output)
 							res = modelFct(output, **batchData)
 							
@@ -322,6 +322,7 @@ class DefaultTrainer(Trainer_ABC) :
 		startTime = time.time()
 		self.store["runInfos"]["epoch"] = 0
 		inputLayers = model.inputs.values()
+		outputLayers = model.outputs.values()
 		while True :
 			for mapName, aMap in self.maps.iteritems() :
 				if len(aMap) > 0 :
@@ -338,7 +339,8 @@ class DefaultTrainer(Trainer_ABC) :
 						shuffle,
 						trainingOrder,
 						self.miniBatchSizes[mapName],
-						inputLayers
+						inputLayers,
+						outputLayers
 					)
 			runtime = (time.time() - startTime)/60
 			
