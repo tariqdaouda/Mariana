@@ -63,6 +63,15 @@ class TheanoFunction(object) :
 		"""Print the theano graph of the function"""
 		theano.printing.debugprint(self.theano_fct)
 
+	def dumpToImage(self, filename) :
+		"""saves hthe graph to an image file, requires pydot"""
+		theano.printing.pydotprint(self.theano_fct, filename)
+
+	def dumpToHTML(self, filename) :
+		"""dumps the graph into a interactive html file"""
+		import theano.d3viz as d3v
+		d3v.d3viz(self.theano_fct, filename)
+
 	def run(self, **kwargs) :
 
 		def _autocast(kwargs) :
@@ -77,28 +86,27 @@ class TheanoFunction(object) :
 			raise exc
 
 		self.fctInputs.update(kwargs)
-		return self.theano_fct(*self.fctInputs.values())
-	# 	try :
-			
-	# 	except TypeError as e :
-	# 		if MSET.AUTOCAST :
-	# 			if not self.cast_warning_told :
-	# 				MCAN.friendly("Casting: Trying to save the day",
-	# 				"""The GPU max size is float32.
-	# I will try to cast the inputs at every iterration before computation.
-	# Please cast your data to '%s' next time, that would certainly speed up the whole computation."""  % (theano.config.floatX))
-	# 				self.cast_warning_told = True
+		try :
+			return self.theano_fct(*self.fctInputs.values())		
+		except TypeError as e :
+			if MSET.AUTOCAST :
+				if not self.cast_warning_told :
+					MCAN.friendly("Casting: Trying to save the day",
+					"""The GPU max size is float32.
+	I will try to cast the inputs at every iterration before computation.
+	Please cast your data to '%s' next time, that would certainly speed up the whole computation."""  % (theano.config.floatX))
+					self.cast_warning_told = True
 				
-	# 			_autocast(kwargs)
-	# 		else :
-	# 			_die(self.name, self.outputLayer, kwargs, e)
+				_autocast(kwargs)
+			else :
+				_die(self.name, self.outputLayer, kwargs, e)
 	
-	# 		try :
-	# 			return self.theano_fct(*_autocast(kwargs).values())
-	# 		except Exception as e :
-	# 			_die(self.name, self.outputLayer, kwargs, e)
-	# 	except Exception as e :
-	# 		_die(self.name, self.outputLayer, kwargs, e)
+			try :
+				return self.theano_fct(*_autocast(kwargs).values())
+			except Exception as e :
+				_die(self.name, self.outputLayer, kwargs, e)
+		except Exception as e :
+			_die(self.name, self.outputLayer, kwargs, e)
 
 	def __call__(self, **kwargs) :
 		return self.run(**kwargs)

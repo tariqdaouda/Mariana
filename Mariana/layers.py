@@ -337,10 +337,11 @@ class Output_ABC(Hidden) :
 		Hidden.__init__(self, size, activation = activation, name = name, **kwargs)
 		self.type = TYPE_OUTPUT_LAYER
 		self.targets = None
+		self.test_targets = None
 		self.dependencies = OrderedDict()
 		self.costObject = costObject
 		self.learningScenario = learningScenario
-		self.lastOutsTestUpdates = None
+		self.updates_lastOutputs = None
 		self.cost = None
 		self.test_cost = None
 		self.updates = None
@@ -368,7 +369,7 @@ class Output_ABC(Hidden) :
 		self._userInit()
 
 		self.cost = self.costObject.costFct(self.targets, self.outputs)
-		self.test_cost = self.costObject.costFct(self.targets, self.test_outputs)
+		self.test_cost = self.costObject.costFct(self.test_targets, self.test_outputs)
 		
 		for l in self.dependencies.itervalues() :
 			if l.__class__  is not Composite :
@@ -383,15 +384,15 @@ class Output_ABC(Hidden) :
 			except AttributeError :
 				self.updates.extend(self.learningScenario.getUpdates(l, self.cost))
 			
-		self.lastOutsTestUpdates = []
+		self.updates_lastOutputs = []
 		for l in self.network.layers.itervalues() :
 			if ( l.last_outputs is not None ) and ( l.outputs is not None ) :
 				self.updates.append( (l.last_outputs, l.outputs ) )
-				self.lastOutsTestUpdates.append( (l.last_outputs, l.test_outputs ) )
+				self.updates_lastOutputs.append( (l.last_outputs, l.test_outputs ) )
 
 		self.train = MWRAP.TheanoFunction("train", MWRAP.TYPE_TRAIN, self, [self.cost], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
-		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [self.test_cost], { "targets" : self.targets }, updates = self.lastOutsTestUpdates, allow_input_downcast=True)
-		self.propagate = MWRAP.TheanoFunction("propagate", MWRAP.TYPE_TEST, self, [self.test_outputs], updates = self.lastOutsTestUpdates, allow_input_downcast=True)
+		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [self.test_cost], { "targets" : self.test_targets }, updates = self.updates_lastOutputs, allow_input_downcast=True)
+		self.propagate = MWRAP.TheanoFunction("propagate", MWRAP.TYPE_TEST, self, [self.test_outputs], updates = self.updates_lastOutputs, allow_input_downcast=True)
 	
 		self.setCustomTheanoFunctions()
 
@@ -428,10 +429,11 @@ class SoftmaxClassifier(Classifier_ABC) :
 	def __init__(self, nbOutputs, learningScenario, costObject, name = None, **kwargs) :
 		Classifier_ABC.__init__(self, nbOutputs, activation = MA.softmax, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.targets = tt.ivector(name = "targets")
+		self.test_targets = tt.ivector(name = "targets")
 
 	def setCustomTheanoFunctions(self) :
 		"""defined theano_classify, that returns the argmax of the output"""
-		self.classify = MWRAP.TheanoFunction("classify", MWRAP.TYPE_TEST, self, [ tt.argmax(self.test_outputs) ], updates = self.lastOutsTestUpdates)
+		self.classify = MWRAP.TheanoFunction("classify", MWRAP.TYPE_TEST, self, [ tt.argmax(self.test_outputs) ], updates = self.updates_lastOutputs)
 
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=doublecircle]' % (self.name, self.nbOutputs)
@@ -441,6 +443,7 @@ class Regression(Output_ABC) :
 	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
 		Output_ABC.__init__(self, nbOutputs, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.targets = tt.matrix(name = "targets")
+		self.test_targets = tt.matrix(name = "targets")
 
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=egg]' % (self.name, self.nbOutputs)
@@ -455,13 +458,14 @@ class Autoencode(Output_ABC) :
 
 	def _userInit(self):
 		self.targets = self.layer.outputs
+		self.test_targets = self.layer.test_outputs
 
 	def setCustomTheanoFunctions(self) :
 		self.train = MWRAP.TheanoFunction("train", MWRAP.TYPE_TRAIN, self, [self.cost], {}, updates = self.updates, allow_input_downcast=True)
-		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [self.test_cost], {}, updates = self.lastOutsTestUpdates, allow_input_downcast=True)
+		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [self.test_cost], {}, updates = self.updates_lastOutputs, allow_input_downcast=True)
 
 	def _dot_representation(self) :
-		return '[label="%s: %s" shape=egg]' % (self.name, self.nbOutputs)
+		return '[label="%s: AE(%s)" shape=egg]' % (self.name, self.layer.name)
 
 #work in progress
 # class Convolution2D(Hidden) :
