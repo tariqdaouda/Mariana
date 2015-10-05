@@ -254,8 +254,8 @@ class DefaultTrainer(Trainer_ABC) :
 						for i in xrange(0, len(aMap), miniBatchSize) :
 							layerList.append(output)
 							batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
-							
 							res = modelFct(output, **batchData)
+
 							try :
 								scores[output.name].append(res[0])
 							except KeyError:
@@ -278,12 +278,10 @@ class DefaultTrainer(Trainer_ABC) :
 					raise ValueError("Unknown training order: %s" % trainingOrder)
 
 			if len(scores) > 1 :
-				scores["average"] = 0
 				for outputName in scores :
 					scores[outputName] = numpy.mean(scores[outputName])
-					scores["average"] += scores[outputName]
-
-				scores["average"] = numpy.mean(scores["average"])
+				
+				scores["average"] = numpy.mean(scores.values())
 			else :
 				for outputName in scores :
 					scores[outputName] = numpy.mean(scores[outputName])

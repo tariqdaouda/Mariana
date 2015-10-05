@@ -83,7 +83,6 @@ class GGPlot2(Recorder_ABC):
 					**muchData
 				)
 	
-	
 		if self.printRate > 0 and (self.length%self.printRate) == 0:
 			self.printCurrentState()
 

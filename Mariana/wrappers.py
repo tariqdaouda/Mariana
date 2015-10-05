@@ -61,7 +61,7 @@ class TheanoFunction(object) :
 		
 		self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs, updates = self.updates, **kwargs)
 
-		if any([x.__class__.__name__.lower().find("gpu") for x in self.theano_fct.maker.fgraph.toposort()]):
+		if theano.config.device.find("gpu") > -1:
 			device = "GPU"
 		else:
 			device = "CPU"
