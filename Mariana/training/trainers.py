@@ -155,6 +155,8 @@ class DefaultTrainer(Trainer_ABC) :
 
 	SEQUENTIAL_TRAINING = 0
 	SIMULTANEOUS_TRAINING = 1
+	RANDOM_PICK_TRAINING = 2
+
 	ALL_SET = -1
 
 	def __init__(self,
@@ -198,7 +200,8 @@ class DefaultTrainer(Trainer_ABC) :
 		
 		self.trainingOrdersHR = {
 			self.SIMULTANEOUS_TRAINING : "SIMULTANEOUS",
-			self.SEQUENTIAL_TRAINING : "SEQUENTIAL"
+			self.SEQUENTIAL_TRAINING : "SEQUENTIAL",
+			self.RAMDOM_PICK_TRAINING : "RANDOM_PICK"
 		}
 
 	def start(self, runName, model, recorder = "default", trainingOrder = 0, shuffle = False, datasetName = "") :
@@ -213,6 +216,8 @@ class DefaultTrainer(Trainer_ABC) :
 				* DefaultTrainer.SEQUENTIAL_TRAINING: Each output will be trained indipendetly on it's own epoch
 				* DefaultTrainer.SIMULTANEOUS_TRAINING: All outputs are trained within the same epoch with the same inputs
 				* Both are in O(m*n), where m is the number of mini batches and n the number of outputs
+				* DefaultTrainer.RANDOM_PICK_TRAINING: Will pick one of the outputs at random for each example
+
 			:param bool reset: Should the trainer be reset before starting the run
 			:param bool shuffle: Should the datasets be shuffled at each epoch
 			:param str datasetName: If provided, the name of the dataset will be stored as a hyper-parameter
@@ -274,6 +279,19 @@ class DefaultTrainer(Trainer_ABC) :
 							except KeyError:
 								scores[output.name] = [res[0]]
 							layerList.pop(-1)
+				elif trainingOrder == DefaultTrainer.RANDOM_PICK_TRAINING :
+					outputOrder = numpy.random.randint(0, len(outputLayers), len(aMap)/miniBatchSize)
+					for i in xrange(1, len(aMap), miniBatchSize):
+						batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
+						output = outputLayers[outputOrder[i]]
+						layerList.append(output)
+						res = modelFct(output, **batchData)
+						
+						try :
+							scores[output.name].append(res[0])
+						except KeyError:
+							scores[output.name] = [res[0]]
+						layerList.pop(-1)
 				else :
 					raise ValueError("Unknown training order: %s" % trainingOrder)
 
