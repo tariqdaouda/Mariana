@@ -43,7 +43,7 @@ class DastasetMapsTests(unittest.TestCase):
 				self.assertEquals(o[i][1], 1.)
 
 		nbTrials = 10000
-		nb2 = 0
+		nb2 = 0.
 		for i in xrange(nbTrials) :
 			o, n, p = sample(cls)
 			for j in xrange(len(p)) :
