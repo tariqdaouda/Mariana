@@ -103,7 +103,7 @@ class Trainer_ABC(object) :
 			MCAN.friendly(
 				"Default recorder",
 				"The trainer will recruit the default 'GGPlot2' recorder with the following arguments:\n\t %s.\nResults will be saved into '%s'." % (params, recorder.filename)
-				)
+			)
 	
 		if not self.saveIfMurdered :
 			return self.run(runName, model, recorder, *args, **kwargs)
@@ -201,7 +201,7 @@ class DefaultTrainer(Trainer_ABC) :
 		self.trainingOrdersHR = {
 			self.SIMULTANEOUS_TRAINING : "SIMULTANEOUS",
 			self.SEQUENTIAL_TRAINING : "SEQUENTIAL",
-			self.RAMDOM_PICK_TRAINING : "RANDOM_PICK"
+			self.RANDOM_PICK_TRAINING : "RANDOM_PICK"
 		}
 
 	def start(self, runName, model, recorder = "default", trainingOrder = 0, shuffle = False, datasetName = "") :
@@ -280,11 +280,11 @@ class DefaultTrainer(Trainer_ABC) :
 								scores[output.name] = [res[0]]
 							layerList.pop(-1)
 				elif trainingOrder == DefaultTrainer.RANDOM_PICK_TRAINING :
-					outputOrder = numpy.random.randint(0, len(outputLayers), len(aMap)/miniBatchSize)
-					for i in xrange(1, len(aMap), miniBatchSize):
-						batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
-						output = outputLayers[outputOrder[i]]
+					outputOrder = list(numpy.random.randint(0, len(outputLayers), len(aMap)/miniBatchSize +1))
+					for i in xrange(0, len(aMap), miniBatchSize):
+						output = outputLayers[outputOrder.pop()]
 						layerList.append(output)
+						batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
 						res = modelFct(output, **batchData)
 						
 						try :
@@ -330,18 +330,23 @@ class DefaultTrainer(Trainer_ABC) :
 		self.store["runInfos"]["training_order"] = self.trainingOrdersHR[trainingOrder]
 		self.store["runInfos"]["pid"] = os.getpid()
 
-		for mapName in self.maps :
-			self.store["setSizes"][mapName] = len(self.maps[mapName])
-
 		self.recorder = recorder
 		
 		startTime = time.time()
 		self.store["runInfos"]["epoch"] = 0
 		inputLayers = model.inputs.values()
 		outputLayers = model.outputs.values()
+
+		for mapName in self.maps :
+			self.store["setSizes"][mapName] = len(self.maps[mapName])
+			self.store["scores"][mapName] = {}
+			for o in outputLayers :
+				self.store["scores"][mapName][o.name] = "NA"
+
 		while True :
 			for mapName, aMap in self.maps.iteritems() :
 				if len(aMap) > 0 :
+					scores = {}
 					if shuffle :
 						aMap.reroll()
 					if mapName == "train" :
@@ -349,7 +354,7 @@ class DefaultTrainer(Trainer_ABC) :
 					else :
 						modelFct = model.test
 					
-					self.store["scores"][mapName] = _trainTest(
+					scores = _trainTest(
 						aMap,
 						modelFct,
 						shuffle,
@@ -358,8 +363,10 @@ class DefaultTrainer(Trainer_ABC) :
 						inputLayers,
 						outputLayers
 					)
+					for k, v in scores.iteritems() :
+						self.store["scores"][mapName][k] = v
+
 			runtime = (time.time() - startTime)/60
-			
 			self.store["runInfos"].update( (
 				("runtime(min)", runtime),
 			) )
