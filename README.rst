@@ -207,7 +207,16 @@ And a hidden layer to an output layer using:
 Visualizing networks
 ====================
 
-To get a DOT format representation of your network:
+To simplify debugging and communication Mariana allow to export graphical representation of networks.
+
+The easiest way is to export it as a web page:
+
+.. code:: python
+
+  #to save it
+  mlp.saveHTML("myAwesomeMLP")
+
+But you can also ask for a DOT format representation of your network:
 
 .. code:: python
 
@@ -215,7 +224,7 @@ To get a DOT format representation of your network:
   print mlp.toDOT()
 
   #to save it
-  mlp.saveDOT("myMLP.dot")
+  mlp.saveDOT("myAwesomeMLP")
 
 You can then visualize your graph with any DOT visualizer such a graphviz.
 
