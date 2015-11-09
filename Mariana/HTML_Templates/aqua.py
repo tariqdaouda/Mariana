@@ -55,7 +55,9 @@ TEMPLATE = r"""
       <div class="jumbotron">
         <svg id="graphContainer"> <g/> </svg>
       </div>
-      <h5 class="footer">Mariana generated</h5>
+      <a href="http://www.github.com/tariqdaouda/Mariana">
+        <h5 class="footer">Mariana generated</h5>
+      </a>
     </div>
   </body>
 </html>"""
