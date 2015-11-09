@@ -182,6 +182,15 @@ class Network(object) :
 
 		return s
 
+	def saveHTML(self, name, forceInit = True) :
+		"""Creates an HTML file with the graph representation. Heavily inspired from: http://stackoverflow.com/questions/22595493/reading-dot-files-in-javascript-d3"""
+		from Mariana.HTML_Templates.aqua import getHTML
+		import time
+		temp = getHTML(self.toDOT(name, forceInit), name, time.ctime())
+		f = open(name + '.mariana.dot.html', 'wb')
+		f.write(temp)
+		f.close()
+
 	def saveDOT(self, name, forceInit = True) :
 		"saves the current network as a graph in the DOT format into the file name.mariana.dot"
 		f = open(name + '.mariana.dot', 'wb')

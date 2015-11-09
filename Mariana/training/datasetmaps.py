@@ -1,5 +1,6 @@
 import Mariana.layers as ML
 import numpy, random, theano
+from collections import OrderedDict
 
 __all__ = ["DatasetHandle", "Dataset_ABC", "Series", "RandomSeries", "ClassSets", "DatasetMapper"]
 
@@ -120,20 +121,20 @@ class ClassSets(Dataset_ABC) :
 		* .onehot, onehot representation of classes
 
 		"""
-	def __init__(self, **kwargs) :
+	def __init__(self, sets) :
 		"""
 		Expects arguments in the following form::
 		
-				trainSet = ClassSets(cars = train_set[0], bikes = train_set[1])
+				trainSet = ClassSets( [ ('cars', train_set[0]), ('bikes', train_set[1]) ] )
 		"""
 
-		self.classSets = {}
+		self.classSets = OrderedDict()
 		
 		self.minLength = float('inf')
 		self.maxLength = 0
 		self.totalLength = 0
 		self.inputSize = 0
-		for k, v in kwargs.iteritems() :
+		for k, v in sets :
 			self.classSets[k] = numpy.asarray(v)
 			if len(self.classSets[k].shape) < 2 :
 			 	self.classSets[k] = self.classSets[k].reshape(self.classSets[k].shape[0], 1)

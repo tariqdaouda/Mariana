@@ -38,6 +38,7 @@ if __name__ == "__main__":
 	mlp = i > h > o
 
 	mlp.saveDOT("mnist_mlp")
+	mlp.saveHTML("mnist_mlp")
 	# And then map sets to the inputs and outputs of our network
 	train_set, validation_set, test_set = load_mnist()
 
