@@ -25,7 +25,7 @@ So in short:
 * trainers can be used to encapsulate your training in a safe environement
 * models can be written super fast
 * easily save your models and resume training
-* export your models into DOT format to obtain clean and easy to communicate graphs
+* export you models into HTML or DOT format commincation and debuging
 * free your imagination and experiment
 * no requirements concerning the format of the datasets
 
