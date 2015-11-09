@@ -114,7 +114,10 @@ class RandomSeries(Series) :
 
 class ClassSets(Dataset_ABC) :
 	"""Pass it one set for each class and it will take care of randomly sampling them with replacement.
-	All class sets must have at least two elements. The subsets exposed by a ClassSets are:
+	All class sets must have at least two elements. If classes do not have the same number of elements
+	it will take care of the oversampling for you.
+	
+	The subsets exposed by a ClassSets are:
 		
 		* .input, for the raw inputs
 		* .classNumber, each class is represent by an int
