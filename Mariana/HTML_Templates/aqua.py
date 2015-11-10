@@ -17,15 +17,7 @@ TEMPLATE = r"""
     </script>
     <style>
       .footer {
-        color: #2ECC40;
-      }
-      
-      .foote:hover {
-        color: #FF4136;
-      }
-
-      .github{
-        font-size:150%;
+        color: #0074D9;
       }
 
       .header{
@@ -66,8 +58,8 @@ TEMPLATE = r"""
         <svg id="graphContainer"> <g/> </svg>
       </div>
       <a href="http://www.github.com/tariqdaouda/Mariana">
+        <i class="fa fa-github-alt"></i>
         <h5 class="footer"> <i class="fa fa-hand-spock-o"></i> Mariana generated <i class="fa fa-hand-spock-o"></i> </h5>
-        <i class="github fa fa-github-alt"></i>
       </a>
     </div>
   </body>
