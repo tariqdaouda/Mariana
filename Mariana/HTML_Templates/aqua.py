@@ -17,7 +17,11 @@ TEMPLATE = r"""
     </script>
     <style>
       .footer {
-        color: #0074D9;
+        color: #2ECC40;
+      }
+      
+      .foote:hover {
+        color: #FF4136;
       }
 
       .header{
@@ -27,6 +31,7 @@ TEMPLATE = r"""
       svg {
         overflow: hidden;
       }
+
       .node rect {
         stroke: #0074D9;
         stroke-width: 2px;
@@ -49,7 +54,7 @@ TEMPLATE = r"""
   <script src="http://cpettitt.github.io/project/dagre-d3/v0.1.5/dagre-d3.min.js"></script>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
-  
+
   <body>
     <div class = "container text-center">
       <h1 class="header"> #NAME# <small>#DATE#</small> </h1>
@@ -58,6 +63,7 @@ TEMPLATE = r"""
       </div>
       <a href="http://www.github.com/tariqdaouda/Mariana">
         <h5 class="footer"> <i class="fa fa-hand-spock-o"></i> Mariana generated <i class="fa fa-hand-spock-o"></i> </h5>
+        <i class="fa fa-github-alt"></i>
       </a>
     </div>
   </body>
