@@ -48,7 +48,8 @@ TEMPLATE = r"""
   <script src="http://cpettitt.github.io/project/graphlib-dot/v0.4.10/graphlib-dot.min.js"></script>
   <script src="http://cpettitt.github.io/project/dagre-d3/v0.1.5/dagre-d3.min.js"></script>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
-
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+  
   <body>
     <div class = "container text-center">
       <h1 class="header"> #NAME# <small>#DATE#</small> </h1>
@@ -56,7 +57,7 @@ TEMPLATE = r"""
         <svg id="graphContainer"> <g/> </svg>
       </div>
       <a href="http://www.github.com/tariqdaouda/Mariana">
-        <h5 class="footer">Mariana generated</h5>
+        <h5 class="footer"> <i class="fa fa-hand-spock-o"></i> Mariana generated <i class="fa fa-hand-spock-o"></i> </h5>
       </a>
     </div>
   </body>
