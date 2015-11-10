@@ -24,6 +24,10 @@ TEMPLATE = r"""
         color: #FF4136;
       }
 
+      .github{
+        font-size:150%;
+      }
+
       .header{
         color: #0074D9;
       }
@@ -63,7 +67,7 @@ TEMPLATE = r"""
       </div>
       <a href="http://www.github.com/tariqdaouda/Mariana">
         <h5 class="footer"> <i class="fa fa-hand-spock-o"></i> Mariana generated <i class="fa fa-hand-spock-o"></i> </h5>
-        <i class="fa fa-github-alt"></i>
+        <i class="github fa fa-github-alt"></i>
       </a>
     </div>
   </body>
