@@ -69,7 +69,7 @@ class GGPlot2(Recorder_ABC):
 				self.currentScores[theSet][outputName] = score
 				if outputName not in self.bestScores[theSet] or score < self.bestScores[theSet][outputName][0] :
 					self.bestScores[theSet][outputName] = (score, self.length)
-					model.save("best-%s-%s" % (theSet, self.filename))
+					model.save("best-%s-%s-%s" % (outputName, theSet, self.filename))
 
 				muchData = store["hyperParameters"]
 				muchData.update(store["runInfos"]) 
