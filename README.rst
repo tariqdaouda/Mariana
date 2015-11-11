@@ -21,11 +21,13 @@ because if you know what these things are, you can turn one into the other in 2 
 So in short:
 
 * no YAML
+* very easy to use
+* great for Feed Forward nets (MLPs, Auto-Encoders, ...)
+* supports momentum
 * completely modular and extendable
 * trainers can be used to encapsulate your training in a safe environement
-* models can be written super fast
 * easily save your models and resume training
-* export you models into HTML or DOT format commincation and debuging
+* export you models into HTML or DOT format communication and debuging
 * free your imagination and experiment
 * no requirements concerning the format of the datasets
 
