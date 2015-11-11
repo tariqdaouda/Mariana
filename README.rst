@@ -26,8 +26,9 @@ So in short:
 * supports momentum
 * completely modular and extendable
 * trainers can be used to encapsulate your training in a safe environement
+* oversampling is also taken care of
 * easily save your models and resume training
-* export you models into HTML or DOT format communication and debuging
+* export you models into HTML or DOT for easy communication and debuging
 * free your imagination and experiment
 * no requirements concerning the format of the datasets
 
