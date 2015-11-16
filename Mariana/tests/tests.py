@@ -39,15 +39,15 @@ class MLPTests(unittest.TestCase):
 		self.xor_outs = numpy.array(self.xor_outs)
 		for i in xrange(1000) :
 			ii = i%len(self.xor_ins)
-			mlp.train(o, inp = [ self.xor_ins[ ii ] ], target = [ self.xor_outs[ ii ] ] )
-		
+			mlp.train(o, inp = [ self.xor_ins[ ii ] ], targets = [ self.xor_outs[ ii ] ] )
+	
 		return mlp
 
 	# @unittest.skip("skipping")
 	def test_xor(self) :
 		mlp = self.trainMLP_xor()
 		o = mlp.outputs.values()[0]
-		
+	
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[0] ] )[0], 0 )
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[1] ] )[0], 1 )
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
@@ -66,7 +66,7 @@ class MLPTests(unittest.TestCase):
 		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[1] ] )[0], 1 )
 		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
 		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[3] ] )[0], 0 )
-		
+	
 		os.remove('test_save.mariana.pkl')
 
 	# @unittest.skip("skipping")
@@ -91,7 +91,7 @@ class MLPTests(unittest.TestCase):
 
 		for e in xrange(2000) :
 			for i in xrange(0, len(data), miniBatchSize) :
-				ae.train(o, inp = data[i:i+miniBatchSize], target = data[i:i+miniBatchSize] )
+				ae.train(o, inp = data[i:i+miniBatchSize], targets = data[i:i+miniBatchSize] )
 
 		res = ae.propagate(o, inp = data)[0]
 		for i in xrange(len(res)) :
@@ -107,22 +107,22 @@ class MLPTests(unittest.TestCase):
 		h2 = ML.Hidden(2, activation = MA.tanh, name = "h2")
 		o = ML.SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
 		c = ML.Composite(name = "Comp")
-		
+	
 		inp > h1 > c
 		inp > h2 > c
 		mlp = c > o
-	
+
 		self.xor_ins = numpy.array(self.xor_ins)
 		self.xor_outs = numpy.array(self.xor_outs)
 		for i in xrange(1000) :
 			ii = i%len(self.xor_ins)
-			mlp.train(o, inp = [ self.xor_ins[ ii ] ], target = [ self.xor_outs[ ii ] ])
-		
+			mlp.train(o, inp = [ self.xor_ins[ ii ] ], targets = [ self.xor_outs[ ii ] ])
+	
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[0] ] )[0], 0 )
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[1] ] )[0], 1 )
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[3] ] )[0], 0 )
-		
+	
 if __name__ == '__main__' :
 	import Mariana.settings as MSET
 	MSET.VERBOSE = False
