@@ -61,7 +61,7 @@ class MLPTests(unittest.TestCase):
 		mlp.save("test_save")
 		mlp2 = cPickle.load(open('test_save.mariana.pkl'))
 
-		o = mlp.outputs.values()[0]
+		o = mlp2.outputs.values()[0]
 		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[0] ] )[0], 0 )
 		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[1] ] )[0], 1 )
 		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
