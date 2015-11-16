@@ -40,14 +40,14 @@ class MLPTests(unittest.TestCase):
 		for i in xrange(1000) :
 			ii = i%len(self.xor_ins)
 			mlp.train(o, inp = [ self.xor_ins[ ii ] ], targets = [ self.xor_outs[ ii ] ] )
-	
+
 		return mlp
 
 	# @unittest.skip("skipping")
 	def test_xor(self) :
 		mlp = self.trainMLP_xor()
 		o = mlp.outputs.values()[0]
-	
+
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[0] ] )[0], 0 )
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[1] ] )[0], 1 )
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
@@ -61,12 +61,12 @@ class MLPTests(unittest.TestCase):
 		mlp.save("test_save")
 		mlp2 = cPickle.load(open('test_save.mariana.pkl'))
 
-		o = mlp.outputs.values()[0]
+		o = mlp2.outputs.values()[0]
 		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[0] ] )[0], 0 )
 		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[1] ] )[0], 1 )
 		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
 		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[3] ] )[0], 0 )
-	
+
 		os.remove('test_save.mariana.pkl')
 
 	# @unittest.skip("skipping")
@@ -107,7 +107,7 @@ class MLPTests(unittest.TestCase):
 		h2 = ML.Hidden(2, activation = MA.tanh, name = "h2")
 		o = ML.SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
 		c = ML.Composite(name = "Comp")
-	
+
 		inp > h1 > c
 		inp > h2 > c
 		mlp = c > o
@@ -117,12 +117,12 @@ class MLPTests(unittest.TestCase):
 		for i in xrange(1000) :
 			ii = i%len(self.xor_ins)
 			mlp.train(o, inp = [ self.xor_ins[ ii ] ], targets = [ self.xor_outs[ ii ] ])
-	
+
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[0] ] )[0], 0 )
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[1] ] )[0], 1 )
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[3] ] )[0], 0 )
-	
+
 if __name__ == '__main__' :
 	import Mariana.settings as MSET
 	MSET.VERBOSE = False
