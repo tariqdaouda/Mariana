@@ -194,7 +194,7 @@ class ClassSets(Dataset_ABC) :
 			offset += self.minLength
 
 		size = len(self.subsets["input"])
-		indexes = numpy.random.randint(0, size, size)
+		indexes = random.sample(xrange(size), size)
 		for k, v in self.subsets.iteritems() :
 			self.subsets[k] = self.subsets[k][indexes]
 
@@ -208,7 +208,7 @@ class ClassSets(Dataset_ABC) :
 		return self.subsets[subset][i:i+size]
 
 	def getAll(self, subset) :
-		"""return all the elements from a subset"""
+		"""return all the elements from a subset. Oversampled of course if necessary"""
 		if self._mustReroll :
 			self.reroll()
 

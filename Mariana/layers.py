@@ -227,7 +227,7 @@ class Composite(Layer_ABC):
 	The output of c will be single vector: [layer1.output, layer2.output]
 	"""
 	def __init__(self, name = None):
-		Layer_ABC.__init__(self, nbOutputs = None, name = name)
+		Layer_ABC.__init__(self, size = None, name = name)
 
 	def getParams(self) :
 		return []

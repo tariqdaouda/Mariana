@@ -243,7 +243,7 @@ class DefaultTrainer(Trainer_ABC) :
 						for hp in thingObj.hyperParameters :
 							dct["%s_%s" % (l.name, hp)] = getattr(thingObj, hp)
 
-		def _trainTest(aMap, modelFct, shuffle, trainingOrder, miniBatchSize, inputLayers, outputLayers) :
+		def _trainTest(aMap, modelFct, trainingOrder, miniBatchSize, inputLayers, outputLayers) :
 			scores = {}
 			layerList = inputLayers
 			if miniBatchSize == DefaultTrainer.ALL_SET :
@@ -357,7 +357,6 @@ class DefaultTrainer(Trainer_ABC) :
 					scores = _trainTest(
 						aMap,
 						modelFct,
-						shuffle,
 						trainingOrder,
 						self.miniBatchSizes[mapName],
 						inputLayers,
