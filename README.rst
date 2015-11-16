@@ -50,7 +50,7 @@ Then Clone it from git!::
 Update::
 
 	git pull #from Mariana's folder
-	
+
 .. _Theano: https://github.com/Theano/Theano
 
 
@@ -98,10 +98,10 @@ Training, Testing and Propagating:
 .. code:: python
 
 	#train the model for output 'o' function will update parameters and return the current cost
-	print MLP.train(o, inputLayer = train_set[0][i : i +miniBatchSize], target = train_set[1][i : i +miniBatchSize] )
+	print MLP.train(o, inputLayer = train_set[0][i : i +miniBatchSize], targets = train_set[1][i : i +miniBatchSize] )
 
 	#the same as train but does not updated the parameters
-	print MLP.test(o, inputLayer = test_set[0][i : i +miniBatchSize], target = test_set[1][i : i +miniBatchSize] )
+	print MLP.test(o, inputLayer = test_set[0][i : i +miniBatchSize], targets = test_set[1][i : i +miniBatchSize] )
 
 	#the propagate will return the output for the output layer 'o'
 	print MLP.propagate(o, inputLayer = test_set[0][i : i +miniBatchSize])
