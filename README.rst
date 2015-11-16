@@ -21,11 +21,14 @@ because if you know what these things are, you can turn one into the other in 2 
 So in short:
 
 * no YAML
+* very easy to use
+* great for Feed Forward nets (MLPs, Auto-Encoders, ...)
+* supports momentum
 * completely modular and extendable
 * trainers can be used to encapsulate your training in a safe environement
-* models can be written super fast
+* oversampling is also taken care of
 * easily save your models and resume training
-* export you models into HTML or DOT format commincation and debuging
+* export you models into HTML or DOT for easy communication and debuging
 * free your imagination and experiment
 * no requirements concerning the format of the datasets
 
@@ -47,7 +50,7 @@ Then Clone it from git!::
 Update::
 
 	git pull #from Mariana's folder
-	
+
 .. _Theano: https://github.com/Theano/Theano
 
 
@@ -95,10 +98,10 @@ Training, Testing and Propagating:
 .. code:: python
 
 	#train the model for output 'o' function will update parameters and return the current cost
-	print MLP.train(o, inputLayer = train_set[0][i : i +miniBatchSize], target = train_set[1][i : i +miniBatchSize] )
+	print MLP.train(o, inputLayer = train_set[0][i : i +miniBatchSize], targets = train_set[1][i : i +miniBatchSize] )
 
 	#the same as train but does not updated the parameters
-	print MLP.test(o, inputLayer = test_set[0][i : i +miniBatchSize], target = test_set[1][i : i +miniBatchSize] )
+	print MLP.test(o, inputLayer = test_set[0][i : i +miniBatchSize], targets = test_set[1][i : i +miniBatchSize] )
 
 	#the propagate will return the output for the output layer 'o'
 	print MLP.propagate(o, inputLayer = test_set[0][i : i +miniBatchSize])

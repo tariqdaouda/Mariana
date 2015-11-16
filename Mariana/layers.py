@@ -25,7 +25,7 @@ class Layer_ABC(object) :
 	__metaclass__ = ABCMeta
 
 	def __init__(self, size, saveOutputs = MSET.SAVE_OUTPUTS_DEFAULT, decorators = [], name = None) :
-		
+
 		if name is not None :
 			self.name = name
 		else :
@@ -53,7 +53,7 @@ class Layer_ABC(object) :
 
 		self.network = None
 		self._inputRegistrations = set()
-		
+
 		self._mustInit = True
 		self._decorating = False
 
@@ -92,12 +92,12 @@ class Layer_ABC(object) :
 				l._registerInput(self)
 				l._init()
 			self._mustInit = False
-	
+
 	#theano hates abstract methods defined with a decorator
 	def _setOutputs(self) :
 		"""Sets the output of the layer. This function is called by _init() ans should be initialised in child"""
 		raise NotImplemented("Should be implemented in child")
-	
+
 	def _decorate(self) :
 		"""applies decorators"""
 		self._decorating = True
@@ -135,15 +135,15 @@ class Layer_ABC(object) :
 			if isinstance(layer, Output_ABC) or issubclass(layer.__class__, Output_ABC) :
 				self.network.addOutput(layer)
 			_connectLayer(self, layer)
-			
+
 		return self.network
 
 	def disconnect(self, layer) :
 		"""Severs a connection"""
-		del(me.feedsInto[layer.name])
-		del(layer.feededBy[me.name])
-		me.network.removeEdge(me, layer)
-		me.network._mustInit = True
+		del(self.feedsInto[layer.name])
+		del(layer.feededBy[self.name])
+		self.network.removeEdge(self, layer)
+		self.network._mustInit = True
 
 	def getOutputs(self) :
 		"""Return the last outputs of the layer"""
@@ -219,7 +219,7 @@ class Input(Layer_ABC) :
 class Composite(Layer_ABC):
 	"""A Composite layer concatenates the outputs of several other layers
 	for example is we have::
-		
+
 		c = Composite()
 		layer1 > c
 		layer2 > c
@@ -236,25 +236,25 @@ class Composite(Layer_ABC):
 		if self.nbInputs is None :
 			self.nbInputs = 0
 		self.nbInputs += layer.nbOutputs
-	
+
 	def _setOutputs(self) :
 		self.nbOutputs = self.nbInputs
 		self.outputs = tt.concatenate( [l.outputs for l in self.feededBy.itervalues()], axis = 1 )
 
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=tripleoctogon]' % (self.name, self.nbOutputs)
-		
+
 class Hidden(Layer_ABC) :
 	"A hidden layer"
 	def __init__(self, size, activation = getattr(MA, "reLU"), learningScenario = None, name = None, regularizations = [], **kwargs) :
 		Layer_ABC.__init__(self, size, name = name, **kwargs)
 		self.W = None
 		self.b = None
-		
+
 		self.type = TYPE_HIDDEN_LAYER
 		self.activation = activation
 		self.learningScenario = learningScenario
-		
+
 		self.regularizationObjects = regularizations
 		self.regularizations = []
 
@@ -286,9 +286,9 @@ class Hidden(Layer_ABC) :
 			# self.outputs = theano.printing.Print('this is a very important value for %s' % self.name)(self.activation(tt.dot(self.inputs, self.W) + self.b))
 			self.outputs = self.activation(tt.dot(self.inputs, self.W) + self.b)
 			self.test_outputs = self.activation(tt.dot(self.test_inputs, self.W) + self.b)
-		
+
 		self._decorate()
-		
+
 		for reg in self.regularizationObjects :
 			self.regularizations.append(reg.getFormula(self))
 
@@ -306,7 +306,7 @@ class Hidden(Layer_ABC) :
 		res.W = self.W
 		res.b = self.b
 		res.name = self.name
-		
+
 		for k, v in kwargs.iteritems() :
 			setattr(res, k, v)
 
@@ -333,7 +333,7 @@ class Output_ABC(Hidden) :
 		"""
 
 	def __init__(self, size, activation, learningScenario, costObject, name = None, **kwargs) :
-		
+
 		Hidden.__init__(self, size, activation = activation, name = name, **kwargs)
 		self.type = TYPE_OUTPUT_LAYER
 		self.targets = None
@@ -348,7 +348,7 @@ class Output_ABC(Hidden) :
 
 	def _backTrckDependencies(self) :
 		"""Finds all the hidden layers the ouput layer is influenced by"""
-		def _bckTrk(deps, layer) :		
+		def _bckTrk(deps, layer) :
 			for l in layer.feededBy.itervalues() :
 				if l.__class__ is not Input :
 					deps[l.name] = l
@@ -362,7 +362,7 @@ class Output_ABC(Hidden) :
 		pass
 
 	def _setTheanoFunctions(self) :
-		"""Creates theano_train/theano_test/theano_propagate functions and calls setCustomTheanoFunctions to 
+		"""Creates theano_train/theano_test/theano_propagate functions and calls setCustomTheanoFunctions to
 		create user custom theano functions."""
 
 		self._backTrckDependencies()
@@ -370,20 +370,20 @@ class Output_ABC(Hidden) :
 
 		self.cost = self.costObject.costFct(self.targets, self.outputs)
 		self.test_cost = self.costObject.costFct(self.test_targets, self.test_outputs)
-		
+
 		for l in self.dependencies.itervalues() :
 			if l.__class__  is not Composite :
 				for reg in l.regularizations :
 					self.cost += reg
 
 		self.updates = self.learningScenario.getUpdates(self, self.cost)
-		
+
 		for l in self.dependencies.itervalues() :
 			try :
 				self.updates.extend(l.learningScenario.getUpdates(l, self.cost))
 			except AttributeError :
 				self.updates.extend(self.learningScenario.getUpdates(l, self.cost))
-			
+
 		self.updates_lastOutputs = []
 		for l in self.network.layers.itervalues() :
 			if ( l.last_outputs is not None ) and ( l.outputs is not None ) :
@@ -393,11 +393,11 @@ class Output_ABC(Hidden) :
 		self.train = MWRAP.TheanoFunction("train", MWRAP.TYPE_TRAIN, self, [self.cost], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
 		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [self.test_cost], { "targets" : self.test_targets }, updates = self.updates_lastOutputs, allow_input_downcast=True)
 		self.propagate = MWRAP.TheanoFunction("propagate", MWRAP.TYPE_TEST, self, [self.test_outputs], updates = self.updates_lastOutputs, allow_input_downcast=True)
-	
+
 		self.setCustomTheanoFunctions()
 
 	def setCustomTheanoFunctions(self) :
-		"""This is where you should put the definitions of your custom theano functions. Theano functions 
+		"""This is where you should put the definitions of your custom theano functions. Theano functions
 		must be declared as self attributes using a wrappers.TheanoFunction object, cf. wrappers documentation.
 		"""
 		pass
@@ -422,7 +422,7 @@ class Classifier_ABC(Output_ABC):
 
 	def setCustomTheanoFunctions(self) :
 		"""Classifiers must define a 'classify' function that returns the result of the classification"""
-		raise NotImplemented("theano classify must be defined in child's setCustomTheanoFunctions()")				
+		raise NotImplemented("theano classify must be defined in child's setCustomTheanoFunctions()")
 
 class SoftmaxClassifier(Classifier_ABC) :
 	"""A softmax (probabilistic) Classifier"""
@@ -482,7 +482,7 @@ class Autoencode(Output_ABC) :
 # 		self.outputs = self.activation(tt.signal.conv2d(self.inputs, self.W, *self.theanoArgs, **self.theanoKwArgs))
 
 # class MaxPooling2D(Layer_ABC) :
-	
+
 # 	def __init__(self, downScaleFactors) :
 # 		"""downScaleFactors is the factor by which to downscale vertical and horizontal dimentions. (2,2) will halve the image in each dimension."""
 # 		self.downScaleFactors = downScaleFactors

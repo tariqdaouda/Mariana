@@ -18,7 +18,7 @@ class OutputMap(object):
 	def printGraph(self, outputLayer) :
 		"""Print the theano graph of the function associated with a given output"""
 		self.outputFcts[outputLayer].printGraph()
-	
+
 	def addOutput(self, outputLayer, fct) :
 		self.outputFcts[outputLayer] = fct
 
@@ -81,8 +81,8 @@ class Network(object) :
 						del(d[layer.name])
 
 		self.edges.remove( (layer1, layer2))
-		self.layerConnectionCount[layer1] -= 1
-		self.layerConnectionCount[layer2] -= 1
+		self.layerConnectionCount[layer1.name] -= 1
+		self.layerConnectionCount[layer2.name] -= 1
 
 		_del(self, layer1)
 		_del(self, layer2)
@@ -103,12 +103,12 @@ class Network(object) :
 
 		for inp in toLayer.network.inputs.itervalues() :
 			self.addInput(inp)
-	
+
 		self.addEdge(fromLayer, toLayer)
-		
+
 		for o in toLayer.network.outputs.itervalues() :
 			self.addOutput(o)
-	
+
 		self.layers.update(toLayer.network.layers)
 		self.edges = self.edges.union(toLayer.network.edges)
 
@@ -117,12 +117,12 @@ class Network(object) :
 
 		if self._mustInit :
 			print "\n" + MSET.OMICRON_SIGNATURE
-		
+
 			for inp in self.inputs.itervalues() :
 				inp._init()
 
 			self._mustInit = False
-			
+	
 			for l in self.layers.itervalues() :
 				self.params.extend(l.getParams())
 
@@ -133,14 +133,14 @@ class Network(object) :
 						if k not in self.outputMaps :
 							self.outputMaps[k] = OutputMap(k, self)
 						self.outputMaps[k].addOutput(o, v)
-	
+
 	def help(self) :
 		"""prints the list of available model functions, such as train, test,..."""
 		os = []
 		for o in self.outputMaps.itervalues() :
 			os.append(repr(o))
 		os = '\n\t'.join(os)
-		
+
 		print "Available model functions:\n" % os
 
 	def save(self, filename) :
@@ -162,7 +162,7 @@ class Network(object) :
 
 		com = "//Mariana network DOT representation generated on %s" % time.ctime()
 		s = '#COM#\ndigraph "%s"{\n#HEAD#;\n\n#GRAPH#;\n}' % name
-		
+
 		headers = []
 		aidi = 0
 		aidis = {}
@@ -174,7 +174,7 @@ class Network(object) :
 		g = []
 		for e in self.edges :
 			g.append("\t%s -> %s" % (aidis[e[0].name], aidis[e[1].name]))
-	
+
 		s = s.replace("#COM#", com)
 		s = s.replace("#HEAD#", ';\n'.join(headers))
 		s = s.replace("#GRAPH#", ';\n'.join(g))

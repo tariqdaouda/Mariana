@@ -14,7 +14,7 @@ class TheanoFunction(object) :
 	This class encapsulates a Theano function.
 	TheanoFunction objects should be defined as self attributes in the setCustomTheanoFunctions() function of output layers.
 	It will also generate custom error messages whose verbosity depends on Mariana.settings.VERBOSE. Set it to False to get quieter
-	error messages. 
+	error messages.
 	"""
 
 	def __init__(self, name, applicationType, outputLayer, output_expressions, additional_input_expressions = {}, updates = [], **kwargs) :
@@ -41,16 +41,16 @@ class TheanoFunction(object) :
 				inpOut = inp.outputs
 			else :
 				raise AttributeError('Unknow applicationType %s' % applicationType)
-			
+
 			if inpOut not in inpSet :
 				self.inputs[inp.name] = inpOut
 				inpSet.add(inpOut)
-		
+
 		for k, v in additional_input_expressions.iteritems() :
 			if v not in inpSet :
 				self.inputs[k] = v
 				inpSet.add(v)
-	
+
 		self.fctInputs = OrderedDict()
 		for i in self.inputs :
 				self.fctInputs[i] = None
@@ -58,7 +58,7 @@ class TheanoFunction(object) :
 		self.additional_input_expressions = additional_input_expressions
 		self.outputs = output_expressions
 		self.updates = updates
-		
+
 		self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs, updates = self.updates, **kwargs)
 
 		if theano.config.device.find("gpu") > -1:
@@ -83,12 +83,6 @@ class TheanoFunction(object) :
 
 	def run(self, **kwargs) :
 
-		def _autocast(kwargs) :
-			res = {}
-			for k in kwargs :
-				res[k] = numpy.asarray(kwargs[k], dtype = theano.config.floatX)
-			return res
-
 		def _die(fctName, outputLayer, kwargs, exc) :
 			sys.stderr.write("!!=> Error in function '%s' for layer '%s':\n" % (fctName, outputLayer.name))
 			sys.stderr.write("\t!!=> the arguments were:\n %s\n" % (kwargs))
@@ -96,26 +90,6 @@ class TheanoFunction(object) :
 
 		self.fctInputs.update(kwargs)
 		return self.theano_fct(*self.fctInputs.values())
-	# 	try :
-	# 	except TypeError as e :
-	# 		if MSET.AUTOCAST :
-	# 			if not self.cast_warning_told :
-	# 				MCAN.friendly("Casting: Trying to save the day",
-	# 				"""The GPU max size is float32.
-	# I will try to cast the inputs at every iterration before computation.
-	# Please cast your data to '%s' next time, that would certainly speed up the whole computation."""  % (theano.config.floatX))
-	# 				self.cast_warning_told = True
-				
-	# 			_autocast(kwargs)
-	# 		else :
-	# 			_die(self.name, self.outputLayer, kwargs, e)
-	
-	# 		try :
-	# 			return self.theano_fct(*_autocast(kwargs).values())
-	# 		except Exception as e :
-	# 			_die(self.name, self.outputLayer, kwargs, e)
-	# 	except Exception as e :
-	# 		_die(self.name, self.outputLayer, kwargs, e)
 
 	def __call__(self, **kwargs) :
 		return self.run(**kwargs)

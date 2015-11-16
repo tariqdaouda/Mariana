@@ -21,28 +21,28 @@ Models in Mariana can be driven output layer by output layer using the model fun
 
 	ls = MS.GradientDescent(lr = 0.01)
 	cost = MC.NegativeLogLikelihood()
-	
+
 	i = ML.Input(28*28, name = "inputLayer")
 	h = ML.Hidden(300, activation = MA.reLU, decorators = [MD.BinomialDropout(0.2)], regularizations = [ MR.L1(0.0001) ])
 	o = ML.SoftmaxClassifier(9, learningScenario = ls, costObject = cost, regularizations = [ MR.L1(0.0001) ])
-	
+
 	MLP = i > h > o
-	
+
 	...load you dataset etc...
 
 	#train the model for output 'o' function will update parameters and return the current cost
-	print MLP.train(o, inputLayer = train_set[0][i : i +miniBatchSize], target = train_set[1][i : i +miniBatchSize] )
+	print MLP.train(o, inputLayer = train_set[0][i : i +miniBatchSize], targets = train_set[1][i : i +miniBatchSize] )
 
 	#the same as train but does not updated the parameters
-	print MLP.test(o, inputLayer = test_set[0][i : i +miniBatchSize], target = test_set[1][i : i +miniBatchSize] )
-	
+	print MLP.test(o, inputLayer = test_set[0][i : i +miniBatchSize], targets = test_set[1][i : i +miniBatchSize] )
+
 	#the propagate will return the output for the output layer 'o'
 	print MLP.propagate(o, inputLayer = test_set[0][i : i +miniBatchSize])
 
 Trainers
 --------
 
-A trainer takes care of the whole training process. If the process dies unexpectedly during training it will 
+A trainer takes care of the whole training process. If the process dies unexpectedly during training it will
 automatically save the last version of the model as well as logs explaining what happened. The trainer can also take as argument a list of stopCriterias, and be paired with a recorder whose job is to record the training evolution. Trainers must has a .store dictionary exposed that represents the current state of the process. The store is used by stop criteria, recorders and learning scenarii.
 
 .. automodule:: Mariana.training.trainers
@@ -58,7 +58,7 @@ with the data they must receive (cf. mnist_mlp_ for a full example). Here's a sh
 	o = ML.Output(...)
 
 	trainSet = RandomSeries(images = train_set[0], classes = train_set[1])
-	
+
 	DatasetMapper = dm
 	dm.map(i, trainSet.images)
 	dm.map(o, trainSet.classes)
