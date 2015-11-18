@@ -28,7 +28,7 @@ class DastasetMapsTests(unittest.TestCase):
 
 			return o, n, p
 
-		l1 = numpy.arange(10)
+		l1 = numpy.arange(100)
 		l2 = numpy.arange(10) + 10
 
 		cls = MD.ClassSets(l1 = l1, l2 = l2)

@@ -157,7 +157,6 @@ class ClassSets(Dataset_ABC) :
 
 		self.classNumbers = {}
 		self.onehots = {}
-		self.nbElements = {}
 		i = 0
 		for k, v in self.classSets.iteritems() :
 			length = len(v)
@@ -167,13 +166,12 @@ class ClassSets(Dataset_ABC) :
 				self.maxLength = length
 			self.totalLength += length
 			
-			self.nbElements[k] = length
 			self.classNumbers[k] = i
 			self.onehots[k] = numpy.zeros(len(self.classSets))
 			self.onehots[k][i] = 1
 			i += 1
 
-		subsetSize = self.totalLength
+		subsetSize = self.minLength * len(self.classSets)
 		self.subsets = {
 			"input" : numpy.zeros((subsetSize, self.inputSize)),
 			"classNumber" : numpy.zeros(subsetSize),
@@ -187,7 +185,7 @@ class ClassSets(Dataset_ABC) :
 		offset = 0
 		for k, v in self.classSets.iteritems() :
 			start, end = offset, offset+self.minLength
-			indexes = numpy.random.randint(0, self.nbElements[k], self.minLength)
+			indexes = numpy.random.randint(0, len(v), self.minLength)
 			self.subsets["input"][start : end] = v[indexes]
 			self.subsets["classNumber"][start : end] = self.classNumbers[k]
 			self.subsets["onehot"][start : end] = self.onehots[k]
@@ -220,7 +218,8 @@ class ClassSets(Dataset_ABC) :
 			return DatasetHandle(self, subset)
 
 	def __len__(self) :
-		return self.minLength
+		"""size of the smallest set X number of sets"""
+		return self.minLength * len(self.classSets)
 
 class DatasetMapper(object):
 	"""a DatasetMapper maps Input and Output layer to the data they must receive.

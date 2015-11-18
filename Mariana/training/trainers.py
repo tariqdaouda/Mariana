@@ -204,11 +204,11 @@ class DefaultTrainer(Trainer_ABC) :
 			self.RANDOM_PICK_TRAINING : "RANDOM_PICK"
 		}
 
-	def start(self, runName, model, recorder = "default", trainingOrder = 0, shuffle = False, datasetName = "") :
+	def start(self, runName, model, recorder = "default", trainingOrder = 0, datasetName = "") :
 		"""starts the training, cf. run() for the a description of the arguments"""
-		Trainer_ABC.start( self, runName, model, recorder, trainingOrder, shuffle, datasetName )
+		Trainer_ABC.start( self, runName, model, recorder, trainingOrder, datasetName )
 
-	def run(self, name, model, recorder, trainingOrder, shuffle, datasetName) :
+	def run(self, name, model, recorder, trainingOrder, datasetName) :
 		"""
 			:param str runName: The name of this run
 			:param Recorder recorder: A recorder object
@@ -219,7 +219,6 @@ class DefaultTrainer(Trainer_ABC) :
 				* DefaultTrainer.RANDOM_PICK_TRAINING: Will pick one of the outputs at random for each example
 
 			:param bool reset: Should the trainer be reset before starting the run
-			:param bool shuffle: Should the datasets be shuffled at each epoch
 			:param str datasetName: If provided, the name of the dataset will be stored as a hyper-parameter
 		"""
 		def setHPs(layer, thing, dct) :
@@ -347,8 +346,7 @@ class DefaultTrainer(Trainer_ABC) :
 			for mapName, aMap in self.maps.iteritems() :
 				if len(aMap) > 0 :
 					scores = {}
-					if shuffle :
-						aMap.reroll()
+					aMap.reroll()
 					if mapName == "train" :
 						modelFct = model.train
 					else :
