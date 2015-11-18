@@ -124,18 +124,19 @@ class ClassSets(Dataset_ABC) :
 		* .onehot, onehot representation of classes
 
 		"""
-	def __init__(self, sets) :
+	def __init__(self, sets, sampleSize) :
 		"""
 		Expects arguments in the following form::
 		
-				trainSet = ClassSets( [ ('cars', train_set[0]), ('bikes', train_set[1]) ] )
+				trainSet = ClassSets( sets = [ ('cars', train_set[0]), ('bikes', train_set[1]), sampleSize=len(train_set[1]) ] )
 		"""
 
 		self.classSets = OrderedDict()
 		
-		self.minLength = float('inf')
-		self.maxLength = 0
-		self.totalLength = 0
+		self.sampleSize = sampleSize
+		# self.minLength = float('inf')
+		# self.maxLength = 0
+		# self.totalLength = 0
 		self.inputSize = 0
 		for k, v in sets :
 			self.classSets[k] = numpy.asarray(v)
@@ -152,26 +153,26 @@ class ClassSets(Dataset_ABC) :
 			elif self.inputSize != inputSize :
 				raise ValueError("All class elements must have the same size. Got '%s', while the previous value was '%s'" % ( len(v[0]), self.inputSize ))
 				
-		if self.minLength < 2 :
-			raise ValueError('All class sets must have at least two elements')
+		# if self.minLength < 2 :
+		# 	raise ValueError('All class sets must have at least two elements')
 
 		self.classNumbers = {}
 		self.onehots = {}
 		i = 0
 		for k, v in self.classSets.iteritems() :
-			length = len(v)
-			if length < self.minLength :
-				self.minLength = length
-			if self.maxLength < length :
-				self.maxLength = length
-			self.totalLength += length
+			# length = len(v)
+			# if length < self.minLength :
+				# self.minLength = length
+			# if self.maxLength < length :
+				# self.maxLength = length
+			# self.totalLength += length
 			
 			self.classNumbers[k] = i
 			self.onehots[k] = numpy.zeros(len(self.classSets))
 			self.onehots[k][i] = 1
 			i += 1
 
-		subsetSize = self.minLength * len(self.classSets)
+		subsetSize = self.sampleSize * len(self.classSets)
 		self.subsets = {
 			"input" : numpy.zeros((subsetSize, self.inputSize)),
 			"classNumber" : numpy.zeros(subsetSize),
@@ -182,18 +183,18 @@ class ClassSets(Dataset_ABC) :
 
 	def reroll(self) :
 		"""shuffle subsets"""
-		offset = 0
+		start = 0
 		for k, v in self.classSets.iteritems() :
-			start, end = offset, offset+self.minLength
-			indexes = numpy.random.randint(0, len(v), self.minLength)
-			self.subsets["input"][start : end] = v[indexes]
+			end = start+self.sampleSize
+			subIndexes = numpy.random.randint(0, len(v), self.sampleSize)
+			self.subsets["input"][start : end] = v[subIndexes]
 			self.subsets["classNumber"][start : end] = self.classNumbers[k]
 			self.subsets["onehot"][start : end] = self.onehots[k]
-			offset += self.minLength
+			start = end
 
 		size = len(self.subsets["input"])
 		indexes = random.sample(xrange(size), size)
-		for k, v in self.subsets.iteritems() :
+		for k in self.subsets :
 			self.subsets[k] = self.subsets[k][indexes]
 
 		self._mustReroll = False
@@ -219,7 +220,7 @@ class ClassSets(Dataset_ABC) :
 
 	def __len__(self) :
 		"""size of the smallest set X number of sets"""
-		return self.minLength * len(self.classSets)
+		return self.sampleSize * len(self.classSets)
 
 class DatasetMapper(object):
 	"""a DatasetMapper maps Input and Output layer to the data they must receive.
