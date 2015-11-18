@@ -1,5 +1,5 @@
 
->|\/| /-\ |-> | /-\ |\| /-\>
+MARIANA
 ==============================
 
 Named after the deepest place on earth (Mariana trench), Mariana is a Python Machine Learning Framework built on top of Theano, that focuses on ease of use. The full documentation is available here_.
