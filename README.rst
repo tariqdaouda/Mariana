@@ -114,8 +114,8 @@ Training, Testing and Propagating:
 	cost = MC.MeanSquaredError()
 
 	i = ML.Input(10, name = "inputLayer")
-	h = ML.Hidden(2, activation = MA.tanh, decorators = [ MD.GlorotTanhInit() ])
-	o = ML.Regression(10, activation = MA.tanh, costObject = cost, learningScenario = ls)
+	h = ML.Hidden(2, activation = MA.Tanh(), decorators = [ MD.GlorotTanhInit() ])
+	o = ML.Regression(10, activation = MA.Tanh(), costObject = cost, learningScenario = ls)
 
 	ae = i > h > o
 	ae.init()
@@ -126,7 +126,7 @@ Training, Testing and Propagating:
 
 Another way is to use the Autoencode layer as output::
 
-	o = ML.Autoencode(i, activation = MA.tanh, costObject = cost, learningScenario = ls)
+	o = ML.Autoencode(i, activation = MA.Tanh(), costObject = cost, learningScenario = ls)
 
 Can it run on GPU?
 ==================
