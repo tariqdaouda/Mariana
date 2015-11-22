@@ -5,7 +5,8 @@ __all__ = ["Activation_ABC", "Pass", "Sigmoid", "Tanh", "Input", "ReLU", "Softma
 class Activation_ABC(object):
 	"""All activations must inherit fron this class"""
 	def __init__(self, *args, **kwargs):
-		self.hyperparameters = []
+		self.hyperParameters = []
+		self.name = self.__class__.__name__
 
 	def function(self, x) :
 		"""the actual activation function that will be applied to the neurones."""
@@ -16,9 +17,9 @@ class Pass(Activation_ABC):
 	simply returns x
 	"""
 	def __init__(self):
-		super(ClassName, self).__init__()
+		Activation_ABC.__init__(self)
 		
-	def function(x):
+	def function(self, x):
 		return x
 
 class Sigmoid(Activation_ABC):
@@ -27,20 +28,20 @@ class Sigmoid(Activation_ABC):
 
 		1/ (1/ + exp(-x))"""
 	def __init__(self):
-		super(ClassName, self).__init__()
+		Activation_ABC.__init__(self)
 		
-	def function(x):
+	def function(self, x):
 		return tt.nnet.sigmoid(x)
 
 class Tanh(Activation_ABC):
-		"""
-		.. math::
+	"""
+	.. math::
 
-			tanh(x)"""
-		def __init__(self):
-			super(ClassName, self).__init__()
-				
-	def function(x):
+		tanh(x)"""
+	def __init__(self):
+		Activation_ABC.__init__(self)
+
+	def function(self, x):
 		return tt.tanh(x)
 
 class ReLU(Activation_ABC):
@@ -49,9 +50,9 @@ class ReLU(Activation_ABC):
 
 		max(0, x)"""
 	def __init__(self):
-		super(ClassName, self).__init__()
+		Activation_ABC.__init__(self)
 				
-	def function(x):
+	def function(self, x):
 		#do not replace by theano's relu. It works bad with nets that have multiple outputs
 		return tt.maximum(0., x)
 
@@ -62,9 +63,9 @@ class Softmax(Activation_ABC):
 		exp(x_i/T)/ sum_k( exp(x_k/T) )
 	"""
 	def __init__(self, temperature = 1):
-		super(ClassName, self).__init__()
-		self.hyperparameters = ["temperature"]
+		Activation_ABC.__init__(self)
+		self.hyperParameters = ["temperature"]
 		self.temperature = temperature
 
-	def function(x):
+	def function(self, x):
 		return tt.nnet.softmax(x/self.temperature)
