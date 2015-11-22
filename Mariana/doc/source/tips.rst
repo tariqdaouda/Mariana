@@ -29,11 +29,20 @@ Less Verbosity
 
  	MSET.VERBOSE = False
 
-Modifiying hyper-parameters during training
---------------------------------------------
+.. Modifiying hyper-parameters during training
+.. --------------------------------------------
 
-Learning scenarii have an **update(self, trainer)** function that is called by the trainer at each epoch. Trainers have a **.store** dictionary attribute that stores values relative to the current epoch (for example the current epoch number is contained in **trainer.store["runInfos"]["epoch"]**). The role of this function is to modify the attribute of the learning scenario according to the values in the store.
-You may need to create your own learning scenario, for that, simply write a class that inherits from an existing learning scenario or from the provided base class.
+.. Learning scenarii have an **update(self, trainer)** function that is called by the trainer at each epoch. Trainers have a **.store** dictionary attribute that stores values relative to the current epoch (for example the current epoch number is contained in **trainer.store["runInfos"]["epoch"]**). The role of this function is to modify the attribute of the learning scenario according to the values in the store.
+.. You may need to create your own learning scenario, for that, simply write a class that inherits from an existing learning scenario or from the provided base class.
+
+Launching runs on the GPU
+--------------------------
+For more information please have a look at the documentation of Theano. The easiest way, once Theano has been correctly set up is to run :
+
+.. code:: shell
+
+  THEANO_FLAGS="device='gpu'" python my_model.py
+
 
 Getting the outputs of intermediate layers
 -------------------------------------------

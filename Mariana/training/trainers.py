@@ -204,11 +204,11 @@ class DefaultTrainer(Trainer_ABC) :
 			self.RANDOM_PICK_TRAINING : "RANDOM_PICK"
 		}
 
-	def start(self, runName, model, recorder = "default", trainingOrder = 0, datasetName = "") :
+	def start(self, runName, model, recorder = "default", trainingOrder = 0, moreHyperParameters={}) :
 		"""starts the training, cf. run() for the a description of the arguments"""
-		Trainer_ABC.start( self, runName, model, recorder, trainingOrder, datasetName )
+		Trainer_ABC.start( self, runName, model, recorder, trainingOrder, moreHyperParameters )
 
-	def run(self, name, model, recorder, trainingOrder, datasetName) :
+	def run(self, name, model, recorder, trainingOrder, moreHyperParameters) :
 		"""
 			:param str runName: The name of this run
 			:param Recorder recorder: A recorder object
@@ -219,7 +219,7 @@ class DefaultTrainer(Trainer_ABC) :
 				* DefaultTrainer.RANDOM_PICK_TRAINING: Will pick one of the outputs at random for each example
 
 			:param bool reset: Should the trainer be reset before starting the run
-			:param str datasetName: If provided, the name of the dataset will be stored as a hyper-parameter
+			:param dict moreHyperParameters: If provided, the fields in this dictionary will be included into the log .csv file
 		"""
 		def setHPs(layer, thing, dct) :
 			try :
@@ -308,7 +308,8 @@ class DefaultTrainer(Trainer_ABC) :
 		if trainingOrder not in self.trainingOrdersHR:
 			raise ValueError("Unknown training order: %s" % trainingOrder)
 
-		legend = ["name", "epoch", "runtime(min)", "dataset_name", "training_order"]
+		legend = ["name", "epoch", "runtime(min)", "training_order"]
+		legend.extend(moreHyperParameters.keys())
 		hyperParameters = OrderedDict()
 		for l in model.layers.itervalues() :
 			hyperParameters["%s_size" % l.name] = len(l)
@@ -318,17 +319,18 @@ class DefaultTrainer(Trainer_ABC) :
 				pass
 			setHPs(l, "learningScenario", hyperParameters)
 			setHPs(l, "decorators", hyperParameters)
+			setHPs(l, "activation", hyperParameters)
 			if l.type == ML.TYPE_OUTPUT_LAYER :
 				setHPs(l, "costObject", hyperParameters)
 
 		legend.extend(hyperParameters.keys())
 		self.store["hyperParameters"].update(hyperParameters)
+		self.store["hyperParameters"].update(moreHyperParameters)
 		
 		self.store["runInfos"]["name"] = name
-		self.store["runInfos"]["dataset_name"] = datasetName
 		self.store["runInfos"]["training_order"] = self.trainingOrdersHR[trainingOrder]
 		self.store["runInfos"]["pid"] = os.getpid()
-
+	
 		self.recorder = recorder
 		
 		startTime = time.time()

@@ -246,7 +246,7 @@ class Composite(Layer_ABC):
 
 class Hidden(Layer_ABC) :
 	"A hidden layer"
-	def __init__(self, size, activation = getattr(MA, "reLU"), learningScenario = None, name = None, regularizations = [], **kwargs) :
+	def __init__(self, size, activation = MA.ReLU(), learningScenario = None, name = None, regularizations = [], **kwargs) :
 		Layer_ABC.__init__(self, size, name = name, **kwargs)
 		self.W = None
 		self.b = None
@@ -279,13 +279,9 @@ class Hidden(Layer_ABC) :
 			if self.b.get_value().shape[0] != self.nbOutputs :
 				raise ValueError("bias has a length of %s, but there are %s outputs" % (self.b.get_value().shape[0], self.nbOutputs))
 
-		if self.activation is None :
-			self.outputs = tt.dot(self.inputs, self.W) + self.b
-			self.test_outputs = tt.dot(self.test_inputs, self.W) + self.b
-		else :
-			# self.outputs = theano.printing.Print('this is a very important value for %s' % self.name)(self.activation(tt.dot(self.inputs, self.W) + self.b))
-			self.outputs = self.activation(tt.dot(self.inputs, self.W) + self.b)
-			self.test_outputs = self.activation(tt.dot(self.test_inputs, self.W) + self.b)
+		# self.outputs = theano.printing.Print('this is a very important value for %s' % self.name)(self.activation(tt.dot(self.inputs, self.W) + self.b))
+		self.outputs = self.activation.function(tt.dot(self.inputs, self.W) + self.b)
+		self.test_outputs = self.activation.function(tt.dot(self.test_inputs, self.W) + self.b)
 
 		self._decorate()
 
@@ -426,8 +422,8 @@ class Classifier_ABC(Output_ABC):
 
 class SoftmaxClassifier(Classifier_ABC) :
 	"""A softmax (probabilistic) Classifier"""
-	def __init__(self, nbOutputs, learningScenario, costObject, name = None, **kwargs) :
-		Classifier_ABC.__init__(self, nbOutputs, activation = MA.softmax, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
+	def __init__(self, nbOutputs, learningScenario, costObject, temperature = 1, name = None, **kwargs) :
+		Classifier_ABC.__init__(self, nbOutputs, activation = MA.Softmax(temperature = temperature), learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.targets = tt.ivector(name = "targets")
 		self.test_targets = tt.ivector(name = "targets")
 

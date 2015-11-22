@@ -30,7 +30,7 @@ class MLPTests(unittest.TestCase):
 		cost = MC.NegativeLogLikelihood()
 
 		i = ML.Input(2, 'inp')
-		h = ML.Hidden(4, activation = MA.tanh, decorators = [dec.GlorotTanhInit()], regularizations = [MR.L1(0), MR.L2(0)])
+		h = ML.Hidden(4, activation = MA.Tanh(), decorators = [dec.GlorotTanhInit()], regularizations = [MR.L1(0), MR.L2(0)])
 		o = ML.SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
 
 		mlp = i > h > o
@@ -84,8 +84,8 @@ class MLPTests(unittest.TestCase):
 		cost = MC.MeanSquaredError()
 
 		i = ML.Input(8, name = 'inp')
-		h = ML.Hidden(3, activation = MA.reLU, name = "hid", saveOutputs = True )
-		o = ML.Regression(8, activation = MA.reLU, learningScenario = ls, costObject = cost, name = "out" )
+		h = ML.Hidden(3, activation = MA.ReLU(), name = "hid", saveOutputs = True )
+		o = ML.Regression(8, activation = MA.ReLU(), learningScenario = ls, costObject = cost, name = "out" )
 
 		ae = i > h > o
 
@@ -103,8 +103,8 @@ class MLPTests(unittest.TestCase):
 		cost = MC.NegativeLogLikelihood()
 
 		inp = ML.Input(2, 'inp')
-		h1 = ML.Hidden(2, activation = MA.tanh, name = "h1")
-		h2 = ML.Hidden(2, activation = MA.tanh, name = "h2")
+		h1 = ML.Hidden(2, activation = MA.Tanh(), name = "h1")
+		h2 = ML.Hidden(2, activation = MA.Tanh(), name = "h2")
 		o = ML.SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
 		c = ML.Composite(name = "Comp")
 
