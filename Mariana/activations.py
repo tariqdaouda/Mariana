@@ -58,6 +58,7 @@ class ReLU(Activation_ABC):
 
 class Softmax(Activation_ABC):
 	"""Softmax to get a probabilistic output
+	
 	.. math::
 
 		exp(x_i/T)/ sum_k( exp(x_k/T) )
