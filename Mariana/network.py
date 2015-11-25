@@ -197,6 +197,10 @@ class Network(object) :
 		f.write(self.toDOT(name, forceInit))
 		f.close()
 
+	def __getitem__(self, l) :
+		"""get a layer by name"""
+		return self.layers[l]
+
 	def __repr__(self) :
 		return "<Net (%s layers): %s > ... > [%s]>" % (len(self.layers), self.inputs.keys(), self.outputs.keys())
 

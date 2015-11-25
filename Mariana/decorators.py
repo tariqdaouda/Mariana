@@ -76,7 +76,7 @@ class GlorotTanhInit(Decorator_ABC) :
 				)
 
 class ZerosInit(Decorator_ABC) :
-	"""Initiales the weights at zeros"""
+	"""Initialze the weights at zeros"""
 	def __init__(self, *args, **kwargs) :
 		Decorator_ABC.__init__(self, *args, **kwargs)
 
@@ -85,6 +85,19 @@ class ZerosInit(Decorator_ABC) :
 					(layer.nbInputs, layer.nbOutputs),
 					dtype = theano.config.floatX
 				)
+
+class ValueInit(Decorator_ABC) :
+	"""Initialize the weights at a given value"""
+	def __init__(self, value, *args, **kwargs) :
+		Decorator_ABC.__init__(self, *args, **kwargs)
+		self.value = value
+		self.hyperParameters.append("value")
+
+	def decorate(self, layer) :
+		layer.W = numpy.zeros(
+					(layer.nbInputs, layer.nbOutputs),
+					dtype = theano.config.floatX
+				) + value
 
 class WeightSparsity(Decorator_ABC):
 	"""Stochatically sets a certain ratio of the input weight to 0"""

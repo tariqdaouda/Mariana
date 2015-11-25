@@ -345,26 +345,30 @@ class DefaultTrainer(Trainer_ABC) :
 				self.store["scores"][mapName][o.name] = "NA"
 
 		while True :
-			for mapName, aMap in self.maps.iteritems() :
-				if len(aMap) > 0 :
-					scores = {}
-					aMap.reroll()
-					if mapName == "train" :
-						modelFct = model.train
-					else :
-						modelFct = model.test
-					
-					scores = _trainTest(
-						aMap,
-						modelFct,
-						trainingOrder,
-						self.miniBatchSizes[mapName],
-						inputLayers,
-						outputLayers
-					)
-					for k, v in scores.iteritems() :
-						self.store["scores"][mapName][k] = v
-
+			for mapName in ["train", "test", "validation"] :#self.maps.iteritems() :
+				try :
+					aMap = self.maps[mapName]
+					if len(aMap) > 0 :
+						scores = {}
+						aMap.reroll()
+						if mapName == "train" :
+							modelFct = model.train
+						else :
+							modelFct = model.test
+						
+						scores = _trainTest(
+							aMap,
+							modelFct,
+							trainingOrder,
+							self.miniBatchSizes[mapName],
+							inputLayers,
+							outputLayers
+						)
+						for k, v in scores.iteritems() :
+							self.store["scores"][mapName][k] = v
+				except KeyError :
+					pass
+			
 			runtime = (time.time() - startTime)/60
 			self.store["runInfos"].update( (
 				("runtime(min)", runtime),
