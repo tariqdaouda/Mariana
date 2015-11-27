@@ -259,7 +259,6 @@ class DefaultTrainer(Trainer_ABC) :
 							layerList.append(output)
 							batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
 							res = modelFct(output, **batchData)
-
 							try :
 								scores[output.name].append(res[0])
 							except KeyError:
@@ -272,12 +271,12 @@ class DefaultTrainer(Trainer_ABC) :
 						for output in outputLayers :
 							layerList.append(output)
 							res = modelFct(output, **batchData)
-							
 							try :
 								scores[output.name].append(res[0])
 							except KeyError:
 								scores[output.name] = [res[0]]
 							layerList.pop(-1)
+				
 				elif trainingOrder == DefaultTrainer.RANDOM_PICK_TRAINING :
 					outputOrder = list(numpy.random.randint(0, len(outputLayers), len(aMap)/miniBatchSize +1))
 					for i in xrange(0, len(aMap), miniBatchSize):
@@ -345,26 +344,30 @@ class DefaultTrainer(Trainer_ABC) :
 				self.store["scores"][mapName][o.name] = "NA"
 
 		while True :
-			for mapName, aMap in self.maps.iteritems() :
-				if len(aMap) > 0 :
-					scores = {}
-					aMap.reroll()
-					if mapName == "train" :
-						modelFct = model.train
-					else :
-						modelFct = model.test
-					
-					scores = _trainTest(
-						aMap,
-						modelFct,
-						trainingOrder,
-						self.miniBatchSizes[mapName],
-						inputLayers,
-						outputLayers
-					)
-					for k, v in scores.iteritems() :
-						self.store["scores"][mapName][k] = v
-
+			for mapName in ["train", "test", "validation"] :#self.maps.iteritems() :
+				try :
+					aMap = self.maps[mapName]
+					if len(aMap) > 0 :
+						scores = {}
+						aMap.reroll()
+						if mapName == "train" :
+							modelFct = model.train
+						else :
+							modelFct = model.test
+						
+						scores = _trainTest(
+							aMap,
+							modelFct,
+							trainingOrder,
+							self.miniBatchSizes[mapName],
+							inputLayers,
+							outputLayers
+						)
+						for k, v in scores.iteritems() :
+							self.store["scores"][mapName][k] = v
+				except KeyError :
+					pass
+			
 			runtime = (time.time() - startTime)/60
 			self.store["runInfos"].update( (
 				("runtime(min)", runtime),

@@ -261,23 +261,37 @@ class Hidden(Layer_ABC) :
 	def _setOutputs(self) :
 		"""initialises weights and bias. By default weights are setup to random low values, use mariana decorators
 		to change this behaviour."""
+		from theano.tensor.var import TensorVariable
+		from theano.compile import SharedVariable
 
 		if self.W is None :
 			initWeights = numpy.random.random((self.nbInputs, self.nbOutputs))
 			initWeights = initWeights/sum(initWeights)
 			initWeights = numpy.asarray(initWeights, dtype=theano.config.floatX)
-
+			
 			self.W = theano.shared(value = initWeights, name = self.name + "_W")
-		else :
+		elif isinstance(self.W, SharedVariable) :
 			if self.W.get_value().shape != (self.nbInputs, self.nbOutputs) :
 				raise ValueError("weights have shape %s, but the layer has %s inputs and %s outputs" % (self.W.get_value().shape, self.nbInputs, self.nbOutputs))
+		elif isinstance(self.W, numpy.ndarray) :
+			if self.W.shape != (self.nbInputs, self.nbOutputs) :
+				raise ValueError("weights have shape %s, but the layer has %s inputs and %s outputs" % (self.W.shape, self.nbInputs, self.nbOutputs))
+			self.W = theano.shared(value = self.W, name = self.name + "_W")
+		else :
+			raise ValueError("Weights should be a numpy array or a theano SharedVariable, got: %s" % type(self.W))
 
 		if self.b is None :
 			initBias = numpy.zeros((self.nbOutputs,), dtype=theano.config.floatX)
 			self.b = theano.shared(value = initBias, name = self.name + "_b")
-		else :
+		elif isinstance(self.b, SharedVariable) :
 			if self.b.get_value().shape[0] != self.nbOutputs :
 				raise ValueError("bias has a length of %s, but there are %s outputs" % (self.b.get_value().shape[0], self.nbOutputs))
+		elif isinstance(self.b, numpy.ndarray) :
+			if self.b.shape != self.nbOutputs :
+				raise ValueError("bias has a length of %s, but there are %s outputs" % (self.b.shape[0], self.nbOutputs))
+			self.b = theano.shared(value = self.b, name = self.name + "_b")
+		else :
+			raise ValueError("Bias should be a numpy array or a theano SharedVariable, got: %s" % type(self.b))
 
 		# self.outputs = theano.printing.Print('this is a very important value for %s' % self.name)(self.activation(tt.dot(self.inputs, self.W) + self.b))
 		self.outputs = self.activation.function(tt.dot(self.inputs, self.W) + self.b)
