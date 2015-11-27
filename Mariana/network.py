@@ -17,7 +17,12 @@ class OutputMap(object):
 
 	def printGraph(self, outputLayer) :
 		"""Print the theano graph of the function associated with a given output"""
-		self.outputFcts[outputLayer].printGraph()
+		if type(outputLayer) is StringType :
+			ol = self.network[outputLayer]
+		else :
+			ol = outputLayer
+
+		self.outputFcts[ol].printGraph()
 
 	def addOutput(self, outputLayer, fct) :
 		self.outputFcts[outputLayer] = fct
@@ -205,7 +210,9 @@ class Network(object) :
 		return "<Net (%s layers): %s > ... > [%s]>" % (len(self.layers), self.inputs.keys(), self.outputs.keys())
 
 	def __getattribute__(self, k) :
-		"""All theano functions are accessible through the network interface network.x(). Here x is called a model function"""
+		"""
+		All theano functions are accessible through the network interface network.x(). Here x is called a model function.
+		"""
 		try :
 			return object.__getattribute__(self, k)
 		except AttributeError as e :

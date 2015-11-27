@@ -259,7 +259,6 @@ class DefaultTrainer(Trainer_ABC) :
 							layerList.append(output)
 							batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
 							res = modelFct(output, **batchData)
-
 							try :
 								scores[output.name].append(res[0])
 							except KeyError:
@@ -272,12 +271,12 @@ class DefaultTrainer(Trainer_ABC) :
 						for output in outputLayers :
 							layerList.append(output)
 							res = modelFct(output, **batchData)
-							
 							try :
 								scores[output.name].append(res[0])
 							except KeyError:
 								scores[output.name] = [res[0]]
 							layerList.pop(-1)
+				
 				elif trainingOrder == DefaultTrainer.RANDOM_PICK_TRAINING :
 					outputOrder = list(numpy.random.randint(0, len(outputLayers), len(aMap)/miniBatchSize +1))
 					for i in xrange(0, len(aMap), miniBatchSize):
