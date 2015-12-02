@@ -24,7 +24,7 @@ So in short:
 * very easy to use
 * great for Feed Forward nets (MLPs, Auto-Encoders, ...)
 * supports momentum
-* completely modular and extendable
+* completely modular and extendable, plug in your own activations, regularizations etc...
 * trainers can be used to encapsulate your training in a safe environement
 * oversampling is also taken care of
 * easily save your models and resume training
