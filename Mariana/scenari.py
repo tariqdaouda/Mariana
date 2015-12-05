@@ -28,17 +28,15 @@ class LearningScenario_ABC(object):
 class Fixed(LearningScenario_ABC):
 	"No learning, the layer weights stay fixed"
  	def __init__(self):
- 		super(LearningScenario_ABC, self).__init__()
- 		self.name = self.__class__.__name__
-
+ 		LearningScenario_ABC.__init__(self)
+ 		
  	def getUpdates(self, layer, cost) :
 		return []
 
 class GradientDescent(LearningScenario_ABC):
 	"The GradientDescent scenario has a fixed learning rate."
  	def __init__(self, lr):
- 		super(LearningScenario_ABC, self).__init__()
- 		self.name = self.__class__.__name__
+ 		LearningScenario_ABC.__init__(self)
  		self.lr = lr
  		self.hyperParameters = ["lr"]
 
@@ -53,8 +51,7 @@ class GradientDescent(LearningScenario_ABC):
 class MomentumGradientDescent(LearningScenario_ABC):
 	"The MomentumGradientDescent scenario has a fixed learning rate and a fixed momentum."
  	def __init__(self, lr, momentum):
- 		super(LearningScenario_ABC, self).__init__()
- 		self.name = self.__class__.__name__
+ 		LearningScenario_ABC.__init__(self)
  		self.lr = lr
  		self.momentum = momentum
  		self.hyperParameters = ["lr", "momentum"]
@@ -73,8 +70,7 @@ class MomentumGradientDescent(LearningScenario_ABC):
 class GradientFloor(LearningScenario_ABC):
 	"A gradient descent that only propagates the gradient if it's supperior to a floor value."
  	def __init__(self, lr, momentum, floor):
- 		super(LearningScenario_ABC, self).__init__()
- 		self.name = self.__class__.__name__
+ 		LearningScenario_ABC.__init__(self)
  		
  		self.lr = lr
  		self.momentum = momentum

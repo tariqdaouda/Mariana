@@ -50,7 +50,6 @@ class Trainer_ABC(object) :
 			sys.exit(sig)
 
 		def _dieGracefully(exType, tb = None) :
-			# traceback.print_tb(tb)
 			if type(exType) is types.StringType :
 				exName = exType
 			else :
@@ -293,15 +292,10 @@ class DefaultTrainer(Trainer_ABC) :
 				else :
 					raise ValueError("Unknown training order: %s" % trainingOrder)
 
-			if len(scores) > 1 :
-				for outputName in scores :
-					scores[outputName] = numpy.mean(scores[outputName])
-				
-				scores["average"] = numpy.mean(scores.values())
-			else :
-				for outputName in scores :
-					scores[outputName] = numpy.mean(scores[outputName])
-
+			for outputName in scores :
+				scores[outputName] = numpy.mean(scores[outputName])
+			scores["average"] = numpy.mean(scores.values())
+			
 			return scores
 
 		if trainingOrder not in self.trainingOrdersHR:
@@ -338,7 +332,7 @@ class DefaultTrainer(Trainer_ABC) :
 		outputLayers = model.outputs.values()
 
 		for mapName in self.maps :
-			self.store["setSizes"][mapName] = len(self.maps[mapName])
+			self.store["setSizes"][mapName] = self.maps[mapName].getMinFullLength()
 			self.store["scores"][mapName] = {}
 			for o in outputLayers :
 				self.store["scores"][mapName][o.name] = "NA"
@@ -349,7 +343,7 @@ class DefaultTrainer(Trainer_ABC) :
 					aMap = self.maps[mapName]
 					if len(aMap) > 0 :
 						scores = {}
-						aMap.reroll()
+						aMap.commit()
 						if mapName == "train" :
 							modelFct = model.train
 						else :
