@@ -15,22 +15,23 @@ Mariana provides an interface so simple and intuitive that writing models become
 Networks are graphs of connected layers and that allows for the craziest deepest architectures
 you can think of, as well as for a super light and clean interface.
 
-There's no need for an MLP or a Perceptron or an Auto-Encoder class,
+There's no need for an **MLP** or a **Perceptron** or an **Auto-Encoder** class,
 because if you know what these things are, you can turn one into the other in 2 seconds.
 
-So in short:
+In short:
 
-* no YAML
-* very easy to use
-* great for Feed Forward nets (MLPs, Auto-Encoders, ...)
-* supports momentum
-* completely modular and extendable, plug in your own activations, regularizations etc...
-* trainers can be used to encapsulate your training in a safe environement
-* oversampling is also taken care of
-* easily save your models and resume training
-* export you models into HTML or DOT for easy visualization and debuging
-* free your imagination and experiment
-* no requirements concerning the format of the datasets
+* No YAML
+* Very easy to use
+* Work with high level machine learning abstractions (layers, activations, regularizations, ....) 
+* Great for Feed Forward nets (MLPs, Auto-Encoders, ...)
+* Supports momentum
+* Completely modular and extendable, plug in your own activations, regularizations etc...
+* Trainers can be used to encapsulate your training in a safe environement
+* Oversampling is also taken care of
+* Easily save your models and resume training
+* Export you models into HTML or DOT for easy visualization and debuging
+* Free your imagination and experiment
+* No requirements concerning the format of the datasets
 
 A word about the **'>'**
 ======================
