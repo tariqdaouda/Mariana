@@ -33,8 +33,13 @@ In short:
 * Free your imagination and experiment
 * No requirements concerning the format of the datasets
 
+Disclaimer
+-----------
+
+Mariana is in active developpement, I use it every day and bugs tend to be corrected very quickly. ConvNets and RNNs are planned but not supported yet.
+
 A word about the **'>'**
-======================
+=========================
 
 When communicating about neural networks people often draw sets of connected layers. That's the idea behind Mariana: layers are first defined, then connected using the **'>'** operator.
 
