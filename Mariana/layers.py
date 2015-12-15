@@ -240,6 +240,7 @@ class Composite(Layer_ABC):
 	def _setOutputs(self) :
 		self.nbOutputs = self.nbInputs
 		self.outputs = tt.concatenate( [l.outputs for l in self.feededBy.itervalues()], axis = 1 )
+		self.test_outputs = tt.concatenate( [l.test_outputs for l in self.feededBy.itervalues()], axis = 1 )
 
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=tripleoctogon]' % (self.name, self.nbOutputs)

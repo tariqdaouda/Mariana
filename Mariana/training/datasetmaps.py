@@ -212,6 +212,7 @@ class ClassSets(Dataset_ABC) :
 				self.subsets["input"][start : end] = v
 			else :
 				subIndexes = numpy.random.randint(0, len(v), self.sampleSize)
+				#print subIndexes
 				self.subsets["input"][start : end] = v[subIndexes]
 
 			self.subsets["classNumber"][start : end] = self.classNumbers[k]
@@ -265,7 +266,9 @@ class DatasetMapper(object):
 
 	def commit(self) :
 		"""internally shuffle subsets periodically according to reroll frequency. This is called once by the trainer at each epoch"""
-		if self.rerollFreq and self.commitNumber%self.rerollFreq == 0 :
+		if self.rerollFreq is None or self.commitNumber%self.rerollFreq == 0 :
+			if self.rerollFreq is None :
+				self.rerollFreq = -1
 			self.reroll()
 
 		self.commitNumber += 1
