@@ -294,7 +294,8 @@ class DefaultTrainer(Trainer_ABC) :
 
 			for outputName in scores :
 				scores[outputName] = numpy.mean(scores[outputName])
-			scores["average"] = numpy.mean(scores.values())
+			if len(scores) > 1 :
+				scores["average"] = numpy.mean(scores.values())
 			
 			return scores
 
