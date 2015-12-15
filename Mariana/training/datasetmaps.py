@@ -40,6 +40,10 @@ class Dataset_ABC(object) :
 		"""returns a DatasetHandle(self, subset)"""
 		raise NotImplemented("Should be implemented in child")
 
+	def getFullLength(self) :
+		"""returns the total number of examples"""
+		raise NotImplemented("Should be implemented in child")
+
 	def __len__(self) :
 		raise NotImplemented("Should be implemented in child")
 
@@ -89,6 +93,10 @@ class Series(Dataset_ABC) :
 			return DatasetHandle(self, subset)
 		return None
 
+	def getFullLength(self) :
+		"""returns the total number of examples"""
+		return len(self)
+
 	def __len__(self) :
 		return self.length
 
@@ -124,19 +132,16 @@ class ClassSets(Dataset_ABC) :
 		* .onehot, onehot representation of classes
 
 		"""
-	def __init__(self, sets, sampleSize) :
+
+	def __init__(self, sets) :
 		"""
 		Expects arguments in the following form::
 		
-				trainSet = ClassSets( sets = [ ('cars', train_set[0]), ('bikes', train_set[1]), sampleSize=len(train_set[1]) ] )
+				trainSet = ClassSets( sets = [ ('cars', train_set[0]), ('bikes', train_set[1]) ] )
 		"""
 
 		self.classSets = OrderedDict()
 		
-		self.sampleSize = sampleSize
-		# self.minLength = float('inf')
-		# self.maxLength = 0
-		# self.totalLength = 0
 		self.inputSize = 0
 		for k, v in sets :
 			self.classSets[k] = numpy.asarray(v)
@@ -153,24 +158,38 @@ class ClassSets(Dataset_ABC) :
 			elif self.inputSize != inputSize :
 				raise ValueError("All class elements must have the same size. Got '%s', while the previous value was '%s'" % ( len(v[0]), self.inputSize ))
 				
-		# if self.minLength < 2 :
-		# 	raise ValueError('All class sets must have at least two elements')
-
 		self.classNumbers = {}
 		self.onehots = {}
+		self.nbElements = 0
 		i = 0
 		for k, v in self.classSets.iteritems() :
-			# length = len(v)
-			# if length < self.minLength :
-				# self.minLength = length
-			# if self.maxLength < length :
-				# self.maxLength = length
-			# self.totalLength += length
-			
+			self.nbElements += len(v)
 			self.classNumbers[k] = i
 			self.onehots[k] = numpy.zeros(len(self.classSets))
 			self.onehots[k][i] = 1
 			i += 1
+
+		self.samplingStrategy = None
+		self.subsets = {
+			"input" : None,
+			"classNumber" : None,
+			"onehot" : None
+		}
+
+	def setSampling(self, strategy, arg) :
+		"""Set the sampling strategy::
+
+		* strategy='all_random', arg = k(int). Full data will be made of a random sampling(with replacement) of k elements for each class
+		* strategy='filling', arg = n(str). The totality of the elements of every class that has as much elements as card(n) will be always present.
+		Elements from other classes will be integrated using a random samplings of card(n) elements with replacements.
+		"""
+		if strategy == "all_random" :
+			assert arg is not None
+			self.sampleSize = arg
+		elif strategy == "filling" :
+			self.sampleSize = len(self.classSets[arg])
+		else:
+			raise ValueError("Unkown sampling strategy")
 
 		subsetSize = self.sampleSize * len(self.classSets)
 		self.subsets = {
@@ -178,16 +197,24 @@ class ClassSets(Dataset_ABC) :
 			"classNumber" : numpy.zeros(subsetSize),
 			"onehot" : numpy.zeros( (subsetSize, len(self.classSets)) )
 		}
-
-		self._mustReroll = True
+	
+		self.samplingStrategy = strategy
 
 	def reroll(self) :
-		"""shuffle subsets"""
+		"""internally shuffle subsets"""
+		if self.samplingStrategy is None :
+			AttributeError("Please use setSampling() to setup a sampling strategy first")
+
 		start = 0
 		for k, v in self.classSets.iteritems() :
 			end = start+self.sampleSize
-			subIndexes = numpy.random.randint(0, len(v), self.sampleSize)
-			self.subsets["input"][start : end] = v[subIndexes]
+			if self.samplingStrategy == "filling" and len(v) == self.sampleSize :
+				self.subsets["input"][start : end] = v
+			else :
+				subIndexes = numpy.random.randint(0, len(v), self.sampleSize)
+				#print subIndexes
+				self.subsets["input"][start : end] = v[subIndexes]
+
 			self.subsets["classNumber"][start : end] = self.classNumbers[k]
 			self.subsets["onehot"][start : end] = self.onehots[k]
 			start = end
@@ -197,20 +224,12 @@ class ClassSets(Dataset_ABC) :
 		for k in self.subsets :
 			self.subsets[k] = self.subsets[k][indexes]
 
-		self._mustReroll = False
-
 	def get(self, subset, i, size) :
 		"""Returns n element from a subset, starting from position i"""
-		if self._mustReroll :
-			self.reroll()
-
 		return self.subsets[subset][i:i+size]
 
 	def getAll(self, subset) :
 		"""return all the elements from a subset. Oversampled of course if necessary"""
-		if self._mustReroll :
-			self.reroll()
-
 		return self.subsets[subset]
 
 	def getHandle(self, subset) :
@@ -218,8 +237,11 @@ class ClassSets(Dataset_ABC) :
 		if subset in self.subsets :
 			return DatasetHandle(self, subset)
 
+	def getFullLength(self) :
+		"""returns the total number of examples"""
+		return self.nbElements
+
 	def __len__(self) :
-		"""size of the smallest set X number of sets"""
 		return self.sampleSize * len(self.classSets)
 
 class DatasetMapper(object):
@@ -233,6 +255,23 @@ class DatasetMapper(object):
 		self.inputLayers = []
 		self.outputLayers = []
 		self.minLength = float('inf')
+		self.minFullLength = float('inf')
+
+		self.commitNumber = 0
+		self.rerollFreq = None
+
+	def setRerollFrequency(self, freq) :
+		"""How many epochs before internally shuffling the subsets). Freq=10 means 1 reroll each 10 commits. Use a None to prevent rerolls"""
+		self.rerollFreq = freq
+
+	def commit(self) :
+		"""internally shuffle subsets periodically according to reroll frequency. This is called once by the trainer at each epoch"""
+		if self.rerollFreq is None or self.commitNumber%self.rerollFreq == 0 :
+			if self.rerollFreq is None :
+				self.rerollFreq = -1
+			self.reroll()
+
+		self.commitNumber += 1
 
 	def mapInput(self, layer, setHandle) :
 		"""
@@ -251,7 +290,9 @@ class DatasetMapper(object):
 
 		self.datasets.add(setHandle.dataset)
 		if len(setHandle.dataset) < self.minLength : 
-			self.minLength = len(setHandle.dataset)
+			self.minLength = len(setHandle.dataset)	
+		if setHandle.dataset.getFullLength() < self.minFullLength : 
+			self.minFullLength = setHandle.dataset.getFullLength()
 
 	def mapOutput(self, layer, setHandle, inputName = 'targets') :
 		"""
@@ -281,6 +322,8 @@ class DatasetMapper(object):
 		self.datasets.add(setHandle.dataset)
 		if len(setHandle.dataset) < self.minLength : 
 			self.minLength = len(setHandle.dataset)
+		if setHandle.dataset.getFullLength() < self.minFullLength : 
+			self.minFullLength = setHandle.dataset.getFullLength()
 
 	def reroll(self) :
 		"""rerolls all datasets"""
@@ -329,6 +372,9 @@ class DatasetMapper(object):
 					res[name] = handle.dataset.getAll(handle.subset)
 
 		return res
+
+	def getMinFullLength(self) :
+		return self.minFullLength
 
 	def __len__(self) :
 		return self.minLength

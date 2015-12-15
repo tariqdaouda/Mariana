@@ -39,6 +39,9 @@ class GGPlot2(Recorder_ABC):
 		self.printRate = printRate
 		self.writeRate = writeRate
 
+	def getBestModelFilename(self, outputName, theSet) :
+		return "best-%s-%s-%s" % (outputName, theSet, self.filename)
+
 	def commit(self, store, model) :
 		"""Appends the current state of the store to the CSV. This one is meant to be called by the trainer"""
 		def _fillLine(csvFile, score, bestScore, setName, setLen, outputName, **csvValues) :
@@ -69,7 +72,7 @@ class GGPlot2(Recorder_ABC):
 				self.currentScores[theSet][outputName] = score
 				if outputName not in self.bestScores[theSet] or score < self.bestScores[theSet][outputName][0] :
 					self.bestScores[theSet][outputName] = (score, self.length)
-					model.save("best-%s-%s-%s" % (outputName, theSet, self.filename))
+					model.save(self.getBestModelFilename(outputName, theSet))
 
 				muchData = store["hyperParameters"]
 				muchData.update(store["runInfos"]) 
@@ -104,6 +107,13 @@ class GGPlot2(Recorder_ABC):
 			print "==>rec: ggplot2, nothing to show yet"
 		
 		sys.stdout.flush()
+
+	def getBestModel(self, outputName, theSet) :
+		import cPickle
+		f = open(self.getBestModelFilename(outputName, theSet)+".mariana.pkl")
+		model = cPickle.load(f)
+		f.close()
+		return model
 
 	def __len__(self) :
 		"""returns the number of commits performed"""
