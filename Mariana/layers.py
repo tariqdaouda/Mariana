@@ -15,6 +15,7 @@ import Mariana.wrappers as MWRAP
 
 __all__ = ["Layer_ABC", "Output_ABC", "Classifier_ABC", "Input", "Hidden", "Composite", "SoftmaxClassifier", "Regression", "Autoencode"]
 
+TYPE_UNDEF_LAYER = -1
 TYPE_INPUT_LAYER = 0
 TYPE_OUTPUT_LAYER = 1
 TYPE_HIDDEN_LAYER = 1
@@ -24,14 +25,25 @@ class Layer_ABC(object) :
 
 	__metaclass__ = ABCMeta
 
-	def __init__(self, size, saveOutputs = MSET.SAVE_OUTPUTS_DEFAULT, decorators = [], name = None) :
+	def __init__(self,
+		size,
+		saveOutputs=MSET.SAVE_OUTPUTS_DEFAULT,
+		decorators=[],
+		name=None,
+		activation=None,
+		learningScenario=None,
+		**kwrags
+	) :
 
 		if name is not None :
 			self.name = name
 		else :
 			self.name = "%s_%s" %(self.__class__.__name__, numpy.random.random())
 
-		self.type = "no-type-defined"
+		self.activation = activation
+		self.learningScenario = learningScenario
+
+		self.type = TYPE_UNDEF_LAYER 
 
 		self.nbInputs = None
 		self.inputs = None
@@ -64,6 +76,11 @@ class Layer_ABC(object) :
 	def getParams(self) :
 		"""returns the layer parameters"""
 		raise NotImplemented("Should be implemented in child")
+
+	def getSubtensorParams(self) :
+		"""theano has a special optimisation for when you want to update just a subset of a tensor (matrix). Use this function to return a List
+		of tuples: (tensor, subset). By default it returns an empty list"""
+		return []
 
 	def clone(self, **kwargs) :
 		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
@@ -122,8 +139,8 @@ class Layer_ABC(object) :
 				me.network.merge(me, layer)
 			layer.network = me.network
 
-		if self.network is None :
-			self.network = MNET.Network(self)
+		# if self.network is None :
+			# self.network = MNET.Network(self)
 
 		if type(layerOrList) is ListType :
 			raise NotImplemented("List as argument is deprecated")
@@ -188,6 +205,43 @@ class Layer_ABC(object) :
 
 		object.__setattr__(self, k, v)
 
+#work in progress
+class Embedding(Layer_ABC) :
+	"""This layer will take care of creating the embedding and training it. Give it the indexes of the elements as inputs"""
+
+	def __init__(self, size, nbDimentions, nbElements, name = None, **kwargs) :
+		Layer_ABC.__init__(self, size, name = name, **kwargs)
+		self.network = MNET.Network()
+		self.network.addInput(self)
+		
+		self.type = TYPE_INPUT_LAYER
+		self.nbInputs = size
+
+		self.nbElements = nbElements
+		self.nbDimentions = nbDimentions
+		initEmb = numpy.asarray(numpy.random.randn(self.nbDimentions, self.nbElements), dtype=theano.config.floatX)
+		
+		self.embedding = theano.shared(initEmb)		
+		self.inputs = tt.ivector()
+	
+	def _setOutputs(self) :
+		self.outputs = self.embedding[self.inputs]
+		self.test_outputs = self.embedding[self.inputs]
+		for reg in self.regularizationObjects :
+			self.regularizations.append(reg.getFormula(self))
+		self._decorate()
+
+	def getParams(self) :
+		"""returns nothing"""
+		return []
+
+	def getSubtensorParams(self) :
+		"""returns the subset corresponding to the embedding"""
+		return [(self.embedding, self.outputs)]
+
+	def _dot_representation(self) :
+		return '[label="%s: %s" shape=invhouse]' % (self.name, self.nbOutputs)
+
 class Input(Layer_ABC) :
 	"An input layer"
 	def __init__(self, size, name = None, **kwargs) :
@@ -248,16 +302,21 @@ class Composite(Layer_ABC):
 class Hidden(Layer_ABC) :
 	"A hidden layer"
 	def __init__(self, size, activation = MA.ReLU(), learningScenario = None, name = None, regularizations = [], **kwargs) :
-		Layer_ABC.__init__(self, size, name = name, **kwargs)
+		Layer_ABC.__init__(self,
+			size,
+			activation=activation,
+			learningScenario=learningScenario,
+			name=name,
+			**kwargs
+		)
 		self.W = None
 		self.b = None
 
-		self.type = TYPE_HIDDEN_LAYER
-		self.activation = activation
-		self.learningScenario = learningScenario
-
 		self.regularizationObjects = regularizations
 		self.regularizations = []
+
+		self.type = TYPE_HIDDEN_LAYER
+		
 
 	def _setOutputs(self) :
 		"""initialises weights and bias. By default weights are setup to random low values, use mariana decorators
@@ -266,7 +325,7 @@ class Hidden(Layer_ABC) :
 		from theano.compile import SharedVariable
 
 		if self.W is None :
-			initWeights = numpy.random.random((self.nbInputs, self.nbOutputs))
+			initWeights = numpy.random.randn(self.nbInputs, self.nbOutputs)
 			initWeights = initWeights/sum(initWeights)
 			initWeights = numpy.asarray(initWeights, dtype=theano.config.floatX)
 			
@@ -478,7 +537,6 @@ class Autoencode(Output_ABC) :
 	def _dot_representation(self) :
 		return '[label="%s: AE(%s)" shape=circle]' % (self.name, self.layer.name)
 
-#work in progress
 # class Convolution2D(Hidden) :
 
 # 	def __init__(self, nbMaps, height, width, *theanoArgs, **theanoKwArgs) :
