@@ -5,8 +5,6 @@ import sys
 import Mariana.candies as MCAN
 import Mariana.settings as MSET
 
-TYPE_TEST = 'test'
-TYPE_TRAIN = 'train'
 DEVICE_IS_GPU = (theano.config.device.find("gpu") > -1)
 
 class TheanoFunction(object) :
@@ -17,7 +15,7 @@ class TheanoFunction(object) :
 	error messages.
 	"""
 
-	def __init__(self, name, applicationType, outputLayer, output_expressions, additional_input_expressions = {}, updates = [], **kwargs) :
+	def __init__(self, name, outputLayer, output_expressions, additional_input_expressions = {}, updates = [], **kwargs) :
 		"""
 		:param str name: name of the function
 		:param Output outputLayer: the output layer the function should be applied to
@@ -30,17 +28,11 @@ class TheanoFunction(object) :
 
 		self.name = name
 		self.outputLayer = outputLayer
-		self.applicationType = applicationType.lower()
 
 		self.inputs = OrderedDict()
 		inpSet = set()
 		for inp in self.outputLayer.network.inputs.itervalues() :
-			if self.applicationType == TYPE_TEST :
-				inpOut = inp.test_outputs
-			elif self.applicationType == TYPE_TRAIN :
-				inpOut = inp.outputs
-			else :
-				raise AttributeError('Unknow applicationType %s' % applicationType)
+			inpOut = inp.inputs
 
 			if inpOut not in inpSet :
 				self.inputs[inp.name] = inpOut
@@ -53,20 +45,21 @@ class TheanoFunction(object) :
 
 		self.fctInputs = OrderedDict()
 		for i in self.inputs :
-				self.fctInputs[i] = None
+			self.fctInputs[i] = None
 
 		self.additional_input_expressions = additional_input_expressions
 		self.outputs = output_expressions
 		self.updates = updates
 
+
 		self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs, updates = self.updates, **kwargs)
 
-		if theano.config.device.find("gpu") > -1:
+		if DEVICE_IS_GPU > -1:
 			device = "GPU"
 		else:
 			device = "CPU"
 
-		MCAN.friendly("Run device", "I will use the [-%s-] to run the *%s* type function '%s' of layer '%s'!" % (device, self.applicationType, name, outputLayer.name))
+		MCAN.friendly("Run device", "I will use the [-%s-] to run function '%s' of layer '%s'!" % (device, name, outputLayer.name))
 
 	def printGraph(self) :
 		"""Print the theano graph of the function"""

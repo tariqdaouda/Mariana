@@ -43,7 +43,7 @@ class MLPTests(unittest.TestCase):
 
 		return mlp
 
-	@unittest.skip("skipping")
+	# @unittest.skip("skipping")
 	def test_xor(self) :
 		mlp = self.trainMLP_xor()
 		o = mlp.outputs.values()[0]
@@ -53,7 +53,7 @@ class MLPTests(unittest.TestCase):
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[3] ] )[0], 0 )
 
-	@unittest.skip("skipping")
+	# @unittest.skip("skipping")
 	def test_save_load(self) :
 		import cPickle, os
 
@@ -71,7 +71,6 @@ class MLPTests(unittest.TestCase):
 
 	# @unittest.skip("skipping")
 	def test_ae(self) :
-		miniBatchSize = 1
 
 		data = []
 		for i in xrange(8) :
@@ -89,17 +88,16 @@ class MLPTests(unittest.TestCase):
 
 		ae = i > h > o
 
+		miniBatchSize = 2
 		for e in xrange(2000) :
 			for i in xrange(0, len(data), miniBatchSize) :
-				print i, ae.train(o, inp = data[i:i+miniBatchSize], targets = data[i:i+miniBatchSize] )
+				ae.train(o, inp = data[i:i+miniBatchSize], targets = data[i:i+miniBatchSize] )
 
 		res = ae.propagate(o, inp = data)[0]
-		# print data
-		# print res
 		for i in xrange(len(res)) :
 			self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
 
-	@unittest.skip("skipping")
+	# @unittest.skip("skipping")
 	def test_composite(self) :
 		ls = MS.GradientDescent(lr = 0.1)
 		cost = MC.NegativeLogLikelihood()
@@ -125,16 +123,28 @@ class MLPTests(unittest.TestCase):
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[3] ] )[0], 0 )
 
-	@unittest.skip("skipping")
+	# @unittest.skip("skipping")
 	def test_embedding(self) :
+		"""the first 3 and the last 3 should be diametrically opposed"""
 		data = [0, 1, 2, 3, 4, 5]
+		targets = [0, 0, 0, 1, 1, 1]
 
-		ls = MS.GradientDescent(lr = 0.1)
+		ls = MS.GradientDescent(lr = 0.5)
 		cost = MC.NegativeLogLikelihood()
 
-		emd = ML.Embedding(2, 2, len(data), learningScenario = ls)
+		emb = ML.Embedding(2, 2, len(data), learningScenario = ls, name="emb")
 		o = ML.SoftmaxClassifier(2, learningScenario = MS.Fixed(), costObject = cost, name = "out")
-		net = emd > o
+		net = emb > o
+		
+		miniBatchSize = 2
+		for i in xrange(2000) :
+			for i in xrange(0, len(data), miniBatchSize) :
+				net.train(o, emb=data[i:i+miniBatchSize], targets=targets[i:i+miniBatchSize])
+
+		embeddings = emb.getEmbeddings()
+		for i in xrange(0, len(data)/2) :
+			v = numpy.dot(embeddings[i], embeddings[i+len(data)/2])
+			self.assertTrue(v < 1)
 
 if __name__ == '__main__' :
 	import Mariana.settings as MSET
