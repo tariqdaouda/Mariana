@@ -212,14 +212,16 @@ class Embedding(Layer_ABC) :
 		self.network.addInput(self)
 		
 		self.type = TYPE_INPUT_LAYER
-		self.nbInputs = size
-
 		self.nbElements = nbElements
 		self.nbDimentions = nbDimentions
+		
+		self.nbInputs = size
+		self.nbOutputs = self.nbDimentions*self.nbInputs
+		
 		initEmb = numpy.asarray(numpy.random.random((self.nbElements, self.nbDimentions)), dtype=theano.config.floatX)
 		
 		self.embeddings = theano.shared(initEmb)		
-		self.inputs = tt.ivector()
+		self.inputs = tt.imatrix()
 	
 	def getEmbeddings(self, idxs = None) :
 		"""returns the embeddings.
@@ -230,8 +232,8 @@ class Embedding(Layer_ABC) :
 		return self.embeddings.get_value()
 
 	def _setOutputs(self) :
-		self.outputs = self.embeddings[self.inputs]
-		self.test_outputs = self.embeddings[self.inputs]
+		self.outputs = self.embeddings[self.inputs].reshape((self.inputs.shape[0], self.nbOutputs))
+		self.test_outputs = self.embeddings[self.inputs].reshape((self.inputs.shape[0], self.nbOutputs))
 		self._decorate()
 
 	def getParams(self) :
