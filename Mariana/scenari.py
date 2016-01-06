@@ -45,6 +45,11 @@ class GradientDescent(LearningScenario_ABC):
 		for param in layer.getParams() :
 			gparam = tt.grad(cost, param)
  			updates.append((param, param - self.lr * gparam))
+ 		
+ 		for param, subtensor in layer.getSubtensorParams() :
+ 			gsub = tt.grad(cost, subtensor)
+			update = (param, tt.inc_subtensor(subtensor, -self.lr * gsub))
+ 			updates.append(update)
 
 		return updates
 
@@ -58,12 +63,11 @@ class MomentumGradientDescent(LearningScenario_ABC):
 
  	def getUpdates(self, layer, cost) :
  		updates = []
- 		if self.lr > 0 :
-	 		for param in layer.getParams() :
-	 			gparam = tt.grad(cost, param)
-		 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
-				updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
-				updates.append((param, param - self.lr * momentum_param))
+ 		for param in layer.getParams() :
+ 			gparam = tt.grad(cost, param)
+	 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
+			updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
+			updates.append((param, param - self.lr * momentum_param))
 
 		return updates
 

@@ -130,6 +130,7 @@ class Network(object) :
 	
 			for l in self.layers.itervalues() :
 				self.params.extend(l.getParams())
+				self.params.extend(l.getSubtensorParams())
 
 			for o in self.outputs.itervalues() :
 				o._setTheanoFunctions()

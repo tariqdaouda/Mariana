@@ -15,6 +15,7 @@ import Mariana.wrappers as MWRAP
 
 __all__ = ["Layer_ABC", "Output_ABC", "Classifier_ABC", "Input", "Hidden", "Composite", "SoftmaxClassifier", "Regression", "Autoencode"]
 
+TYPE_UNDEF_LAYER = -1
 TYPE_INPUT_LAYER = 0
 TYPE_OUTPUT_LAYER = 1
 TYPE_HIDDEN_LAYER = 1
@@ -24,14 +25,25 @@ class Layer_ABC(object) :
 
 	__metaclass__ = ABCMeta
 
-	def __init__(self, size, saveOutputs = MSET.SAVE_OUTPUTS_DEFAULT, decorators = [], name = None) :
+	def __init__(self,
+		size,
+		saveOutputs=MSET.SAVE_OUTPUTS_DEFAULT,
+		decorators=[],
+		name=None,
+		activation=None,
+		learningScenario=None,
+		**kwrags
+	) :
 
 		if name is not None :
 			self.name = name
 		else :
 			self.name = "%s_%s" %(self.__class__.__name__, numpy.random.random())
 
-		self.type = "no-type-defined"
+		self.activation = activation
+		self.learningScenario = learningScenario
+
+		self.type = TYPE_UNDEF_LAYER 
 
 		self.nbInputs = None
 		self.inputs = None
@@ -64,6 +76,11 @@ class Layer_ABC(object) :
 	def getParams(self) :
 		"""returns the layer parameters"""
 		raise NotImplemented("Should be implemented in child")
+
+	def getSubtensorParams(self) :
+		"""theano has a special optimisation for when you want to update just a subset of a tensor (matrix). Use this function to return a List
+		of tuples: (tensor, subset). By default it returns an empty list"""
+		return []
 
 	def clone(self, **kwargs) :
 		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
@@ -121,9 +138,6 @@ class Layer_ABC(object) :
 			if layer.network is not None :
 				me.network.merge(me, layer)
 			layer.network = me.network
-
-		if self.network is None :
-			self.network = MNET.Network(self)
 
 		if type(layerOrList) is ListType :
 			raise NotImplemented("List as argument is deprecated")
@@ -188,6 +202,51 @@ class Layer_ABC(object) :
 
 		object.__setattr__(self, k, v)
 
+class Embedding(Layer_ABC) :
+	"""This input layer will take care of creating the embeddings and training them. Embeddings are learned representations
+	of the inputs that are much loved in NLP."""
+
+	def __init__(self, size, nbDimentions, nbElements, name = None, **kwargs) :
+		Layer_ABC.__init__(self, size, name = name, **kwargs)
+		self.network = MNET.Network()
+		self.network.addInput(self)
+		
+		self.type = TYPE_INPUT_LAYER
+		self.nbElements = nbElements
+		self.nbDimentions = nbDimentions
+		
+		self.nbInputs = size
+		self.nbOutputs = self.nbDimentions*self.nbInputs
+		
+		initEmb = numpy.asarray(numpy.random.random((self.nbElements, self.nbDimentions)), dtype=theano.config.floatX)
+		
+		self.embeddings = theano.shared(initEmb)		
+		self.inputs = tt.imatrix()
+	
+	def getEmbeddings(self, idxs = None) :
+		"""returns the embeddings.
+		:param list idxs: if provided will return the embeddings only for those indexes 
+		"""
+		if idxs :
+			return self.embeddings.get_value()[idxs]
+		return self.embeddings.get_value()
+
+	def _setOutputs(self) :
+		self.outputs = self.embeddings[self.inputs].reshape((self.inputs.shape[0], self.nbOutputs))
+		self.test_outputs = self.embeddings[self.inputs].reshape((self.inputs.shape[0], self.nbOutputs))
+		self._decorate()
+
+	def getParams(self) :
+		"""returns nothing"""
+		return []
+
+	def getSubtensorParams(self) :
+		"""returns the subset corresponding to the embedding"""
+		return [(self.embeddings, self.outputs)]
+
+	def _dot_representation(self) :
+		return '[label="%s: %s" shape=invhouse]' % (self.name, self.nbOutputs)
+
 class Input(Layer_ABC) :
 	"An input layer"
 	def __init__(self, size, name = None, **kwargs) :
@@ -198,14 +257,16 @@ class Input(Layer_ABC) :
 		self.network = MNET.Network()
 		self.network.addInput(self)
 
+		self.inputs = tt.matrix(name = self.name)
+		
 	def getParams(self) :
 		"""return nothing"""
 		return []
 
 	def _setOutputs(self) :
 		"initialises the output to be the same as the inputs"
-		self.outputs = tt.matrix(name = self.name)
-		self.test_outputs = tt.matrix(name = self.name)
+		self.outputs = self.inputs
+		self.test_outputs = self.inputs
 		self._decorate()
 
 	def _dot_representation(self) :
@@ -248,16 +309,21 @@ class Composite(Layer_ABC):
 class Hidden(Layer_ABC) :
 	"A hidden layer"
 	def __init__(self, size, activation = MA.ReLU(), learningScenario = None, name = None, regularizations = [], **kwargs) :
-		Layer_ABC.__init__(self, size, name = name, **kwargs)
+		Layer_ABC.__init__(self,
+			size,
+			activation=activation,
+			learningScenario=learningScenario,
+			name=name,
+			**kwargs
+		)
 		self.W = None
 		self.b = None
 
-		self.type = TYPE_HIDDEN_LAYER
-		self.activation = activation
-		self.learningScenario = learningScenario
-
 		self.regularizationObjects = regularizations
 		self.regularizations = []
+
+		self.type = TYPE_HIDDEN_LAYER
+		
 
 	def _setOutputs(self) :
 		"""initialises weights and bias. By default weights are setup to random low values, use mariana decorators
@@ -344,7 +410,6 @@ class Output_ABC(Hidden) :
 		"""
 
 	def __init__(self, size, activation, learningScenario, costObject, name = None, **kwargs) :
-
 		Hidden.__init__(self, size, activation = activation, name = name, **kwargs)
 		self.type = TYPE_OUTPUT_LAYER
 		self.targets = None
@@ -384,8 +449,11 @@ class Output_ABC(Hidden) :
 
 		for l in self.dependencies.itervalues() :
 			if l.__class__  is not Composite :
-				for reg in l.regularizations :
-					self.cost += reg
+				try :
+					for reg in l.regularizations :
+						self.cost += reg
+				except AttributeError :
+					pass
 
 		self.updates = self.learningScenario.getUpdates(self, self.cost)
 
@@ -401,9 +469,9 @@ class Output_ABC(Hidden) :
 				self.updates.append( (l.last_outputs, l.outputs ) )
 				self.updates_lastOutputs.append( (l.last_outputs, l.test_outputs ) )
 
-		self.train = MWRAP.TheanoFunction("train", MWRAP.TYPE_TRAIN, self, [self.cost], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
-		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [self.test_cost], { "targets" : self.test_targets }, updates = self.updates_lastOutputs, allow_input_downcast=True)
-		self.propagate = MWRAP.TheanoFunction("propagate", MWRAP.TYPE_TEST, self, [self.test_outputs], updates = self.updates_lastOutputs, allow_input_downcast=True)
+		self.train = MWRAP.TheanoFunction("train", self, [self.cost], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
+		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], { "targets" : self.test_targets }, updates = self.updates_lastOutputs, allow_input_downcast=True)
+		self.propagate = MWRAP.TheanoFunction("propagate", self, [self.test_outputs], updates = self.updates_lastOutputs, allow_input_downcast=True)
 
 		self.setCustomTheanoFunctions()
 
@@ -444,7 +512,7 @@ class SoftmaxClassifier(Classifier_ABC) :
 
 	def setCustomTheanoFunctions(self) :
 		"""defined theano_classify, that returns the argmax of the output"""
-		self.classify = MWRAP.TheanoFunction("classify", MWRAP.TYPE_TEST, self, [ tt.argmax(self.test_outputs) ], updates = self.updates_lastOutputs)
+		self.classify = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.test_outputs) ], updates = self.updates_lastOutputs)
 
 	def _dot_representation(self) :
 		return '[label="SoftM %s: %s" shape=doublecircle]' % (self.name, self.nbOutputs)
@@ -472,13 +540,12 @@ class Autoencode(Output_ABC) :
 		self.test_targets = self.layer.test_outputs
 
 	def setCustomTheanoFunctions(self) :
-		self.train = MWRAP.TheanoFunction("train", MWRAP.TYPE_TRAIN, self, [self.cost], {}, updates = self.updates, allow_input_downcast=True)
-		self.test = MWRAP.TheanoFunction("test", MWRAP.TYPE_TEST, self, [self.test_cost], {}, updates = self.updates_lastOutputs, allow_input_downcast=True)
+		self.train = MWRAP.TheanoFunction("train", self, [self.cost], {}, updates = self.updates, allow_input_downcast=True)
+		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], {}, updates = self.updates_lastOutputs, allow_input_downcast=True)
 
 	def _dot_representation(self) :
 		return '[label="%s: AE(%s)" shape=circle]' % (self.name, self.layer.name)
 
-#work in progress
 # class Convolution2D(Hidden) :
 
 # 	def __init__(self, nbMaps, height, width, *theanoArgs, **theanoKwArgs) :
