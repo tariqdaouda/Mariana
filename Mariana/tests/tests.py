@@ -126,13 +126,13 @@ class MLPTests(unittest.TestCase):
 	# @unittest.skip("skipping")
 	def test_embedding(self) :
 		"""the first 3 and the last 3 should be diametrically opposed"""
-		data = [0, 1, 2, 3, 4, 5]
+		data = [[0], [1], [2], [3], [4], [5]]
 		targets = [0, 0, 0, 1, 1, 1]
 
 		ls = MS.GradientDescent(lr = 0.5)
 		cost = MC.NegativeLogLikelihood()
 
-		emb = ML.Embedding(2, 2, len(data), learningScenario = ls, name="emb")
+		emb = ML.Embedding(1, 2, len(data), learningScenario = ls, name="emb")
 		o = ML.SoftmaxClassifier(2, learningScenario = MS.Fixed(), costObject = cost, name = "out")
 		net = emb > o
 		
@@ -140,7 +140,7 @@ class MLPTests(unittest.TestCase):
 		for i in xrange(2000) :
 			for i in xrange(0, len(data), miniBatchSize) :
 				net.train(o, emb=data[i:i+miniBatchSize], targets=targets[i:i+miniBatchSize])
-
+		
 		embeddings = emb.getEmbeddings()
 		for i in xrange(0, len(data)/2) :
 			v = numpy.dot(embeddings[i], embeddings[i+len(data)/2])

@@ -206,25 +206,31 @@ class Embedding(Layer_ABC) :
 	"""This input layer will take care of creating the embeddings and training them. Embeddings are learned representations
 	of the inputs that are much loved in NLP."""
 
-	def __init__(self, size, nbDimentions, nbElements, name = None, **kwargs) :
-		Layer_ABC.__init__(self, size, name = name, **kwargs)
+	def __init__(self, size, nbDimentions, dictSize, name = None, **kwargs) :
+		"""
+		:param size int: the size of the input vector (if your input is a sentence this should be the number of words in it).
+		:param nbDimentions int: the number of dimentions in wich to encode each word.
+		:param dictSize int: the total number of words. 
+		"""
+		Layer_ABC.__init__(self, size, nbDimentions, name = name, **kwargs)
 		self.network = MNET.Network()
 		self.network.addInput(self)
 		
 		self.type = TYPE_INPUT_LAYER
-		self.nbElements = nbElements
+		self.dictSize = dictSize
 		self.nbDimentions = nbDimentions
 		
 		self.nbInputs = size
 		self.nbOutputs = self.nbDimentions*self.nbInputs
 		
-		initEmb = numpy.asarray(numpy.random.random((self.nbElements, self.nbDimentions)), dtype=theano.config.floatX)
+		initEmb = numpy.asarray(numpy.random.random((self.dictSize, self.nbDimentions)), dtype=theano.config.floatX)
 		
-		self.embeddings = theano.shared(initEmb)		
+		self.embeddings = theano.shared(initEmb)
 		self.inputs = tt.imatrix()
 	
 	def getEmbeddings(self, idxs = None) :
 		"""returns the embeddings.
+		
 		:param list idxs: if provided will return the embeddings only for those indexes 
 		"""
 		if idxs :
@@ -232,7 +238,8 @@ class Embedding(Layer_ABC) :
 		return self.embeddings.get_value()
 
 	def _setOutputs(self) :
-		self.outputs = self.embeddings[self.inputs].reshape((self.inputs.shape[0], self.nbOutputs))
+		self.preOutputs = self.embeddings[self.inputs]
+		self.outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
 		self.test_outputs = self.embeddings[self.inputs].reshape((self.inputs.shape[0], self.nbOutputs))
 		self._decorate()
 
@@ -242,7 +249,8 @@ class Embedding(Layer_ABC) :
 
 	def getSubtensorParams(self) :
 		"""returns the subset corresponding to the embedding"""
-		return [(self.embeddings, self.outputs)]
+		return [(self.embeddings, self.preOutputs)]
+		# return [(self.embeddings, self.embeddings[1])]
 
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=invhouse]' % (self.name, self.nbOutputs)
@@ -335,6 +343,7 @@ class Hidden(Layer_ABC) :
 			initWeights = numpy.random.random((self.nbInputs, self.nbOutputs))
 			initWeights = initWeights/sum(initWeights)
 			initWeights = numpy.asarray(initWeights, dtype=theano.config.floatX)
+			# initWeights = numpy.random.normal(0, 0.01, (self.nbInputs, self.nbOutputs))
 			
 			self.W = theano.shared(value = initWeights, name = self.name + "_W")
 		elif isinstance(self.W, SharedVariable) :
