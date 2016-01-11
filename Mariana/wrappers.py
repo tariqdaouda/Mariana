@@ -22,7 +22,7 @@ class TheanoFunction(object) :
 		:param list output_expressions: list of the symbolic expressions you want as output
 		:param dict additional_input_expressions: additional inputs needed to compute the expressions
 		:param list updates: list of tuples (shared variable, symbolic expression of the update to be applied to it)
-		:param dict **kwargs: additional arguments to passed to the real theano function underneath
+		:param dict \*\*kwargs: additional arguments to passed to the real theano function underneath
 		"""
 		self.cast_warning_told = False
 

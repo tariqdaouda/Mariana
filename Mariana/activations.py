@@ -1,6 +1,6 @@
 import theano.tensor as tt
 
-__all__ = ["Activation_ABC", "Pass", "Sigmoid", "Tanh", "Input", "ReLU", "Softmax"]
+__all__ = ["Activation_ABC", "Pass", "Sigmoid", "Tanh", "ReLU", "Softmax"]
 
 class Activation_ABC(object):
 	"""All activations must inherit fron this class"""
