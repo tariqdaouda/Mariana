@@ -179,9 +179,8 @@ class ClassSets(Dataset_ABC) :
 	def setSampling(self, strategy, arg) :
 		"""Set the sampling strategy::
 
-		* strategy='all_random', arg = k(int). Full data will be made of a random sampling(with replacement) of k elements for each class
-		* strategy='filling', arg = n(str). The totality of the elements of every class that has as much elements as card(n) will be always present.
-		Elements from other classes will be integrated using a random samplings of card(n) elements with replacements.
+			* strategy='all_random', arg = k(int). Full data will be made of a random sampling(with replacement) of k elements for each class
+			* strategy='filling', arg = n(str). The totality of the elements of every class that has as much elements as card(n) will be always present. Elements from other classes will be integrated using a random samplings of card(n) elements with replacements.
 		"""
 		if strategy == "all_random" :
 			assert arg is not None
