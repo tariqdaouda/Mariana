@@ -238,9 +238,11 @@ class Embedding(Layer_ABC) :
 		return self.embeddings.get_value()
 
 	def _setOutputs(self) :
-		self.preOutputs = self.embeddings[self.inputs]
-		self.outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
-		self.test_outputs = self.embeddings[self.inputs].reshape((self.inputs.shape[0], self.nbOutputs))
+		preOutputs = self.embeddings[self.inputs]
+		self.outputs = preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
+		
+		preTestOutputs = self.embeddings[self.test_inputs]
+		self.test_outputs = preTestOutputs.reshape((self.test_inputs.shape[0], self.nbOutputs))
 		self._decorate()
 
 	def getParams(self) :
