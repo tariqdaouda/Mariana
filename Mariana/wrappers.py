@@ -51,7 +51,6 @@ class TheanoFunction(object) :
 		self.outputs = output_expressions
 		self.updates = updates
 
-
 		self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs, updates = self.updates, **kwargs)
 
 		if DEVICE_IS_GPU > -1:
