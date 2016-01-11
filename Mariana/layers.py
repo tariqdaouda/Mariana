@@ -227,6 +227,7 @@ class Embedding(Layer_ABC) :
 		
 		self.embeddings = theano.shared(initEmb)
 		self.inputs = tt.imatrix()
+		self.test_inputs = tt.imatrix()
 	
 	def getEmbeddings(self, idxs = None) :
 		"""returns the embeddings.
@@ -238,11 +239,9 @@ class Embedding(Layer_ABC) :
 		return self.embeddings.get_value()
 
 	def _setOutputs(self) :
-		preOutputs = self.embeddings[self.inputs]
-		self.outputs = preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
-		
-		preTestOutputs = self.embeddings[self.test_inputs]
-		self.test_outputs = preTestOutputs.reshape((self.test_inputs.shape[0], self.nbOutputs))
+		self.preOutputs = self.embeddings[self.inputs]
+		self.outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
+		self.test_outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
 		self._decorate()
 
 	def getParams(self) :
@@ -252,7 +251,6 @@ class Embedding(Layer_ABC) :
 	def getSubtensorParams(self) :
 		"""returns the subset corresponding to the embedding"""
 		return [(self.embeddings, self.preOutputs)]
-		# return [(self.embeddings, self.embeddings[1])]
 
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=invhouse]' % (self.name, self.nbOutputs)
@@ -424,7 +422,6 @@ class Output_ABC(Hidden) :
 		Hidden.__init__(self, size, activation = activation, name = name, **kwargs)
 		self.type = TYPE_OUTPUT_LAYER
 		self.targets = None
-		self.test_targets = None
 		self.dependencies = OrderedDict()
 		self.costObject = costObject
 		self.learningScenario = learningScenario
@@ -456,7 +453,7 @@ class Output_ABC(Hidden) :
 		self._userInit()
 
 		self.cost = self.costObject.costFct(self.targets, self.outputs)
-		self.test_cost = self.costObject.costFct(self.test_targets, self.test_outputs)
+		self.test_cost = self.costObject.costFct(self.targets, self.test_outputs)
 
 		for l in self.dependencies.itervalues() :
 			if l.__class__  is not Composite :
@@ -481,7 +478,7 @@ class Output_ABC(Hidden) :
 				self.updates_lastOutputs.append( (l.last_outputs, l.test_outputs ) )
 
 		self.train = MWRAP.TheanoFunction("train", self, [self.cost], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
-		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], { "targets" : self.test_targets }, updates = self.updates_lastOutputs, allow_input_downcast=True)
+		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], { "targets" : self.targets }, updates = self.updates_lastOutputs, allow_input_downcast=True)
 		self.propagate = MWRAP.TheanoFunction("propagate", self, [self.test_outputs], updates = self.updates_lastOutputs, allow_input_downcast=True)
 
 		self.setCustomTheanoFunctions()
@@ -519,8 +516,7 @@ class SoftmaxClassifier(Classifier_ABC) :
 	def __init__(self, nbOutputs, learningScenario, costObject, temperature = 1, name = None, **kwargs) :
 		Classifier_ABC.__init__(self, nbOutputs, activation = MA.Softmax(temperature = temperature), learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.targets = tt.ivector(name = "targets")
-		self.test_targets = tt.ivector(name = "targets")
-
+	
 	def setCustomTheanoFunctions(self) :
 		"""defined theano_classify, that returns the argmax of the output"""
 		self.classify = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.test_outputs) ], updates = self.updates_lastOutputs)
@@ -533,8 +529,7 @@ class Regression(Output_ABC) :
 	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
 		Output_ABC.__init__(self, nbOutputs, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.targets = tt.matrix(name = "targets")
-		self.test_targets = tt.matrix(name = "targets")
-
+	
 	def _dot_representation(self) :
 		return '[label="Reg %s: %s" shape=circle]' % (self.name, self.nbOutputs)
 
@@ -548,8 +543,7 @@ class Autoencode(Output_ABC) :
 
 	def _userInit(self):
 		self.targets = self.layer.outputs
-		self.test_targets = self.layer.test_outputs
-
+	
 	def setCustomTheanoFunctions(self) :
 		self.train = MWRAP.TheanoFunction("train", self, [self.cost], {}, updates = self.updates, allow_input_downcast=True)
 		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], {}, updates = self.updates_lastOutputs, allow_input_downcast=True)
