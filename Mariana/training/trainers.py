@@ -365,7 +365,7 @@ class DefaultTrainer(Trainer_ABC) :
 			
 			runtime = (time.time() - startTime)/60
 			self.store["runInfos"].update( (
-				("runtime(min)", runtime),
+				("runtime_min", runtime),
 			) )
 	
 			self.recorder.commit(self.store, model)
