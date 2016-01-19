@@ -30,8 +30,6 @@ class Layer_ABC(object) :
 		saveOutputs=MSET.SAVE_OUTPUTS_DEFAULT,
 		decorators=[],
 		name=None,
-		activation=None,
-		learningScenario=None,
 		**kwrags
 	) :
 
@@ -40,14 +38,13 @@ class Layer_ABC(object) :
 		else :
 			self.name = "%s_%s" %(self.__class__.__name__, numpy.random.random())
 
-		self.activation = activation
-		self.learningScenario = learningScenario
+		# self.activation = activation
+		# self.learningScenario = learningScenario
 
 		self.type = TYPE_UNDEF_LAYER 
 
 		self.nbInputs = None
 		self.inputs = None
-		self.test_inputs = None
 		self.nbOutputs = size
 		self.outputs = None # this is a symbolic var
 		self.test_outputs = None # this is a symbolic var
@@ -100,11 +97,9 @@ class Layer_ABC(object) :
 			for l in self.feedsInto.itervalues() :
 				if l.inputs is None :
 					l.inputs = self.outputs
-					l.test_inputs = self.test_outputs
 				else :
 					l.inputs += self.outputs
-					l.test_inputs += self.test_outputs
-
+				
 				l._setNbInputs(self)
 				l._registerInput(self)
 				l._init()
@@ -226,9 +221,8 @@ class Embedding(Layer_ABC) :
 		initEmb = numpy.asarray(numpy.random.random((self.dictSize, self.nbDimentions)), dtype=theano.config.floatX)
 		
 		self.embeddings = theano.shared(initEmb)
-		self.inputs = tt.imatrix()
-		self.test_inputs = tt.imatrix()
-	
+		self.inputs = tt.imatrix(name = "embInp_" + self.name)
+		
 	def getEmbeddings(self, idxs = None) :
 		"""returns the embeddings.
 		
@@ -319,11 +313,12 @@ class Hidden(Layer_ABC) :
 	def __init__(self, size, activation = MA.ReLU(), learningScenario = None, name = None, regularizations = [], **kwargs) :
 		Layer_ABC.__init__(self,
 			size,
-			activation=activation,
-			learningScenario=learningScenario,
 			name=name,
 			**kwargs
 		)
+
+		self.activation=activation
+		self.learningScenario=learningScenario
 		self.W = None
 		self.b = None
 
@@ -331,7 +326,6 @@ class Hidden(Layer_ABC) :
 		self.regularizations = []
 
 		self.type = TYPE_HIDDEN_LAYER
-		
 
 	def _setOutputs(self) :
 		"""initialises weights and bias. By default weights are setup to random low values, use mariana decorators
@@ -345,33 +339,33 @@ class Hidden(Layer_ABC) :
 			initWeights = numpy.asarray(initWeights, dtype=theano.config.floatX)
 			# initWeights = numpy.random.normal(0, 0.01, (self.nbInputs, self.nbOutputs))
 			
-			self.W = theano.shared(value = initWeights, name = self.name + "_W")
+			self.W = theano.shared(value = initWeights, name = "W_" + self.name)
 		elif isinstance(self.W, SharedVariable) :
 			if self.W.get_value().shape != (self.nbInputs, self.nbOutputs) :
 				raise ValueError("weights have shape %s, but the layer has %s inputs and %s outputs" % (self.W.get_value().shape, self.nbInputs, self.nbOutputs))
 		elif isinstance(self.W, numpy.ndarray) :
 			if self.W.shape != (self.nbInputs, self.nbOutputs) :
 				raise ValueError("weights have shape %s, but the layer has %s inputs and %s outputs" % (self.W.shape, self.nbInputs, self.nbOutputs))
-			self.W = theano.shared(value = self.W, name = self.name + "_W")
+			self.W = theano.shared(value = self.W, name = "W_" + self.name)
 		else :
 			raise ValueError("Weights should be a numpy array or a theano SharedVariable, got: %s" % type(self.W))
 
 		if self.b is None :
 			initBias = numpy.zeros((self.nbOutputs,), dtype=theano.config.floatX)
-			self.b = theano.shared(value = initBias, name = self.name + "_b")
+			self.b = theano.shared(value = initBias, name = "b_" + self.name)
 		elif isinstance(self.b, SharedVariable) :
 			if self.b.get_value().shape[0] != self.nbOutputs :
 				raise ValueError("bias has a length of %s, but there are %s outputs" % (self.b.get_value().shape[0], self.nbOutputs))
 		elif isinstance(self.b, numpy.ndarray) :
 			if self.b.shape != self.nbOutputs :
 				raise ValueError("bias has a length of %s, but there are %s outputs" % (self.b.shape[0], self.nbOutputs))
-			self.b = theano.shared(value = self.b, name = self.name + "_b")
+			self.b = theano.shared(value = self.b, name = "b_" + self.name)
 		else :
 			raise ValueError("Bias should be a numpy array or a theano SharedVariable, got: %s" % type(self.b))
 
 		# self.outputs = theano.printing.Print('this is a very important value for %s' % self.name)(self.activation(tt.dot(self.inputs, self.W) + self.b))
 		self.outputs = self.activation.function(tt.dot(self.inputs, self.W) + self.b)
-		self.test_outputs = self.activation.function(tt.dot(self.test_inputs, self.W) + self.b)
+		self.test_outputs = self.activation.function(tt.dot(self.inputs, self.W) + self.b)
 
 		self._decorate()
 
@@ -515,7 +509,7 @@ class SoftmaxClassifier(Classifier_ABC) :
 	"""A softmax (probabilistic) Classifier"""
 	def __init__(self, nbOutputs, learningScenario, costObject, temperature = 1, name = None, **kwargs) :
 		Classifier_ABC.__init__(self, nbOutputs, activation = MA.Softmax(temperature = temperature), learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
-		self.targets = tt.ivector(name = "targets")
+		self.targets = tt.ivector(name = "targets_" + self.name)
 	
 	def setCustomTheanoFunctions(self) :
 		"""defined theano_classify, that returns the argmax of the output"""
@@ -551,33 +545,112 @@ class Autoencode(Output_ABC) :
 	def _dot_representation(self) :
 		return '[label="%s: AE(%s)" shape=circle]' % (self.name, self.layer.name)
 
-# class Convolution2D(Hidden) :
+class ConvPooler(object) :
 
-# 	def __init__(self, nbMaps, height, width, *theanoArgs, **theanoKwArgs) :
-# 		self.nbMaps = self.nbMaps
-# 		self.height = self.height
-# 		self.width = self.width
-# 		self.border_mode = border_mode
-# 		self.theanoArgs = theanoArgs
-# 		self.theanoKwArgs = self.theanoKwArgs
+	def __init__(self, *args, **kwrags) :
+		pass
+		
+	def pool(self, convLayer) :
+		raise NotImplemented("Must be implemented in child")
 
-# 	def _setOutputs(self) :
-# 		self.outputs = self.activation(tt.signal.conv2d(self.inputs, self.W, *self.theanoArgs, **self.theanoKwArgs))
+class Pass(ConvPooler) :
+	"""No pooling"""
+	def pool(self, convLayer) :
+		hOutputs = convLayer.imageHeight - convLayer.filterHeight + 1
+		wOutputs = convLayer.imageWidth - convLayer.filterWidth + 1
+		nbOutputs = convLayer.nbMaps * hOutputs *  wOutputs
+		
+		return convLayer.convolution, nbOutputs
 
-# class MaxPooling2D(Layer_ABC) :
+class MaxPooling2D(ConvPooler) :
 
-# 	def __init__(self, downScaleFactors) :
-# 		"""downScaleFactors is the factor by which to downscale vertical and horizontal dimentions. (2,2) will halve the image in each dimension."""
-# 		self.downScaleFactors = downScaleFactors
+	def __init__(self, heightDownscaleFactor, widthDownscaleFactor, *args, **kwargs) :
+		"""downScaleFactors is the factor by which to downscale vertical and horizontal dimentions. (2,2) will halve the image in each dimension."""
+		ConvPooler.__init__(self, *args, **kwargs)
+		self.heightDownscaleFactor = heightDownscaleFactor
+		self.widthDownscaleFactor = widthDownscaleFactor
+	
+	def pool(self, convLayer) :
+		from theano.tensor.signal import downsample
+		ds = (self.heightDownscaleFactor, self.widthDownscaleFactor)
+		output = downsample.max_pool_2d( convLayer.convolution, ds, ignore_border = True )
+		
+		hOutputs = convLayer.imageHeight - convLayer.filterHeight + 1
+		wOutputs = convLayer.imageWidth - convLayer.filterWidth + 1
 
-# 	def _setOutputs(self) :
-# 		self.outputs =  max_pool_2d(self.inputs, self.downScaleFactors)
+		hRatio = hOutputs // self.heightDownscaleFactor
+		wRatio = wOutputs // self.widthDownscaleFactor
+		
+		nbOutputs = convLayer.nbMaps * hRatio * wRatio
+		
+		return output, nbOutputs
 
-# class Flatten(Layer_ABC) :
+# class ConvolutionInput(Layer_ABC) :
+# 	def __init__(self) :
+# 		pass
 
-# 	def __init__(self, outdim) :
-# 		"""Flattens the output of a convolution to a given numer of dimentions"""
-# 		self.outdim = outdim
+class Convolution2D(Layer_ABC) :
 
-# 	def _setOutputs(self) :
-# 		self.outputs = T.flatten(self.inputs, self.outdim)
+	def __init__(self, nbMaps, imageHeight, imageWidth, filterHeight, filterWidth, activation, pooler, **kwargs) :
+		Layer_ABC.__init__(self, nbMaps, **kwargs)
+		self.nbMaps = nbMaps
+		self.activation = activation
+		self.imageHeight = imageHeight
+		self.imageWidth = imageWidth
+		self.filterHeight = filterHeight
+		self.filterWidth = filterWidth
+		self.pooler = pooler
+		
+	def _setOutputs(self) :
+		from theano.tensor.nnet import conv
+
+		inputLayer = self.feededBy.values()
+		if len(inputLayer) != 1 :
+			raise ValueError("Convolution layers must have a single input")
+		inputLayer = inputLayer[0]
+
+		if inputLayer.__class__ is Input :
+			self.imageShape = (-1, 1, self.imageHeight, self.imageWidth)
+			self.filterShape = (self.nbOutputs, 1, self.filterHeight, self.filterWidth) 
+			self.inputs = self.inputs.reshape(self.imageShape)
+		else :
+			try :
+				self.imageShape = (-1, inputLayer.nbMaps, self.imageHeight, self.imageWidth)
+				self.filterShape = (self.nbOutputs, inputLayer.nbMaps, self.filterHeight, self.filterWidth) 
+			except AttributeError :
+				raise ValueError("Input to a conv2d layer must be of type Input or Convolution2D")
+
+		initWeights = numpy.random.normal(0, 0.01, self.filterShape)
+		initWeights = numpy.asarray(initWeights, dtype = theano.config.floatX)
+		self.W = theano.shared(value = initWeights, name = self.name + "_W", borrow = True)
+		
+		initB = numpy.zeros((self.filterShape[0],), dtype = theano.config.floatX)
+		self.b = theano.shared(value = initB, borrow = True)
+
+		self.convolution = conv.conv2d( input = self.inputs, filters = self.W, filter_shape = self.filterShape )
+		self.pooled, self.nbOutputs = self.pooler.pool(self)
+		
+		self.outputs = self.activation.function(self.pooled + self.b.dimshuffle('x', 0, 'x', 'x'))
+		
+	def getParams(self) :
+		"""returns the layer parameters (Weights and bias)"""
+		return [self.W, self.b]
+
+class Flatten(Layer_ABC) :
+
+	def __init__(self, **kwargs) :
+		"""Flattens the output of a convolution to a given numer of dimentions"""
+		Layer_ABC.__init__(self, None, **kwargs)
+		self.outdim = 2
+
+	def getParams(self) :
+		return []
+
+	def _setOutputs(self) :
+		convLayer = self.feededBy.values()
+		if len(convLayer) != 1 :
+			raise ValueError("Flatten layers must have a single input")
+		convLayer = convLayer[0]
+
+		self.nbOutputs = convLayer.nbOutputs
+		self.outputs = self.inputs.flatten(self.outdim)
