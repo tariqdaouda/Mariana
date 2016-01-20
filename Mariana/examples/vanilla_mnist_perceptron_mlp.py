@@ -32,7 +32,7 @@ def MLP(ls, cost) :
 	mlp = i > h > o
 	
 	return mlp
-	
+
 if __name__ == "__main__" :
 	
 	#Let's define the network
@@ -41,15 +41,13 @@ if __name__ == "__main__" :
 
 	train_set, validation_set, validation_set = load_mnist()
 
-	model = MLP(ls, cost)
-	o = model.outputs.values()[0]
-
-	h = model.layers["hid"]
-
 	maxEpochs = 1000
 	miniBatchSize = 20
 	
-	e = 0
+	model = MLP(ls, cost)
+	o = model.outputs.values()[0]
+
+	epoch = 0
 	bestValScore = numpy.inf
 	model.init()
 	
@@ -62,7 +60,7 @@ if __name__ == "__main__" :
 		trainScore = numpy.mean(trainScores)
 		res = model.test(o, inp = validation_set[0], targets = validation_set[1] )
 		
-		print "---\nepoch", e
+		print "---\nepoch", epoch
 		print "\ttrain score:", trainScore
 		if bestValScore > res[0] :
 			bestValScore = res[0]
@@ -70,4 +68,4 @@ if __name__ == "__main__" :
 		else :
 			print "\tvalidation score:", res[0], "best:", bestValScore
 		
-		e += 1
+		epoch += 1
