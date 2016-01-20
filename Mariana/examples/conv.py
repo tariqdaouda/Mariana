@@ -14,94 +14,104 @@ MSET.VERBOSE = False
 
 from Mariana.examples.useful import load_mnist
 
-def conv(ls, cost) :
-	maxPool = MCONV.MaxPooling2D(2, 2)
-	passPool = MCONV.Pass()
+####
+# This is an example of two identical conv nets. The only difference is that the first one uses a convolution input layer
+# while the second uses an InpuChanneler to automatically cast the output of a regular input layer in a format
+# suitable for a convolution layer.
+
+class Conv :
 	
-	i = MCONV.Input(1, 28, 28, name = 'inp')
-	c1 = MCONV.Convolution2D( 
-		nbChannels = 1,
-		filterHeight = 5,
-		filterWidth = 5,
-		activation = MA.Tanh(),
-		pooler = maxPool,
-		name = "conv1"
-	)
+	def __init__(self, ls, cost) :
+		maxPool = MCONV.MaxPooling2D(2, 2)
+		
+		i = MCONV.Input(nbChannels = 1, height = 28, width = 28, name = 'inp')
+		
+		c1 = MCONV.Convolution2D( 
+			nbFilters = 20,
+			filterHeight = 5,
+			filterWidth = 5,
+			activation = MA.Tanh(),
+			pooler = maxPool,
+			name = "conv1"
+		)
 
-	c2 = MCONV.Convolution2D( 
-		nbChannels = 1,
-		filterHeight = 5,
-		filterWidth = 5,
-		activation = MA.Tanh(),
-		pooler = maxPool,
-		name = "conv2"
-	)
+		c2 = MCONV.Convolution2D( 
+			nbFilters = 50,
+			filterHeight = 5,
+			filterWidth = 5,
+			activation = MA.Tanh(),
+			pooler = maxPool,
+			name = "conv2"
+		)
 
-	f = MCONV.Flatten(name = "flat")
-	o = ML.SoftmaxClassifier(10, decorators = [], learningScenario = ls, costObject = cost, name = "out", regularizations = [ ] )
+		#needed for the transition to a fully connected layer
+		f = MCONV.Flatten(name = "flat")
+		h = ML.Hidden(500, activation = MA.Tanh(), decorators = [], regularizations = [ ], name = "hid" )
+		o = ML.SoftmaxClassifier(10, decorators = [], learningScenario = ls, costObject = cost, name = "out", regularizations = [ ] )
+		
+		self.model = i > c1 > c2 > f > h > o
+		
+	def train(self, inputs, targets) :
+		#The inputs have to be reshaped into a 4d matrix before passing them to the conv layers
+		inps = inputs.reshape((-1, 1, 28, 28))
+		return self.model.train("out", inp = inps, targets = targets)
 
-	conv = i > c1 > c2 > f > o
+class ConvWithChanneler :
 	
-	return conv
+	def __init__(self, ls, cost) :
+		maxPool = MCONV.MaxPooling2D(2, 2)
+		
+		#The input channeler will take regular layers and arrange them into several channels
+		i = ML.Input(28*28, name = 'inp')
+		ichan = MCONV.InputChanneler(28, 28, name = 'inpChan')
+		
+		c1 = MCONV.Convolution2D( 
+			nbFilters = 20,
+			filterHeight = 5,
+			filterWidth = 5,
+			activation = MA.Tanh(),
+			pooler = maxPool,
+			name = "conv1"
+		)
 
-def conv2(ls, cost) :
-	maxPool = MCONV.MaxPooling2D(2, 2)
-	passPool = MCONV.Pass()
-	
-	i = ML.Input(28*28, name = 'inp')
-	ichan = MCONV.InputChanneler(28, 28, name = 'inpChan')
-	
-	c1 = MCONV.Convolution2D( 
-		nbChannels = 1,
-		filterHeight = 5,
-		filterWidth = 5,
-		activation = MA.Tanh(),
-		pooler = maxPool,
-		# pooler = passPool,
-		name = "conv1"
-	)
+		c2 = MCONV.Convolution2D( 
+			nbFilters = 50,
+			filterHeight = 5,
+			filterWidth = 5,
+			activation = MA.Tanh(),
+			pooler = maxPool,
+			name = "conv2"
+		)
 
-	c2 = MCONV.Convolution2D( 
-		nbChannels = 1,
-		filterHeight = 5,
-		filterWidth = 5,
-		activation = MA.Tanh(),
-		pooler = maxPool,
-		# pooler = passPool,
-		name = "conv2"
-	)
-
-	f = MCONV.Flatten(name = "flat")
-	o = ML.SoftmaxClassifier(10, decorators = [], learningScenario = ls, costObject = cost, name = "out", regularizations = [ ] )
-
-	conv = i > ichan > c1 > c2 > f > o
-	
-	return conv
+		f = MCONV.Flatten(name = "flat")
+		h = ML.Hidden(500, activation = MA.Tanh(), decorators = [], regularizations = [ ], name = "hid" )
+		o = ML.SoftmaxClassifier(10, decorators = [], learningScenario = ls, costObject = cost, name = "out", regularizations = [ ] )
+		
+		self.model = i > ichan > c1 > c2 > f > h > o
+		
+	def train(self, inputs, targets) :
+		#because of the channeler there is no need to reshape the data besfore passing them to the conv layer
+		return self.model.train("out", inp = inputs, targets = targets )
 
 if __name__ == "__main__" :
 	
-	#Let's define the network
-	ls = MS.GradientDescent(lr = 0.01)
+	ls = MS.GradientDescent(lr = 0.1)
 	cost = MC.NegativeLogLikelihood()
 
 	train_set, validation_set, validation_set = load_mnist()
 
-	maxEpochs = 1000
-	miniBatchSize = 10
+	maxEpochs = 200
+	miniBatchSize = 500
 	
-	model = conv2(ls, cost)
-	o = model.outputs.values()[0]
-
-	epoch = 0
-	bestValScore = numpy.inf
-	model.init()
+	model = Conv(ls, cost)
 	
+	epoch = 0	
 	while True :
 		trainScores = []
 		for i in xrange(0, len(train_set[0]), miniBatchSize) :
-			# inputs = train_set[0][i : i +miniBatchSize].reshape((-1, 1, 28, 28))
 			inputs = train_set[0][i : i +miniBatchSize]
-			res = model.train(o, inp = inputs, targets = train_set[1][i : i +miniBatchSize] )
+			targets = train_set[1][i : i +miniBatchSize]
+			res = model.train(inputs, targets )
 			trainScores.append(res[0])
 	
 		trainScore = numpy.mean(trainScores)
