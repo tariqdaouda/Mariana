@@ -51,6 +51,7 @@ class Network(object) :
 		self.inputs = OrderedDict()
 		self.layers = OrderedDict()
 		self.outputs = OrderedDict()
+		self.layerAppelidos = {}
 		self.layerConnectionCount = {}
 
 		self.regularizations = OrderedDict()
@@ -63,6 +64,13 @@ class Network(object) :
 
 	def addEdge(self, layer1, layer2) :
 		"""Add a connection between two layers"""
+		for layer in (layer1, layer2) :
+			try :
+				if self.layerAppelidos[layer.name] != layer.appelido :
+					raise ValueError("There's already a layer by the name of '%s'" % (layer.name))
+			except KeyError :
+				self.layerAppelidos[layer.name] = layer.appelido
+
 		self.layers[layer1.name] = layer1
 		self.layers[layer2.name] = layer2
 		self.edges.add( (layer1, layer2))
@@ -101,8 +109,7 @@ class Network(object) :
 		self.outputs[o.name] = o
 
 	def merge(self, fromLayer, toLayer) :
-		"""Merges two layer together. There can be only one input to a network, if self ans network both have an input layer
-		this function will raise a ValueError."""
+		"""Merges the networks of two layers together."""
 		if fromLayer.name not in self.layers :
 			raise ValueError("from layer '%s' is not part of this network" % fromLayer.name)
 

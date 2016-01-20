@@ -8,44 +8,77 @@ import Mariana.costs as MC
 import Mariana.regularizations as MR
 import Mariana.scenari as MS
 
+import Mariana.settings as MSET
+
+MSET.VERBOSE = False
+
 from Mariana.examples.useful import load_mnist
 
 def conv(ls, cost) :
-	maxPool = ML.MaxPooling2D(2, 2)
-	passPool = ML.Pass()
+	maxPool = MCONV.MaxPooling2D(2, 2)
+	passPool = MCONV.Pass()
 	
-	i = ML.Input(28*28, name = 'inp')
-	c1 = ML.Convolution2D( 
-		nbMaps= 5,
-		imageHeight = 28,
-		imageWidth = 28,
-		filterHeight = 12,
-		filterWidth = 1,
+	i = MCONV.Input(1, 28, 28, name = 'inp')
+	c1 = MCONV.Convolution2D( 
+		nbChannels = 1,
+		filterHeight = 5,
+		filterWidth = 5,
 		activation = MA.Tanh(),
 		pooler = maxPool,
 		# pooler = passPool,
-		name = "conv"
+		name = "conv1"
 	)
 
-	# c2 = ML.Convolution2D( 
-	# 	nbMaps= 5,
-	# 	imageHeight = 28,
-	# 	imageWidth = 28,
-	# 	filterHeight = 12,
-	# 	filterWidth = 1,
-	# 	activation = MA.Tanh(),
-	# 	pooler = maxPool,
-	# 	# pooler = passPool,
-	# 	name = "conv"
-	# )
-	f = ML.Flatten(name = "flat")
-	# h = ML.Hidden(500, activation = MA.Tanh(), decorators = [MD.GlorotTanhInit()], regularizations = [ MR.L1(0), MR.L2(0.0001) ], name = "hid" )
+	c2 = MCONV.Convolution2D( 
+		nbChannels = 1,
+		filterHeight = 5,
+		filterWidth = 5,
+		activation = MA.Tanh(),
+		pooler = maxPool,
+		# pooler = passPool,
+		name = "conv2"
+	)
+
+	f = MCONV.Flatten(name = "flat")
 	o = ML.SoftmaxClassifier(10, decorators = [], learningScenario = ls, costObject = cost, name = "out", regularizations = [ ] )
 
-	mlp = i > c1 > f > o
+	conv = i > c1 > c2 > f > o
 	
-	return mlp
+	return conv
 
+def conv2(ls, cost) :
+	maxPool = MCONV.MaxPooling2D(2, 2)
+	passPool = MCONV.Pass()
+	
+	i = ML.Input(28*28, name = 'inp')
+	ichan = MCONV.InputChanneler(28, 28, name = 'inpChan')
+	
+	c1 = MCONV.Convolution2D( 
+		nbChannels = 1,
+		filterHeight = 5,
+		filterWidth = 5,
+		activation = MA.Tanh(),
+		pooler = maxPool,
+		# pooler = passPool,
+		name = "conv1"
+	)
+
+	c2 = MCONV.Convolution2D( 
+		nbChannels = 1,
+		filterHeight = 5,
+		filterWidth = 5,
+		activation = MA.Tanh(),
+		pooler = maxPool,
+		# pooler = passPool,
+		name = "conv2"
+	)
+
+	f = MCONV.Flatten(name = "flat")
+	o = ML.SoftmaxClassifier(10, decorators = [], learningScenario = ls, costObject = cost, name = "out", regularizations = [ ] )
+
+	conv = i > ichan > c1 > c2 > f > o
+	
+	return conv
 
 if __name__ == "__main__" :
 	
@@ -58,7 +91,7 @@ if __name__ == "__main__" :
 	maxEpochs = 1000
 	miniBatchSize = 10
 	
-	model = conv(ls, cost)
+	model = conv2(ls, cost)
 	o = model.outputs.values()[0]
 
 	epoch = 0
@@ -68,32 +101,14 @@ if __name__ == "__main__" :
 	while True :
 		trainScores = []
 		for i in xrange(0, len(train_set[0]), miniBatchSize) :
+			# inputs = train_set[0][i : i +miniBatchSize].reshape((-1, 1, 28, 28))
 			inputs = train_set[0][i : i +miniBatchSize]
-			#print inputs
-			# print model["conv"].convolution.eval({ model["inp"].inputs : inputs } ).shape
-			# print "----a"
-			# print model["conv"].pooled.eval({ model["inp"].inputs : inputs } ).shape
-			# print "----b"
-			# print model["conv"].outputs.eval({ model["inp"].inputs : inputs } ).shape
-			# print "----c"
-			# print model["flat"].outputs.eval({ model["inp"].inputs : inputs } )
-			# print model["flat"].outputs.eval({ model["inp"].inputs : inputs } ).shape
-			
-			# print "----d"
-			# print train_set[1][i : i +miniBatchSize]
-			# print i, len(train_set[0])
 			res = model.train(o, inp = inputs, targets = train_set[1][i : i +miniBatchSize] )
 			trainScores.append(res[0])
 	
 		trainScore = numpy.mean(trainScores)
-		# res = model.test(o, inp = validation_set[0], targets = validation_set[1] )
 		
 		print "---\nepoch", epoch
 		print "\ttrain score:", trainScore
-		# if bestValScore > res[0] :
-			# bestValScore = res[0]
-			# print "\tvalidation score:", res[0], "+best+"
-		# else :
-			# print "\tvalidation score:", res[0], "best:", bestValScore
 		
 		epoch += 1
