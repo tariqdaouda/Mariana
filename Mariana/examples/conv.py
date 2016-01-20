@@ -25,7 +25,6 @@ def conv(ls, cost) :
 		filterWidth = 5,
 		activation = MA.Tanh(),
 		pooler = maxPool,
-		# pooler = passPool,
 		name = "conv1"
 	)
 
@@ -35,7 +34,6 @@ def conv(ls, cost) :
 		filterWidth = 5,
 		activation = MA.Tanh(),
 		pooler = maxPool,
-		# pooler = passPool,
 		name = "conv2"
 	)
 

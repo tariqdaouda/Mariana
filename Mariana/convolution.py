@@ -4,28 +4,38 @@ import theano.tensor as tt
 import Mariana.layers as ML
 import Mariana.network as MNET
 
-class ConvPooler_ABC(object) :
+__all__ = ["ConvPooler_ABC", "NoPool", "MaxPooling2D", "Flatten", "ConvLayer_ABC", "Composite", "InputChanneler", "Input", "Convolution2D"]
 
+class ConvPooler_ABC(object) :
+	"""The interface that all poolers must implement"""
 	def __init__(self, *args, **kwrags) :
 		pass
 		
 	def pool(self, convLayer) :
+		"""This function takes the convolution layer and performs some pooling (usually down sampling).
+		It must return a tuple (outputs, mapHeight, mapWidth)
+		"""
 		raise NotImplemented("Must be implemented in child")
 
-class Pass(ConvPooler_ABC) :
-	"""No pooling"""
+class NoPool(ConvPooler_ABC) :
+	"""No pooling. The convolution is kept as is"""
 	def pool(self, convLayer) :
 		hOutputs = convLayer.inputHeight - convLayer.filterHeight + 1
 		wOutputs = convLayer.inputWidth - convLayer.filterWidth + 1
-		nbOutputs = convLayer.nbChannels * hOutputs *  wOutputs
 		
-		return convLayer.convolution, nbOutputs, hOutputs, wOutputs
+		return convLayer.convolution, hOutputs, wOutputs
 
 class MaxPooling2D(ConvPooler_ABC) :
-
-	def __init__(self, heightDownscaleFactor, widthDownscaleFactor, *args, **kwargs) :
-		"""downScaleFactors is the factor by which to downscale vertical and horizontal dimentions. (2,2) will halve the image in each dimension."""
-		ConvPooler_ABC.__init__(self, *args, **kwargs)
+	"""
+	Popular downsampling. This will divide each feature map into a number of independent smaller squares
+	and take the activation of the most activated neurone in each square
+	"""
+	def __init__(self, heightDownscaleFactor, widthDownscaleFactor) :
+		"""
+		:param int heightDownscaleFactor: Factor by which to downscale the height of feature maps. Ex: 2 will halve the height.
+		:param int widthDownscaleFactor: Factor by which to downscale the width of feature maps. Ex: 2 will halve the width.
+		"""
+		ConvPooler_ABC.__init__(self)
 		self.heightDownscaleFactor = heightDownscaleFactor
 		self.widthDownscaleFactor = widthDownscaleFactor
 	
@@ -40,15 +50,14 @@ class MaxPooling2D(ConvPooler_ABC) :
 		hImage = hOutputs // self.heightDownscaleFactor
 		wImage = wOutputs // self.widthDownscaleFactor
 		
-		nbOutputs = convLayer.nbChannels * hImage * wImage
-		
-		return output, nbOutputs, hImage, wImage
+		return output, hImage, wImage
 
 class Flatten(ML.Layer_ABC) :
 
 	def __init__(self, **kwargs) :
-		"""Flattens the output of a convolution so it can be fed into a regular layer"""
+		"""Flattens the output of a convolution layer so it can be fed into a regular layer"""
 		ML.Layer_ABC.__init__(self, None, **kwargs)
+		self.type = ML.TYPE_HIDDEN_LAYER
 		self.outdim = 2
 		
 		self.inputHeight = None
@@ -85,25 +94,30 @@ class Flatten(ML.Layer_ABC) :
 		self._decorate()
 
 class ConvLayer_ABC(object) :
-	def __init__(self, nbChannels) :
+	"""The abstract class that all convolution layers must implement"""
+
+	def __init__(self, nbChannels, **kwargs) :
 		self.nbChannels = nbChannels
 		self.height = None
 		self.width = None
 		self.nbFlatOutputs = None #the number of outputs flattened in 2d.
 
-class InputChanneler(ML.Layer_ABC, ConvLayer_ABC) :
+class InputChanneler(ConvLayer_ABC, ML.Layer_ABC) :
 	"""Takes the outputs of several regular layer and pools them into separate channels. All inputs must have the same dimentions"""
 	def __init__(self, height, width, **kwargs) :
-		ConvLayer_ABC.__init__(self, None)
+		"""
+		:param int height: Image height.
+		:param int width: Image width.
+		"""
+		ConvLayer_ABC.__init__(self, None, **kwargs)
 		ML.Layer_ABC.__init__(self, None, **kwargs)
 		self.height = height
 		self.width = width
+	
 	def getParams(self) :
-		"""return nothing"""
 		return []
 
 	def _setOutputs(self) :
-		"initialises the output to be the same as the inputs"
 		inps = []
 		for l in self.feededBy.itervalues() :
 			if self.nbInputs is None :
@@ -117,9 +131,17 @@ class InputChanneler(ML.Layer_ABC, ConvLayer_ABC) :
 		self.nbFlatOutputs = self.nbChannels * self.height * self.width
 		self._decorate()
 
-class Input(ML.Layer_ABC, ConvLayer_ABC) :
+class Input(ConvLayer_ABC, ML.Layer_ABC) :
+	"""The input to a convolution network. This is different from a regular Input layer in the sense that it also holds channels information.
+	To feed regular layers into a convolution network, have a look at InputChanneler."""
+
 	def __init__(self, nbChannels, height, width, **kwargs) :
-		ConvLayer_ABC.__init__(self, nbChannels)
+		"""
+		:param int nbChannels: Number of channels in the images (ex: RGB is 3).
+		:param int height: Image height.
+		:param int width: Image width.
+		"""
+		ConvLayer_ABC.__init__(self, nbChannels, **kwargs)
 		ML.Layer_ABC.__init__(self, nbChannels, **kwargs)
 
 		self.type = ML.TYPE_INPUT_LAYER
@@ -133,7 +155,6 @@ class Input(ML.Layer_ABC, ConvLayer_ABC) :
 		self.nbFlatOutputs = self.height * self.width * self.nbChannels
 
 	def getParams(self) :
-		"""return nothing"""
 		return []
 
 	def _setOutputs(self) :
@@ -143,10 +164,18 @@ class Input(ML.Layer_ABC, ConvLayer_ABC) :
 		self._decorate()
 
 class Convolution2D(ML.Hidden, ConvLayer_ABC) :
+	"""The layer that performs the convolutions"""
 
-	def __init__(self, nbChannels, filterHeight, filterWidth, activation, pooler, **kwargs) :
-		ConvLayer_ABC.__init__(self, nbChannels)
-		ML.Hidden.__init__(self, nbChannels, activation = activation, **kwargs)
+	def __init__(self, nbFilters, filterHeight, filterWidth, activation, pooler, **kwargs) :
+		"""
+		:param int nbFilters: Number of filters (feature maps) generated by the network.
+		:param int filterHeight: Height of each filter.
+		:param int filterWidth: Width of each filter.
+		:param Activation activation: An activation object such as Tanh or ReLU.
+		:param Pooler pooler: A pooler object.
+		"""
+		ConvLayer_ABC.__init__(self, nbFilters)
+		ML.Hidden.__init__(self, nbFilters, activation = activation, **kwargs)
 
 		self.inputHeight = None
 		self.inputWidth = None
@@ -202,8 +231,9 @@ class Convolution2D(ML.Hidden, ConvLayer_ABC) :
 		self.b = theano.shared(value = initB, borrow = True)
 
 		self.convolution = conv.conv2d( input = self.inputs, filters = self.W, filter_shape = self.filterShape )
-		self.pooled, self.nbFlatOutputs, self.height, self.width = self.pooler.pool(self)
-		
+		self.pooled, self.height, self.width = self.pooler.pool(self)
+		self.nbFlatOutputs = self.nbChannels * self.height * self.width
+
 		self.outputs = self.activation.function(self.pooled + self.b.dimshuffle('x', 0, 'x', 'x'))
 		self._decorate()
 		
