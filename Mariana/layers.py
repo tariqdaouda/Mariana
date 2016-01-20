@@ -44,7 +44,6 @@ class Layer_ABC(object) :
 		self.inputs = None
 		self.nbOutputs = size
 		self.outputs = None # this is a symbolic var
-		# self.test_outputs = None # this is a symbolic var
 
 		if saveOutputs :
 			initLO = numpy.zeros(self.nbOutputs, dtype=theano.config.floatX)
@@ -84,10 +83,6 @@ class Layer_ABC(object) :
 		"Registers a layer as an input to self. This function is first called by input layers. Initialisation can only start once all input layers have been registered"
 		self._inputRegistrations.add(inputLayer.name)
 
-	# def _addInput(self, inputLayer) :
-	# 	"Abtract. Define what should be done to self when adding inputLayer"
-	# 	raise NotImplemented("Should be implemented in child")
-
 	def _init(self) :
 		"Initialise the layer making it ready for training. This function is automatically called before train/test etc..."
 		if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.feededBy) ) :
@@ -96,13 +91,6 @@ class Layer_ABC(object) :
 				raise ValueError("Invalid layer '%s' has no defined outputs" % self.name)
 
 			for l in self.feedsInto.itervalues() :
-				# l._addInput(self)
-				# if l.inputs is None :
-				# 	l.inputs = self.outputs
-				# else :
-				# 	l.inputs += self.outputs
-				
-				# l._setNbInputs(self)
 				l._registerInput(self)
 				l._init()
 			self._mustInit = False
@@ -118,12 +106,6 @@ class Layer_ABC(object) :
 		for d in self.decorators :
 			d.decorate(self)
 		self._decorating = False
-
-	# def _setNbInputs(self, layer) :
-	# 	"""Sets the size of input that the layer receives"""
-	# 	if self.nbInputs is not None :
-	# 		raise ValueError("A computation layer can only have one single input")
-	# 	self.nbInputs = layer.nbOutputs
 
 	def connect(self, layer) :
 		"""Connect the layer to another one. Using the '>' operator to connect to layers is actually calls this function.
@@ -235,7 +217,6 @@ class Embedding(Layer_ABC) :
 	def _setOutputs(self) :
 		self.preOutputs = self.embeddings[self.inputs]
 		self.outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
-		# self.test_outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
 		self._decorate()
 
 	def getParams(self) :
@@ -268,7 +249,6 @@ class Input(Layer_ABC) :
 	def _setOutputs(self) :
 		"initialises the output to be the same as the inputs"
 		self.outputs = self.inputs
-		# self.test_outputs = self.inputs
 		self._decorate()
 
 	def _dot_representation(self) :
@@ -298,7 +278,6 @@ class Composite(Layer_ABC):
 
 		self.nbOutputs = self.nbInputs
 		self.outputs = tt.concatenate( [l.outputs for l in self.feededBy.itervalues()], axis = 1 )
-		# self.test_outputs = tt.concatenate( [l.test_outputs for l in self.feededBy.itervalues()], axis = 1 )
 
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=tripleoctogon]' % (self.name, self.nbOutputs)
@@ -369,7 +348,6 @@ class Hidden(Layer_ABC) :
 
 		# self.outputs = theano.printing.Print('this is a very important value for %s' % self.name)(self.activation(tt.dot(self.inputs, self.W) + self.b))
 		self.outputs = self.activation.function(tt.dot(self.inputs, self.W) + self.b)
-		# self.test_outputs = self.activation.function(tt.dot(self.inputs, self.W) + self.b)
 		
 		self._decorate()
 
@@ -451,7 +429,6 @@ class Output_ABC(Hidden) :
 		self._userInit()
 
 		self.cost = self.costObject.costFct(self.targets, self.outputs)
-		# self.test_cost = self.costObject.costFct(self.targets, self.test_outputs)
 		self.test_cost = self.costObject.costFct(self.targets, self.outputs)
 
 		for l in self.dependencies.itervalues() :
@@ -474,11 +451,9 @@ class Output_ABC(Hidden) :
 		for l in self.network.layers.itervalues() :
 			if ( l.last_outputs is not None ) and ( l.outputs is not None ) :
 				self.updates.append( (l.last_outputs, l.outputs ) )
-				# self.updates_lastOutputs.append( (l.last_outputs, l.test_outputs ) )
-
+		
 		self.train = MWRAP.TheanoFunction("train", self, [self.cost], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
 		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], { "targets" : self.targets }, updates = self.updates_lastOutputs, allow_input_downcast=True)
-		# self.propagate = MWRAP.TheanoFunction("propagate", self, [self.test_outputs], updates = self.updates_lastOutputs, allow_input_downcast=True)
 		self.propagate = MWRAP.TheanoFunction("propagate", self, [self.outputs], updates = self.updates_lastOutputs, allow_input_downcast=True)
 
 		self.setCustomTheanoFunctions()
@@ -519,7 +494,6 @@ class SoftmaxClassifier(Classifier_ABC) :
 	
 	def setCustomTheanoFunctions(self) :
 		"""defined theano_classify, that returns the argmax of the output"""
-		# self.classify = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.test_outputs) ], updates = self.updates_lastOutputs)
 		self.classify = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.outputs) ], updates = self.updates_lastOutputs)
 
 	def _dot_representation(self) :
