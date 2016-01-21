@@ -53,23 +53,37 @@ class TheanoFunction(object) :
 
 		self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs, updates = self.updates, **kwargs)
 
-		if DEVICE_IS_GPU > -1:
+		warningMsg = False
+		if DEVICE_IS_GPU :
 			device = "GPU"
+			msg = "I will use the [-%s-] to run function '%s' of layer '%s'!" % (device, name, outputLayer.name)
+			if str(self.getToposort()).find("float64") > -1:
+				warningMsg = True
+				msg += "\n\nBut there are some float64s that do not fit on the GPU and will slow down the computations.\nPlease consider:"
+				msg += "\n\t* Launching with THEANO_FLAGS=device=gpu,floatX=float32 python <your script>.py."
+				msg += "\n\t* If you have any dmatrix, dvector or dscalar in your code replace them with matrix, vector, scalar."
 		else:
 			device = "CPU"
+			msg = "I will use the [-%s-] to run function '%s' of layer '%s'!" % (device, name, outputLayer.name)
 
-		MCAN.friendly("Run device", "I will use the [-%s-] to run function '%s' of layer '%s'!" % (device, name, outputLayer.name))
+
+		MCAN.friendly("Run device", msg, warning = warningMsg)
+		
+
+	def getToposort(self) :
+		"""returns the toposort ( name of all ops  of the function in order of application ) of the function"""
+		return self.theano_fct.maker.fgraph.toposort()
 
 	def printGraph(self) :
 		"""Print the theano graph of the function"""
 		theano.printing.debugprint(self.theano_fct)
 
 	def dumpToImage(self, filename) :
-		"""saves hthe graph to an image file, requires pydot"""
+		"""saves the function graph into an image file, requires pydot"""
 		theano.printing.pydotprint(self.theano_fct, filename)
 
 	def dumpToHTML(self, filename) :
-		"""dumps the graph into a interactive html file"""
+		"""saves the function graph into an interactive html file, requires pydot and potentially an internet connection"""
 		import theano.d3viz as d3v
 		d3v.d3viz(self.theano_fct, filename)
 

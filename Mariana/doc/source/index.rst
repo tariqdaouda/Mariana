@@ -76,6 +76,7 @@ Contents:
    intro
    training
    layers
+   convolution
    network
    costs
    scenari

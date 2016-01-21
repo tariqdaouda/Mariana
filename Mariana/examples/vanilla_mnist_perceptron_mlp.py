@@ -32,7 +32,7 @@ def MLP(ls, cost) :
 	mlp = i > h > o
 	
 	return mlp
-	
+
 if __name__ == "__main__" :
 	
 	#Let's define the network
@@ -41,28 +41,27 @@ if __name__ == "__main__" :
 
 	train_set, validation_set, validation_set = load_mnist()
 
-	model = MLP(ls, cost)
-	o = model.outputs.values()[0]
-
-	h = model.layers["hid"]
-
 	maxEpochs = 1000
 	miniBatchSize = 20
 	
-	e = 0
+	model = MLP(ls, cost)
+	o = model.outputs.values()[0]
+	
+	epoch = 0
 	bestValScore = numpy.inf
-	model.init()
 	
 	while True :
 		trainScores = []
 		for i in xrange(0, len(train_set[0]), miniBatchSize) :
+			#you can also use the name of the output layer as defined by its attribute 'name': 
+			#res = model.train("out", ... )
 			res = model.train(o, inp = train_set[0][i : i +miniBatchSize], targets = train_set[1][i : i +miniBatchSize] )
 			trainScores.append(res[0])
 	
 		trainScore = numpy.mean(trainScores)
 		res = model.test(o, inp = validation_set[0], targets = validation_set[1] )
 		
-		print "---\nepoch", e
+		print "---\nepoch", epoch
 		print "\ttrain score:", trainScore
 		if bestValScore > res[0] :
 			bestValScore = res[0]
@@ -70,4 +69,4 @@ if __name__ == "__main__" :
 		else :
 			print "\tvalidation score:", res[0], "best:", bestValScore
 		
-		e += 1
+		epoch += 1
