@@ -92,7 +92,6 @@ class Flatten(ML.Layer_ABC) :
 
 		self.nbInputs = self.nbInputChannels
 		self.outputs = self.inputs.flatten(self.outdim)
-		self._decorate()
 	
 	def _dot_representation(self) :
 		return '[label="%s: %s->%s" shape=invhouse]' % (self.name, self.nbInputChannels, self.nbOutputs)
@@ -134,7 +133,6 @@ class InputChanneler(ConvLayer_ABC, ML.Layer_ABC) :
 		self.nbOutputs = len(inps)
 		self.outputs = tt.stack(inps).reshape((-1, self.nbChannels, self.height, self.width))
 		self.nbFlatOutputs = self.nbChannels * self.height * self.width
-		self._decorate()
 
 class Input(ConvLayer_ABC, ML.Layer_ABC) :
 	"""The input to a convolution network. This is different from a regular Input layer in the sense that it also holds channels information.
@@ -166,7 +164,6 @@ class Input(ConvLayer_ABC, ML.Layer_ABC) :
 		"initialises the output to be the same as the inputs"
 		self.outputs = self.inputs
 		self.test_outputs = self.inputs
-		self._decorate()
 
 class Convolution2D(ML.Hidden, ConvLayer_ABC) :
 	"""The layer that performs the convolutions"""
@@ -242,7 +239,6 @@ class Convolution2D(ML.Hidden, ConvLayer_ABC) :
 		self.nbFlatOutputs = self.nbChannels * self.height * self.width
 
 		self.outputs = self.activation.function(self.pooled + self.b.dimshuffle('x', 0, 'x', 'x'))
-		self._decorate()
 		
 	def getParams(self) :
 		"""returns the layer parameters (Weights and bias)"""

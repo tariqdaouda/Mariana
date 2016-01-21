@@ -87,6 +87,7 @@ class Layer_ABC(object) :
 		"Initialise the layer making it ready for training. This function is automatically called before train/test etc..."
 		if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.feededBy) ) :
 			self._setOutputs()
+			self._decorate()
 			if self.outputs is None :
 				raise ValueError("Invalid layer '%s' has no defined outputs" % self.name)
 
@@ -113,7 +114,7 @@ class Layer_ABC(object) :
 		def _connectLayer(me, layer) :
 			me.feedsInto[layer.name] = layer
 			layer.feededBy[me.name] = me
-		
+			
 			me.network.addEdge(me, layer)
 			if layer.network is not None :
 				me.network.merge(me, layer)
@@ -218,7 +219,6 @@ class Embedding(Layer_ABC) :
 	def _setOutputs(self) :
 		self.preOutputs = self.embeddings[self.inputs]
 		self.outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
-		self._decorate()
 
 	def getParams(self) :
 		"""returns nothing"""
@@ -250,7 +250,7 @@ class Input(Layer_ABC) :
 	def _setOutputs(self) :
 		"initialises the output to be the same as the inputs"
 		self.outputs = self.inputs
-		self._decorate()
+		
 
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=invhouse]' % (self.name, self.nbOutputs)
@@ -350,7 +350,6 @@ class Hidden(Layer_ABC) :
 		# self.outputs = theano.printing.Print('this is a very important value for %s' % self.name)(self.activation(tt.dot(self.inputs, self.W) + self.b))
 		self.outputs = self.activation.function(tt.dot(self.inputs, self.W) + self.b)
 		
-		self._decorate()
 
 		for reg in self.regularizationObjects :
 			self.regularizations.append(reg.getFormula(self))
