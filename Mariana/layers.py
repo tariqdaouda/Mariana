@@ -442,7 +442,6 @@ class Output_ABC(Hidden) :
 		self.updates = self.learningScenario.getUpdates(self, self.cost)
 
 		for l in self.dependencies.itervalues() :
-			print l.learningScenario
 			try :
 				self.updates.extend(l.learningScenario.getUpdates(l, self.cost))
 			except AttributeError :

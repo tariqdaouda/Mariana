@@ -46,11 +46,9 @@ class GradientDescent(LearningScenario_ABC):
 			gparam = tt.grad(cost, param)
  			updates.append((param, param - self.lr * gparam))
  		
- 		print layer.name, layer.getSubtensorParams()
  		for param, subtensor in layer.getSubtensorParams() :
  			gsub = tt.grad(cost, subtensor)
  			update = (param, tt.inc_subtensor(subtensor, -self.lr * gsub))
-			print update
 			updates.append(update)
 
 		return updates
@@ -71,6 +69,13 @@ class MomentumGradientDescent(LearningScenario_ABC):
 			updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
 			updates.append((param, param - self.lr * momentum_param))
 
+ 		for param, subtensor in layer.getSubtensorParams() :
+ 			gsub = tt.grad(cost, subtensor)
+	 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
+			updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gsub))
+			update = (param, tt.inc_subtensor(subtensor, -self.lr * momentum_param))
+			updates.append(update)
+
 		return updates
 
 class GradientFloor(LearningScenario_ABC):
@@ -88,10 +93,18 @@ class GradientFloor(LearningScenario_ABC):
  		if self.lr > 0 :
 	 		for param in layer.getParams() :
 	 			g = tt.grad(cost, param)
-	 			gparam = tt.switch( tt.abs_(g) > self.floor, g, 0.)
 
 		 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
 				updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
 				updates.append((param, param - self.lr * momentum_param))
+
+	 		for param, subtensor in layer.getSubtensorParams() :
+	 			g = tt.grad(cost, subtensor)
+	 			gsub = tt.switch( tt.abs_(g) > self.floor, g, 0.)
+
+		 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
+				updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gsub))
+				update = (param, tt.inc_subtensor(subtensor, -self.lr * momentum_param))
+				updates.append(update)
 
 		return updates
