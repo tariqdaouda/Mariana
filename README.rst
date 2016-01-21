@@ -24,7 +24,7 @@ In short:
 * Very easy to use
 * Work with high level machine learning abstractions (layers, activations, regularizations, ....) 
 * Export you models into HTML or DOT for easy visualization and debugging
-* Great for Feed Forward nets (MLPs, Auto-Encoders, Embeddings, ConvNets...)
+* Great for Feed Forward nets: MLPs, Auto-Encoders, Embeddings, ConvNets,... (**check out the examples**)
 * Supports momentum
 * Completely modular and extendable, plug in your own activations, regularizations etc...
 * Trainers can be used to encapsulate your training (even oversampling, ...) in a safe environement
