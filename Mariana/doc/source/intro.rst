@@ -38,7 +38,7 @@ These are the basics, importations first:
 	cost = MC.NegativeLogLikelihood()
 
 	i = ML.Input(28*28, name = "inputLayer")
-	h = ML.Hidden(300, activation = MA.reLU, decorators = [MD.BinomialDropout(0.2)], regularizations = [ MR.L1(0.0001) ])
+	h = ML.Hidden(300, activation = MA.ReLU(), decorators = [MD.BinomialDropout(0.2)], regularizations = [ MR.L1(0.0001) ])
 	o = ML.SoftmaxClassifier(9, learningScenario = ls, costObject = cost, regularizations = [ MR.L1(0.0001) ])
 
 	MLP = i > h > o
@@ -51,8 +51,8 @@ These are the basics, importations first:
 	cost = MC.MeanSquaredError()
 
 	i = ML.Input(10, name = "inputLayer")
-	h = ML.Hidden(2, activation = MA.tanh, decorators = [ MD.GlorotTanhInit() ])
-	o = ML.Regression(10, activation = MA.tanh, costObject = cost, learningScenario = ls)
+	h = ML.Hidden(2, activation = MA.Tanh(), decorators = [ MD.GlorotTanhInit() ])
+	o = ML.Regression(10, activation = MA.Tanh(), costObject = cost, learningScenario = ls)
 
 	ae = i > h > o
 

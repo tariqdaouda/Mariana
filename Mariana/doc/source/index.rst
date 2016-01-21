@@ -75,6 +75,7 @@ Contents:
    installation
    intro
    training
+   gpu
    layers
    convolution
    network
