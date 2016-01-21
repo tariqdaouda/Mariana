@@ -24,7 +24,7 @@ In short:
 * Very easy to use
 * Work with high level machine learning abstractions (layers, activations, regularizations, ....) 
 * Export you models into HTML or DOT for easy visualization and debugging
-* Great for Feed Forward nets (MLPs, Auto-Encoders, Embeddings, ...)
+* Great for Feed Forward nets (MLPs, Auto-Encoders, Embeddings, ConvNets...)
 * Supports momentum
 * Completely modular and extendable, plug in your own activations, regularizations etc...
 * Trainers can be used to encapsulate your training (even oversampling, ...) in a safe environement
@@ -35,7 +35,7 @@ In short:
 Disclaimer
 -----------
 
-Mariana is in active developpement, I use it every day and bugs tend to be corrected very quickly. ConvNets and RNNs are planned but not supported yet.
+Mariana is in active developpement, I use it every day and bugs tend to be corrected very quickly. Mariana cannot do RNNs yet.
 
 A word about the **'>'**
 =========================
@@ -138,6 +138,12 @@ Can it run on GPU?
 
 At the heart of Mariana are Theano functions, so the answer is yes. The guys behind Theano really did an awesome
 job of optimization, so it should be pretty fast, whether you're running on CPU or GPU.
+This command should run your script en GPU::
+
+	THEANO_FLAGS=mode=FAST_RUN,device=gpu,floatX=float32 python <my script>.py
+
+To make sure your machine is GPU enabled, have a look at: tests/theano_device_check1.py
+By default, Mariana will also tell you wether it's running on GPU or CPU and give you warnings in case you asked for the GPU and have some rogue float64s.
 
 Making life even easier: Trainers and Recorders
 ===============================================
