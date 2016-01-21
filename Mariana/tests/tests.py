@@ -144,7 +144,7 @@ class MLPTests(unittest.TestCase):
 		embeddings = emb.getEmbeddings()
 		for i in xrange(0, len(data)/2) :
 			v = numpy.dot(embeddings[i], embeddings[i+len(data)/2])
-			self.assertTrue(v < 1)
+			self.assertTrue(v < -1)
 
 if __name__ == '__main__' :
 	import Mariana.settings as MSET
