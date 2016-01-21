@@ -67,9 +67,9 @@ If you run into a problem please try to update Theano first by doing a **git pul
 Full Examples
 =============
 
-Please have a look at **examples/mnist_mlp.py**. It illustrates most of what this quickstart guide adresses.
-There's also **examples/vanilla_mnist_perceptron_mlp.py**, wich demonstrate how to train an MLP (network with one hidden layer) or a Perceptron on the MNIST database
-without the use of a trainer.
+Please have a look at the **examples/mnist_mlp.py**. It illustrates most of what this quickstart guide adresses.
+There's also **examples/vanilla_mnist_perceptron_mlp.py**, wich demonstrate how to train an MLP (network with one hidden layer) or a Perceptron on the MNIST database without the use of a trainer.
+You can also check the examples for the Convolutional nets, auto-encoders, embdeddings, ...
 
 Short Snippets
 ===============
