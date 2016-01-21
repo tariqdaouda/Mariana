@@ -17,7 +17,7 @@ class ConvPooler_ABC(object) :
 		"""
 		raise NotImplemented("Must be implemented in child")
 
-class NoPool(ConvPooler_ABC) :
+class NoPooling(ConvPooler_ABC) :
 	"""No pooling. The convolution is kept as is"""
 	def pool(self, convLayer) :
 		hOutputs = convLayer.inputHeight - convLayer.filterHeight + 1
@@ -90,8 +90,12 @@ class Flatten(ML.Layer_ABC) :
 			else :
 				self.inputs += inputLayer.outputs
 
+		self.nbInputs = self.nbInputChannels
 		self.outputs = self.inputs.flatten(self.outdim)
 		self._decorate()
+	
+	def _dot_representation(self) :
+		return '[label="%s: %s->%s" shape=invhouse]' % (self.name, self.nbInputChannels, self.nbOutputs)
 
 class ConvLayer_ABC(object) :
 	"""The abstract class that all convolution layers must implement"""
@@ -127,6 +131,7 @@ class InputChanneler(ConvLayer_ABC, ML.Layer_ABC) :
 			inps.append(l.outputs)
 
 		self.nbChannels = len(inps)
+		self.nbOutputs = len(inps)
 		self.outputs = tt.stack(inps).reshape((-1, self.nbChannels, self.height, self.width))
 		self.nbFlatOutputs = self.nbChannels * self.height * self.width
 		self._decorate()
@@ -215,6 +220,8 @@ class Convolution2D(ML.Hidden, ConvLayer_ABC) :
 
 		if self.filterWidth > self.inputWidth :
 			raise ValueError("Filter width for '%s' cannot be bigger than its input width: '%s' > '%s'" % (self.name, self.filterWidth, self.inputWidth))
+
+		self.nbInputs = self.nbInputChannels
 
 	def _setOutputs(self) :
 		from theano.tensor.nnet import conv

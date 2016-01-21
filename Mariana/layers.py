@@ -203,7 +203,7 @@ class Embedding(Layer_ABC) :
 		initEmb = numpy.asarray(numpy.random.random((self.dictSize, self.nbDimentions)), dtype=theano.config.floatX)
 		
 		self.embeddings = theano.shared(initEmb)
-		self.inputs = tt.imatrix(name = "embInp_" + self.name)
+		self.inputs = tt.matrix(name = "embInp_" + self.name)
 
 	def getEmbeddings(self, idxs = None) :
 		"""returns the embeddings.
@@ -490,7 +490,7 @@ class SoftmaxClassifier(Classifier_ABC) :
 	"""A softmax (probabilistic) Classifier"""
 	def __init__(self, nbOutputs, learningScenario, costObject, temperature = 1, name = None, **kwargs) :
 		Classifier_ABC.__init__(self, nbOutputs, activation = MA.Softmax(temperature = temperature), learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
-		self.targets = tt.ivector(name = "targets_" + self.name)
+		self.targets = tt.vector(name = "targets_" + self.name)
 	
 	def setCustomTheanoFunctions(self) :
 		"""defined theano_classify, that returns the argmax of the output"""

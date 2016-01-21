@@ -10,7 +10,7 @@ import Mariana.scenari as MS
 
 import Mariana.settings as MSET
 
-MSET.VERBOSE = False
+MSET.VERBOSE = True
 
 from Mariana.examples.useful import load_mnist
 
@@ -66,7 +66,7 @@ class ConvWithChanneler :
 		ichan = MCONV.InputChanneler(28, 28, name = 'inpChan')
 		
 		c1 = MCONV.Convolution2D( 
-			nbFilters = 20,
+			nbFilters = 1,
 			filterHeight = 5,
 			filterWidth = 5,
 			activation = MA.Tanh(),
@@ -75,7 +75,7 @@ class ConvWithChanneler :
 		)
 
 		c2 = MCONV.Convolution2D( 
-			nbFilters = 50,
+			nbFilters = 1,
 			filterHeight = 5,
 			filterWidth = 5,
 			activation = MA.Tanh(),
@@ -84,7 +84,7 @@ class ConvWithChanneler :
 		)
 
 		f = MCONV.Flatten(name = "flat")
-		h = ML.Hidden(500, activation = MA.Tanh(), decorators = [], regularizations = [ ], name = "hid" )
+		h = ML.Hidden(5, activation = MA.Tanh(), decorators = [], regularizations = [ ], name = "hid" )
 		o = ML.SoftmaxClassifier(10, decorators = [], learningScenario = ls, costObject = cost, name = "out", regularizations = [ ] )
 		
 		self.model = i > ichan > c1 > c2 > f > h > o
@@ -103,7 +103,7 @@ if __name__ == "__main__" :
 	maxEpochs = 200
 	miniBatchSize = 500
 	
-	model = Conv(ls, cost)
+	model = ConvWithChanneler(ls, cost)
 	
 	epoch = 0	
 	while True :
