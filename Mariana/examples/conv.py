@@ -1,16 +1,11 @@
 import numpy
 
 import Mariana.activations as MA
-import Mariana.decorators as MD
 import Mariana.layers as ML
 import Mariana.convolution as MCONV
 import Mariana.costs as MC
 import Mariana.regularizations as MR
 import Mariana.scenari as MS
-
-import Mariana.settings as MSET
-
-MSET.VERBOSE = True
 
 from Mariana.examples.useful import load_mnist
 

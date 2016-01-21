@@ -183,7 +183,7 @@ class Embedding(Layer_ABC) :
 	"""This input layer will take care of creating the embeddings and training them. Embeddings are learned representations
 	of the inputs that are much loved in NLP."""
 
-	def __init__(self, size, nbDimentions, dictSize, name = None, **kwargs) :
+	def __init__(self, size, nbDimentions, dictSize, learningScenario = None, name = None, **kwargs) :
 		"""
 		:param size int: the size of the input vector (if your input is a sentence this should be the number of words in it).
 		:param nbDimentions int: the number of dimentions in wich to encode each word.
@@ -193,6 +193,7 @@ class Embedding(Layer_ABC) :
 		self.network = MNET.Network()
 		self.network.addInput(self)
 		
+		self.learningScenario = learningScenario
 		self.type = TYPE_INPUT_LAYER
 		self.dictSize = dictSize
 		self.nbDimentions = nbDimentions
@@ -442,6 +443,7 @@ class Output_ABC(Hidden) :
 		self.updates = self.learningScenario.getUpdates(self, self.cost)
 
 		for l in self.dependencies.itervalues() :
+			print l.learningScenario
 			try :
 				self.updates.extend(l.learningScenario.getUpdates(l, self.cost))
 			except AttributeError :

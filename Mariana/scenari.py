@@ -46,9 +46,11 @@ class GradientDescent(LearningScenario_ABC):
 			gparam = tt.grad(cost, param)
  			updates.append((param, param - self.lr * gparam))
  		
+ 		print layer.name, layer.getSubtensorParams()
  		for param, subtensor in layer.getSubtensorParams() :
  			gsub = tt.grad(cost, subtensor)
  			update = (param, tt.inc_subtensor(subtensor, -self.lr * gsub))
+			print update
 			updates.append(update)
 
 		return updates
