@@ -105,7 +105,7 @@ if __name__ == "__main__" :
 	
 	model = ConvWithChanneler(ls, cost)
 	
-	epoch = 0	
+	epoch = 0
 	while True :
 		trainScores = []
 		for i in xrange(0, len(train_set[0]), miniBatchSize) :

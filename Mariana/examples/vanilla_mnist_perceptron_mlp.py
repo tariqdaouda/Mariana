@@ -46,14 +46,15 @@ if __name__ == "__main__" :
 	
 	model = MLP(ls, cost)
 	o = model.outputs.values()[0]
-
+	
 	epoch = 0
 	bestValScore = numpy.inf
-	model.init()
 	
 	while True :
 		trainScores = []
 		for i in xrange(0, len(train_set[0]), miniBatchSize) :
+			#you can also use the name of the output layer as defined by its attribute 'name': 
+			#res = model.train("out", ... )
 			res = model.train(o, inp = train_set[0][i : i +miniBatchSize], targets = train_set[1][i : i +miniBatchSize] )
 			trainScores.append(res[0])
 	

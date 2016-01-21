@@ -3,13 +3,18 @@ import Mariana.settings as MSET
 
 MESSAGE_LOG_FILE = None
 
-def friendly(subject, msg, flush = True) :
+def friendly(msgSubject, msg, warning=False, flush = True) :
 	"""Prints a friendly message"""
 	
 	global MESSAGE_LOG_FILE
 	
 	m = "  " + msg.replace("\n", '\n  ')
 	
+	if warning :
+		subject = "WARNING: " + msgSubject
+	else :
+		subject = msgSubject
+
 	s = """\n%s:\n%s\n%s\n\n  Cheers :),\n\n  Mariana\n""" %(subject, "-"*(len(subject) + 1), m)
 	if MSET.VERBOSE :
 		print s
