@@ -1,4 +1,4 @@
-import theano
+import theano, numpy
 import theano.tensor as tt
 
 __all__ = ["LearningScenario_ABC", "Fixed", "GradientDescent", "MomentumGradientDescent", "GradientFloor"]
@@ -71,8 +71,11 @@ class MomentumGradientDescent(LearningScenario_ABC):
 
  		for param, subtensor in layer.getSubtensorParams() :
  			gsub = tt.grad(cost, subtensor)
-	 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
+	 		# momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
+	 		initZeros = numpy.zeros(param.get_value().shape, dtype = theano.config.floatX)
+	 		momentum_param = theano.shared(initZeros, broadcastable=param.broadcastable)
 			updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gsub))
+			
 			update = (param, tt.inc_subtensor(subtensor, -self.lr * momentum_param))
 			updates.append(update)
 

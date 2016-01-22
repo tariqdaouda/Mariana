@@ -204,7 +204,7 @@ class Embedding(Layer_ABC) :
 		
 		initEmb = numpy.asarray(numpy.random.random((self.dictSize, self.nbDimentions)), dtype=theano.config.floatX)
 		
-		self.embeddings = theano.shared(initEmb)
+		self.embeddings = theano.shared(initEmb, name="emb_" + self.name)
 		self.inputs = tt.imatrix(name = "embInp_" + self.name)
 
 	def getEmbeddings(self, idxs = None) :
