@@ -105,6 +105,9 @@ class ConvLayer_ABC(object) :
 		self.width = None
 		self.nbFlatOutputs = None #the number of outputs flattened in 2d.
 
+	def _dot_representation(self) :
+		return '[label="%s: %sx%sx%s" shape=invhouse]' % ( self.name, self.nbChannels, self.height, self.width)
+
 class InputChanneler(ConvLayer_ABC, ML.Layer_ABC) :
 	"""Takes the outputs of several regular layer and pools them into separate channels. All inputs must have the same dimentions"""
 	def __init__(self, height, width, **kwargs) :
@@ -165,7 +168,7 @@ class Input(ConvLayer_ABC, ML.Layer_ABC) :
 		self.outputs = self.inputs
 		self.test_outputs = self.inputs
 
-class Convolution2D(ML.Hidden, ConvLayer_ABC) :
+class Convolution2D(ConvLayer_ABC, ML.Hidden) :
 	"""The layer that performs the convolutions"""
 
 	def __init__(self, nbFilters, filterHeight, filterWidth, activation, pooler, **kwargs) :

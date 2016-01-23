@@ -143,8 +143,9 @@ class ClassSets(Dataset_ABC) :
 		self.classSets = OrderedDict()
 		
 		self.inputSize = 0
+		self.inputShape = None
 		for k, v in sets :
-			self.classSets[k] = numpy.asarray(v)
+			self.classSets[k] = numpy.asarray(v, dtype=theano.config.floatX)
 			if len(self.classSets[k].shape) < 2 :
 			 	self.classSets[k] = self.classSets[k].reshape(self.classSets[k].shape[0], 1)
 
@@ -153,10 +154,11 @@ class ClassSets(Dataset_ABC) :
 			except :
 				inputSize = 1
 
-			if self.inputSize == 0 :
+			if self.inputShape is None :
 				self.inputSize = inputSize
+				self.inputShape = self.classSets[k][0].shape
 			elif self.inputSize != inputSize :
-				raise ValueError("All class elements must have the same size. Got '%s', while the previous value was '%s'" % ( len(v[0]), self.inputSize ))
+				raise ValueError("All class elements must have the same size. Got '%s', while the previous value was '%s'" % ( self.classSets[k][0].shape, self.inputShape ))
 				
 		self.classNumbers = {}
 		self.onehots = {}
@@ -179,8 +181,9 @@ class ClassSets(Dataset_ABC) :
 	def setSampling(self, strategy, arg) :
 		"""Set the sampling strategy::
 
-			* strategy='all_random', arg = k(int). Full data will be made of a random sampling(with replacement) of k elements for each class
-			* strategy='filling', arg = n(str). The totality of the elements of every class that has as much elements as card(n) will be always present. Elements from other classes will be integrated using a random samplings of card(n) elements with replacements.
+			* strategy='all_random', arg = k (int). Full data will be made of a random sampling(with replacement) of k elements for each class
+			* strategy='filling', arg = class_name (str). The totality of the elements of every class that has as much elements as card(class_name) will be always present.
+			Elements from other classes will be integrated using a random samplings of card(n) elements with replacements.
 		"""
 		if strategy == "all_random" :
 			assert arg is not None
@@ -191,10 +194,15 @@ class ClassSets(Dataset_ABC) :
 			raise ValueError("Unkown sampling strategy")
 
 		subsetSize = self.sampleSize * len(self.classSets)
+		shape = [subsetSize]
+		for v in self.inputShape :
+			shape.append(v)
+		shape = tuple(shape)
+
 		self.subsets = {
-			"input" : numpy.zeros((subsetSize, self.inputSize)),
-			"classNumber" : numpy.zeros(subsetSize),
-			"onehot" : numpy.zeros( (subsetSize, len(self.classSets)) )
+			"input" : numpy.zeros(shape, dtype = theano.config.floatX),
+			"classNumber" : numpy.zeros(subsetSize, dtype = theano.config.floatX),
+			"onehot" : numpy.zeros( (subsetSize, len(self.classSets)), dtype = theano.config.floatX)
 		}
 	
 		self.samplingStrategy = strategy
