@@ -202,7 +202,8 @@ class Embedding(Layer_ABC) :
 		self.nbInputs = size
 		self.nbOutputs = self.nbDimentions*self.nbInputs
 		
-		initEmb = numpy.asarray(numpy.random.random((self.dictSize, self.nbDimentions)), dtype=theano.config.floatX)
+		# initEmb = numpy.asarray(numpy.random.random((self.dictSize, self.nbDimentions)), dtype=theano.config.floatX)
+		initEmb = numpy.asarray(numpy.random.normal(0, 0.01, (self.dictSize, self.nbDimentions)), dtype=theano.config.floatX)
 		
 		self.embeddings = theano.shared(initEmb, name="emb_" + self.name)
 		self.inputs = tt.imatrix(name = "embInp_" + self.name)
@@ -443,15 +444,16 @@ class Output_ABC(Hidden) :
 
 		for l in self.dependencies.itervalues() :
 			try :
-				self.updates.extend(l.learningScenario.getUpdates(l, self.cost))
+				updates = l.learningScenario.getUpdates(l, self.cost)
 			except AttributeError :
-				self.updates.extend(self.learningScenario.getUpdates(l, self.cost))
+				updates = self.learningScenario.getUpdates(l, self.cost)
+			self.updates.extend(updates)
 
 		self.updates_lastOutputs = []
 		for l in self.network.layers.itervalues() :
 			if ( l.last_outputs is not None ) and ( l.outputs is not None ) :
 				self.updates.append( (l.last_outputs, l.outputs ) )
-		
+	
 		self.train = MWRAP.TheanoFunction("train", self, [self.cost], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
 		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], { "targets" : self.targets }, updates = self.updates_lastOutputs, allow_input_downcast=True)
 		self.propagate = MWRAP.TheanoFunction("propagate", self, [self.outputs], updates = self.updates_lastOutputs, allow_input_downcast=True)
