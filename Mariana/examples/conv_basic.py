@@ -7,6 +7,11 @@ import Mariana.costs as MC
 import Mariana.regularizations as MR
 import Mariana.scenari as MS
 
+####
+# Class 1 inputs have a pattern of ones on the left side, class 2 inputs have it on the right.
+# This network learn to differentiate between the two
+####
+
 class ConvWithChanneler :
 	
 	def __init__(self, inputSize, patternSize, ls, cost) :
