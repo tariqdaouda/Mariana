@@ -4,7 +4,7 @@ import theano.tensor as tt
 import Mariana.layers as ML
 import Mariana.network as MNET
 
-__all__ = ["ConvPooler_ABC", "NoPool", "MaxPooling2D", "Flatten", "ConvLayer_ABC", "Composite", "InputChanneler", "Input", "Convolution2D"]
+__all__ = ["ConvPooler_ABC", "NoPooling", "MaxPooling2D", "Flatten", "ConvLayer_ABC", "InputChanneler", "Input", "Convolution2D"]
 
 class ConvPooler_ABC(object) :
 	"""The interface that all poolers must implement"""
