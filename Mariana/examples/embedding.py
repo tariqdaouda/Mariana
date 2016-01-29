@@ -12,13 +12,13 @@ import Mariana.settings as MSET
 MSET.VERBOSE = False
 
 #The first 3 and the last 3 should end up diametrically opposed
-data = [[0], [1], [2], [3], [4], [5]]
+data = [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0]]
 targets = [0, 0, 0, 1, 1, 1]
 
 ls = MS.GradientDescent(lr = 0.5)
 cost = MC.NegativeLogLikelihood()
 
-emb = ML.Embedding(1, 2, len(data), learningScenario = ls, name="emb")
+emb = ML.Embedding(2, 2, len(data), learningScenario = ls, name="emb")
 o = ML.SoftmaxClassifier(2, learningScenario = MS.Fixed(), costObject = cost, name = "out")
 net = emb > o
 

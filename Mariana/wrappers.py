@@ -50,14 +50,13 @@ class TheanoFunction(object) :
 		self.additional_input_expressions = additional_input_expressions
 		self.outputs = output_expressions
 		self.updates = updates
-
 		self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs, updates = self.updates, **kwargs)
 
 		warningMsg = False
 		if DEVICE_IS_GPU :
 			device = "GPU"
 			msg = "I will use the [-%s-] to run function '%s' of layer '%s'!" % (device, name, outputLayer.name)
-			if str(self.getToposort()).find("float64") > -1:
+			if str(self.getToposort()).find("64") > -1:
 				warningMsg = True
 				msg += "\n\nBut there are some float64s that do not fit on the GPU and will slow down the computations.\nPlease consider:"
 				msg += "\n\t* Launching with THEANO_FLAGS=device=gpu,floatX=float32 python <your script>.py."

@@ -44,6 +44,7 @@ class Layer_ABC(object) :
 		self.inputs = None
 		self.nbOutputs = size
 		self.outputs = None # this is a symbolic var
+		self.saveOutputs = saveOutputs
 
 		if saveOutputs :
 			initLO = numpy.zeros(self.nbOutputs, dtype=theano.config.floatX)
@@ -70,10 +71,10 @@ class Layer_ABC(object) :
 		"""returns the layer parameters"""
 		raise NotImplemented("Should be implemented in child")
 
-	def getSubtensorParams(self) :
-		"""theano has a special optimisation for when you want to update just a subset of a tensor (matrix). Use this function to return a List
-		of tuples: (tensor, subset). By default it returns an empty list"""
-		return []
+	# def getSubtensorParams(self) :
+	# 	"""theano has a special optimisation for when you want to update just a subset of a tensor (matrix). Use this function to return a List
+	# 	of tuples: (tensor, subset). By default it returns an empty list"""
+	# 	return []
 
 	def clone(self, **kwargs) :
 		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
@@ -190,6 +191,7 @@ class Embedding(Layer_ABC) :
 		:param nbDimentions int: the number of dimentions in wich to encode each word.
 		:param dictSize int: the total number of words. 
 		"""
+
 		Layer_ABC.__init__(self, size, nbDimentions, name = name, **kwargs)
 		self.network = MNET.Network()
 		self.network.addInput(self)
@@ -220,14 +222,14 @@ class Embedding(Layer_ABC) :
 	def _setOutputs(self) :
 		self.preOutputs = self.embeddings[self.inputs]
 		self.outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
-
+		
 	def getParams(self) :
 		"""returns nothing"""
-		return []
+		return [self.embeddings]
 
-	def getSubtensorParams(self) :
-		"""returns the subset corresponding to the embedding"""
-		return [(self.embeddings, self.preOutputs)]
+	# def getSubtensorParams(self) :
+		# """returns the subset corresponding to the embedding"""
+		# return [(self.embeddings, self.preOutputs)]
 
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=invhouse]' % (self.name, self.nbOutputs)
