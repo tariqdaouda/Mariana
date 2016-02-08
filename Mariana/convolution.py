@@ -168,69 +168,6 @@ class Input(ConvLayer_ABC, ML.Layer_ABC) :
 		self.outputs = self.inputs
 		self.test_outputs = self.inputs
 
-# class Embedding(ConvLayer_ABC, ML.Layer_ABC) :
-# 	"""This input layer will take care of creating the embeddings and training them. Embeddings are learned representations
-# 	of the inputs that are much loved in NLP."""
-
-# 	def __init__(self, size, nbDimentions, dictSize, learningScenario = None, name = None, **kwargs) :
-# 		"""
-# 		:param size int: the size of the input vector (if your input is a sentence this should be the number of words in it).
-# 		:param nbDimentions int: the number of dimentions in wich to encode each word.
-# 		:param dictSize int: the total number of words. 
-# 		"""
-# 		ConvLayer_ABC.__init__(self, nbDimentions, **kwargs)
-# 		ML.Layer_ABC.__init__(self, size, saveOutputs = False, name = name,  **kwargs)
-
-# 		self.network = MNET.Network()
-# 		self.network.addInput(self)
-		
-# 		self.learningScenario = learningScenario
-# 		self.type = ML.TYPE_INPUT_LAYER
-# 		self.dictSize = dictSize
-# 		self.nbDimentions = nbDimentions
-		
-# 		self.nbInputs = size
-# 		self.nbOutputs = self.nbDimentions*self.nbInputs
-		
-# 		self.height = self.nbDimentions
-# 		self.width = size
-# 		# initEmb = numpy.asarray(numpy.random.normal(0, 0.01, (self.dictSize, self.nbDimentions, 1)), dtype=theano.config.floatX)
-# 		initEmb = numpy.asarray(numpy.random.normal(0, 0.01, (self.dictSize, self.nbDimentions)), dtype=theano.config.floatX)
-# 		self.shape = (self.dictSize, 1, self.nbDimentions)
-
-# 		self.embeddings = theano.shared(initEmb, name="emb_" + self.name)
-# 		self.inputs = tt.imatrix(name = "embInp_" + self.name)
-
-# 		# if self.saveOutputs :
-# 		# 	initLO = numpy.zeros((self.nbChannels, self.height, self.width), dtype=theano.config.floatX)
-# 		# 	self.last_outputs = theano.shared(value = numpy.array(initLO)) # this will be a shared variable with the last values of outputs
-# 		# else :
-# 		# 	self.last_outputs = None
-
-# 	def getEmbeddings(self, idxs = None) :
-# 		"""returns the embeddings.
-		
-# 		:param list idxs: if provided will return the embeddings only for those indexes 
-# 		"""
-# 		if idxs :
-# 			return self.embeddings.get_value()[idxs]
-# 		return self.embeddings.get_value()
-
-# 	def _setOutputs(self) :
-# 		self.preOutputs = self.embeddings[self.inputs]
-# 		self.outputs = self.preOutputs.T.dimshuffle('x', 0, 2, 1)#.reshape((self.inputs.shape[0], self.nbChannels, self.height, self.width))
-		
-# 	def getParams(self) :
-# 		"""returns nothing"""
-# 		return []
-
-# 	def getSubtensorParams(self) :
-# 		"""returns the subset corresponding to the embedding"""
-# 		return [(self.embeddings, self.preOutputs)]
-	
-# 	def _dot_representation(self) :
-# 		return '[label="%s: %s" shape=invhouse]' % (self.name, self.shape)
-
 class Convolution2D(ConvLayer_ABC, ML.Hidden) :
 	"""The layer that performs the convolutions"""
 

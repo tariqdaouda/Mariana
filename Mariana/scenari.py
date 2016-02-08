@@ -45,13 +45,7 @@ class GradientDescent(LearningScenario_ABC):
 		for param in layer.getParams() :
 			gparam = tt.grad(cost, param)
  			updates.append((param, param - self.lr * gparam))
- 		
- 	# 	for param, subtensor in layer.getSubtensorParams() :
- 	# 		gsub = tt.grad(cost, subtensor)
- 	# 		updateVal = tt.inc_subtensor(subtensor[0], -self.lr * gsub[0])#.reshape(param.shape)
- 	# 		update = (param, updateVal[0])
-		# 	updates.append(update)
-		# 	layer.grad = gsub
+ 
 		return updates
 
 class MomentumGradientDescent(LearningScenario_ABC):
@@ -69,16 +63,6 @@ class MomentumGradientDescent(LearningScenario_ABC):
 	 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
 			updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
 			updates.append((param, param - self.lr * momentum_param))
-
- 		# for param, subtensor in layer.getSubtensorParams() :
- 		# 	gsub = tt.grad(cost, subtensor)
-	 	# 	# momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
-	 	# 	initZeros = numpy.zeros(param.get_value().shape, dtype = theano.config.floatX)
-	 	# 	momentum_param = theano.shared(initZeros, broadcastable=param.broadcastable)
-			# updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gsub))
-			
-			# update = (param, tt.inc_subtensor(subtensor, -self.lr * momentum_param))
-			# updates.append(update)
 
 		return updates
 
@@ -101,14 +85,5 @@ class GradientFloor(LearningScenario_ABC):
 		 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
 				updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
 				updates.append((param, param - self.lr * momentum_param))
-
-	 		# for param, subtensor in layer.getSubtensorParams() :
-	 		# 	g = tt.grad(cost, subtensor)
-	 		# 	gsub = tt.switch( tt.abs_(g) > self.floor, g, 0.)
-
-		 	# 	momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
-				# updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gsub))
-				# update = (param, tt.inc_subtensor(subtensor, -self.lr * momentum_param))
-				# updates.append(update)
 
 		return updates

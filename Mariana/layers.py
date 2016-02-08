@@ -71,11 +71,6 @@ class Layer_ABC(object) :
 		"""returns the layer parameters"""
 		raise NotImplemented("Should be implemented in child")
 
-	# def getSubtensorParams(self) :
-	# 	"""theano has a special optimisation for when you want to update just a subset of a tensor (matrix). Use this function to return a List
-	# 	of tuples: (tensor, subset). By default it returns an empty list"""
-	# 	return []
-
 	def clone(self, **kwargs) :
 		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
 		raise NotImplemented("Should be implemented in child")
@@ -204,8 +199,8 @@ class Embedding(Layer_ABC) :
 		self.nbInputs = size
 		self.nbOutputs = self.nbDimentions*self.nbInputs
 		
-		# initEmb = numpy.asarray(numpy.random.random((self.dictSize, self.nbDimentions)), dtype=theano.config.floatX)
-		initEmb = numpy.asarray(numpy.random.normal(0, 0.01, (self.dictSize, self.nbDimentions)), dtype=theano.config.floatX)
+		initEmb = numpy.asarray(numpy.random.random((self.dictSize, self.nbDimentions)), dtype=theano.config.floatX)
+		# initEmb = numpy.asarray(numpy.random.normal(0, 0.01, (self.dictSize, self.nbDimentions)), dtype=theano.config.floatX)
 		
 		self.embeddings = theano.shared(initEmb, name="emb_" + self.name)
 		self.inputs = tt.imatrix(name = "embInp_" + self.name)
@@ -226,10 +221,6 @@ class Embedding(Layer_ABC) :
 	def getParams(self) :
 		"""returns nothing"""
 		return [self.embeddings]
-
-	# def getSubtensorParams(self) :
-		# """returns the subset corresponding to the embedding"""
-		# return [(self.embeddings, self.preOutputs)]
 
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=invhouse]' % (self.name, self.nbOutputs)
