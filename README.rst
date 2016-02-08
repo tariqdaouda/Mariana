@@ -35,7 +35,7 @@ In short:
 Disclaimer
 -----------
 
-Mariana is in active developpement, I use it every day and bugs tend to be corrected very quickly. Mariana cannot do RNNs yet.
+Mariana is in active developpement, I use it every day and bugs tend to be corrected very quickly. Mariana cannot do RNNs yet but it does everything else very well.
 
 A word about the **'>'**
 =========================
@@ -44,9 +44,15 @@ When communicating about neural networks people often draw sets of connected lay
 
 Installation
 =============
-First, make sure you have the latest version of Theano_ (do a git clone not a pip install).
+First, make sure you have the latest version of Theano_ (do a git clone not a pip install). I keep a version that is known to work with Mariana, and that I update regularly here::
 
-Then Clone it from git!::
+	git clone https://github.com/tariqdaouda/Theano.git
+	cd Theano
+	python setup.py develop
+
+But if you are not against against a little bit of adventure and want the very latest Theano stuff you can checkout Theano_'s repository.
+
+Then clone Mariana from git!::
 
 	git clone https://github.com/tariqdaouda/Mariana.git
 	cd Mariana
