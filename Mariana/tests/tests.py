@@ -146,6 +146,77 @@ class MLPTests(unittest.TestCase):
 			v = numpy.dot(embeddings[i], embeddings[i+len(data)/2])
 			self.assertTrue(v < -1)
 
+	# @unittest.skip("skipping")
+	def test_conv(self) :
+		import Mariana.convolution as MCONV
+		import theano
+
+		def getModel(inpSize, filterWidth) :
+			ls = MS.GradientDescent(lr = 0.5)
+			cost = MC.NegativeLogLikelihood()
+			
+			pooler = MCONV.MaxPooling2D(1, 2)
+
+			i = ML.Input(inpSize, name = 'inp')
+			ichan = MCONV.InputChanneler(1, inpSize, name = 'inpChan')
+			
+			c1 = MCONV.Convolution2D( 
+				nbFilters = 5,
+				filterHeight = 1,
+				filterWidth = filterWidth,
+				activation = MA.ReLU(),
+				pooler = pooler,
+				name = "conv1"
+			)
+
+			c2 = MCONV.Convolution2D( 
+				nbFilters = 10,
+				filterHeight = 1,
+				filterWidth = filterWidth,
+				activation = MA.ReLU(),
+				pooler = pooler,
+				name = "conv2"
+			)
+
+			f = MCONV.Flatten(name = "flat")
+			h = ML.Hidden(5, activation = MA.ReLU(), decorators = [], regularizations = [ ], name = "hid" )
+			o = ML.SoftmaxClassifier(2, decorators = [], learningScenario = ls, costObject = cost, name = "out", regularizations = [ ] )
+			
+			model = i > ichan > c1 > c2 > f > h > o
+			return model
+
+		def makeDataset(nbExamples, size, patternSize) :
+			data = numpy.random.randn(nbExamples, size).astype(theano.config.floatX)
+			data = data / numpy.sum(data)
+			pattern = numpy.ones(patternSize)
+			
+			targets = []
+			for i in xrange(len(data)) :
+				if i%2 == 0 :
+					start = numpy.random.randint(0, size/2 - patternSize)
+					targets.append(0)
+				else :
+					start = numpy.random.randint(size/2, size - patternSize)
+					targets.append(1)
+
+				data[i][start:start+patternSize] = pattern
+
+			targets = numpy.asarray(targets, dtype=theano.config.floatX)
+			
+			trainData, trainTargets = data, targets
+
+			return (trainData, trainTargets)
+
+		examples, targets = makeDataset(1000, 128, 6)
+		model = getModel(128, 3)
+
+		miniBatchSize = 32
+		for epoch in xrange(100) :
+			for i in xrange(0, len(examples), miniBatchSize) :
+				res = model.train("out", inp = examples[i : i +miniBatchSize], targets = targets[i : i +miniBatchSize] )
+		
+		self.assertTrue(res[0] < 0.1)
+
 if __name__ == '__main__' :
 	import Mariana.settings as MSET
 	MSET.VERBOSE = False

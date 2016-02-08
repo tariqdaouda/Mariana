@@ -15,7 +15,7 @@ import Mariana.scenari as MS
 class ConvWithChanneler :
 	
 	def __init__(self, inputSize, patternSize, ls, cost) :
-		#pooler = MCONV.NoPooling()
+		# pooler = MCONV.NoPooling()
 		pooler = MCONV.MaxPooling2D(1, 2)
 		
 		#The input channeler will take regular layers and arrange them into several channels
@@ -45,7 +45,6 @@ class ConvWithChanneler :
 		o = ML.SoftmaxClassifier(2, decorators = [], learningScenario = ls, costObject = cost, name = "out", regularizations = [] )
 		
 		self.model = i > ichan > c1 > c2 > f > h > o
-		# self.model = i > ichan > c1 > f > h > o
 		
 	def train(self, inputs, targets) :
 		return self.model.train("out", inp = inputs, targets = targets )
@@ -84,9 +83,8 @@ def makeDataset(nbExamples, size, patternSize, testRatio = 0.2, easy = True) :
 
 if __name__ == "__main__" :
 	
-	ls = MS.GradientDescent(lr = 0.05)
+	ls = MS.GradientDescent(lr = 0.5)
 	cost = MC.NegativeLogLikelihood()
-
 
 	maxEpochs = 2000
 	miniBatchSize = 256
@@ -118,4 +116,4 @@ if __name__ == "__main__" :
 				bestValScore = res[0]
 				print "\tvalidation score:", res[0], "+best+"
 			else :
-				print "\tvalidation score:", res[0], "best:", bestValScore			
+				print "\tvalidation score:", res[0], "best:", bestValScore
