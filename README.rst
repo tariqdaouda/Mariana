@@ -50,7 +50,7 @@ First, make sure you have the latest version of Theano_ (do a git clone not a pi
 	cd Theano
 	python setup.py develop
 
-But if you are not against against a little bit of adventure and want to have the latest Theano stuff you can chekcout Theano_'s repository.
+But if you are not against against a little bit of adventure and want the very latest Theano stuff you can checkout Theano_'s repository.
 
 Then clone Mariana from git!::
 
