@@ -15,8 +15,8 @@ __all__ = ["Layer_ABC", "Output_ABC", "Classifier_ABC", "Input", "Hidden", "Comp
 
 TYPE_UNDEF_LAYER = -1
 TYPE_INPUT_LAYER = 0
-TYPE_OUTPUT_LAYER = 1
 TYPE_HIDDEN_LAYER = 1
+TYPE_OUTPUT_LAYER = 2
 
 class Layer_ABC(object) :
 	"The interface that every layer should expose"
@@ -299,6 +299,7 @@ class Hidden(Layer_ABC) :
 		self.learningScenario=learningScenario
 		self.W = None
 		self.b = None
+		self.parameters = []
 
 		self.regularizationObjects = regularizations
 		self.regularizations = []
@@ -327,28 +328,38 @@ class Hidden(Layer_ABC) :
 			# initWeights = numpy.random.normal(0, 0.01, (self.nbInputs, self.nbOutputs))
 			
 			self.W = theano.shared(value = initWeights, name = "W_" + self.name)
+			self.parameters.append(self.W)
 		elif isinstance(self.W, SharedVariable) :
 			if self.W.get_value().shape != (self.nbInputs, self.nbOutputs) :
 				raise ValueError("weights have shape %s, but the layer has %s inputs and %s outputs" % (self.W.get_value().shape, self.nbInputs, self.nbOutputs))
+			self.parameters.append(self.W)
 		elif isinstance(self.W, numpy.ndarray) :
 			if self.W.shape != (self.nbInputs, self.nbOutputs) :
 				raise ValueError("weights have shape %s, but the layer has %s inputs and %s outputs" % (self.W.shape, self.nbInputs, self.nbOutputs))
 			self.W = theano.shared(value = self.W, name = "W_" + self.name)
+			self.parameters.append(self.W)
 		else :
-			raise ValueError("Weights should be a numpy array or a theano SharedVariable, got: %s" % type(self.W))
+			if MSET.VERBOSE :
+				MCAN.friendly("Funny Weights", "Weights of layer %s, are neither a numpy array nor a theano SharedVariable, got: %s.\n I won't add them to the layer's parameters." % type(self.W))
+			# raise ValueError("Weights should be a numpy array or a theano SharedVariable, got: %s" % type(self.W))
 
 		if self.b is None :
 			initBias = numpy.zeros((self.nbOutputs,), dtype=theano.config.floatX)
 			self.b = theano.shared(value = initBias, name = "b_" + self.name)
+			self.parameters.append(self.b)
 		elif isinstance(self.b, SharedVariable) :
 			if self.b.get_value().shape[0] != self.nbOutputs :
 				raise ValueError("bias has a length of %s, but there are %s outputs" % (self.b.get_value().shape[0], self.nbOutputs))
+			self.parameters.append(self.b)
 		elif isinstance(self.b, numpy.ndarray) :
 			if self.b.shape != self.nbOutputs :
 				raise ValueError("bias has a length of %s, but there are %s outputs" % (self.b.shape[0], self.nbOutputs))
 			self.b = theano.shared(value = self.b, name = "b_" + self.name)
+			self.parameters.append(self.b)
 		else :
-			raise ValueError("Bias should be a numpy array or a theano SharedVariable, got: %s" % type(self.b))
+			if MSET.VERBOSE :
+				MCAN.friendly("Funny Bias", "Bias of layer %s, is neither a numpy array nor a theano SharedVariable, got: %s.\n I won't add it to the layer's parameters." % type(self.W))
+			# raise ValueError("Bias should be a numpy array or a theano SharedVariable, got: %s" % type(self.b))
 
 		# self.outputs = theano.printing.Print('this is a very important value for %s' % self.name)(self.activation(tt.dot(self.inputs, self.W) + self.b))
 		self.outputs = self.activation.function(tt.dot(self.inputs, self.W) + self.b)
@@ -363,7 +374,7 @@ class Hidden(Layer_ABC) :
 
 	def getParams(self) :
 		"""returns the layer parameters (Weights and bias)"""
-		return [self.W, self.b]
+		return self.parameters
 
 	def clone(self, **kwargs) :
 		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""

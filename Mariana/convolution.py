@@ -40,9 +40,9 @@ class MaxPooling2D(ConvPooler_ABC) :
 		self.widthDownscaleFactor = widthDownscaleFactor
 	
 	def pool(self, convLayer) :
-		from theano.tensor.signal import downsample
+		from theano.tensor.signal import pool
 		ds = (self.heightDownscaleFactor, self.widthDownscaleFactor)
-		output = downsample.max_pool_2d( convLayer.convolution, ds, ignore_border = True )
+		output = pool.pool_2d( convLayer.convolution, ds, ignore_border = True )
 		
 		hOutputs = convLayer.inputHeight - convLayer.filterHeight + 1
 		wOutputs = convLayer.inputWidth - convLayer.filterWidth + 1

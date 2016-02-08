@@ -56,7 +56,7 @@ class TheanoFunction(object) :
 		if DEVICE_IS_GPU :
 			device = "GPU"
 			msg = "I will use the [-%s-] to run function '%s' of layer '%s'!" % (device, name, outputLayer.name)
-			if str(self.getToposort()).find("64") > -1:
+			if str(self.getToposort()).find("float64") > -1:
 				warningMsg = True
 				msg += "\n\nBut there are some float64s that do not fit on the GPU and will slow down the computations.\nPlease consider:"
 				msg += "\n\t* Launching with THEANO_FLAGS=device=gpu,floatX=float32 python <your script>.py."
@@ -67,7 +67,6 @@ class TheanoFunction(object) :
 
 
 		MCAN.friendly("Run device", msg, warning = warningMsg)
-		
 
 	def getToposort(self) :
 		"""returns the toposort ( name of all ops  of the function in order of application ) of the function"""
