@@ -30,15 +30,7 @@ In short:
 * Free your imagination and experiment
 * No requirements concerning the format of the datasets
 
-Disclaimer
------------
-
-Mariana is in active developpement, I use it every day and bugs tend to be corrected very quickly. Mariana cannot do RNNs yet but it does everything else very well.
-
-A word about the **'>'**
-=========================
-
-When communicating about neural networks people often draw sets of connected layers. That's the idea behind Mariana: layers are first defined, then connected using the **'>'** operator.
+Mariana cannot do RNNs yet but it does everything else very well. It is in active developpement, I use it every day and bugs tend to be corrected very quickly. 
 
 Installation
 =============
@@ -74,6 +66,11 @@ Full Examples
 Please have a look at the **examples/mnist_mlp.py**. It illustrates most of what this quickstart guide adresses.
 There's also **examples/vanilla_mnist_perceptron_mlp.py**, wich demonstrate how to train an MLP (network with one hidden layer) or a Perceptron on the MNIST database without the use of a trainer.
 You can also check the examples for the **Convolutional nets, auto-encoders, embdeddings, ...**
+
+A word about the **'>'**
+=========================
+
+When communicating about neural networks people often draw sets of connected layers. That's the idea behind Mariana: layers are first defined, then connected using the **'>'** operator.
 
 Short Snippets
 ===============
