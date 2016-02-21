@@ -93,24 +93,26 @@ Importations first
 	ls = MS.GradientDescent(lr = 0.01)
 	cost = MC.NegativeLogLikelihood()
 
-	i = ML.Input(28*28, name = "inputLayer")
+	inp = ML.Input(28*28, name = "inputLayer")
 	h = ML.Hidden(300, activation = MA.ReLU(), decorators = [MD.BinomialDropout(0.2)], regularizations = [ MR.L1(0.0001) ])
 	o = ML.SoftmaxClassifier(9, learningScenario = ls, costObject = cost, regularizations = [ MR.L1(0.0001) ])
 
-	MLP = i > h > o
+	MLP = inp > h > o
 
 Training, Testing and Propagating:
 
 .. code:: python
 
-	#train the model for output 'o' function will update parameters and return the current cost
-	print MLP.train(o, inputLayer = train_set[0][i : i +miniBatchSize], targets = train_set[1][i : i +miniBatchSize] )
+	for i in xrange(len(train_set[0])) :
+		#train the model for output 'o' function will update parameters and return the current cost
+		print MLP.train(o, inputLayer = train_set[0][i : i +miniBatchSize], targets = train_set[1][i : i +miniBatchSize] )
 
-	#the same as train but does not updated the parameters
-	print MLP.test(o, inputLayer = test_set[0][i : i +miniBatchSize], targets = test_set[1][i : i +miniBatchSize] )
-
-	#the propagate will return the output for the output layer 'o'
-	print MLP.propagate(o, inputLayer = test_set[0][i : i +miniBatchSize])
+	for i in xrange(len(test_set[0])) :
+		#the same as train but does not updated the parameters
+		print MLP.test(o, inputLayer = test_set[0][i : i +miniBatchSize], targets = test_set[1][i : i +miniBatchSize] )
+	
+		#the propagate will return the output for the output layer 'o'
+		print MLP.propagate(o, inputLayer = test_set[0][i : i +miniBatchSize])
 
 **This is an autoencoder with tied weights**
 
@@ -119,11 +121,11 @@ Training, Testing and Propagating:
 	ls = MS.GradientDescent(lr = 0.001)
 	cost = MC.MeanSquaredError()
 
-	i = ML.Input(10, name = "inputLayer")
+	inp = ML.Input(10, name = "inputLayer")
 	h = ML.Hidden(2, activation = MA.Tanh(), decorators = [ MD.GlorotTanhInit() ])
 	o = ML.Regression(10, activation = MA.Tanh(), costObject = cost, learningScenario = ls)
 
-	ae = i > h > o
+	ae = inp > h > o
 	ae.init()
 
 	#tied weights, we need to force the initialisation of the weight first
@@ -132,7 +134,7 @@ Training, Testing and Propagating:
 
 Another way is to use the Autoencode layer as output::
 
-	o = ML.Autoencode(i, activation = MA.Tanh(), costObject = cost, learningScenario = ls)
+	o = ML.Autoencode(inp, activation = MA.Tanh(), costObject = cost, learningScenario = ls)
 
 Can it run on GPU?
 ==================
