@@ -386,7 +386,8 @@ class Hidden(Layer_ABC) :
 		return res
 
 	def cloneBare(self, **kwargs) :
-		"""Same as clone() but lets you redefine any parameter other than Weights and Bias"""
+		"""Same as clone() but lets you redefine any parameter other than Weights and Bias.
+		This function can be very handy if you are trying to salvage old pickled layers that were created using an older version of Mariana."""
 		res = self.__class__(self.nbOutputs, **kwargs)
 		res.W = self.W
 		res.b = self.b
