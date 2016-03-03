@@ -377,15 +377,20 @@ class Hidden(Layer_ABC) :
 		return self.parameters
 
 	def clone(self, **kwargs) :
-		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
-		res = self.__class__(self.nbOutputs)
+		"""Returns a free layer with the same weights and bias and activation function.
+		You can use kwargs to setup any other attribute of the new layer, just like you would for an instanciation"""
+		res = self.__class__(self.nbOutputs, activation = self.activation, **kwargs)
 		res.W = self.W
 		res.b = self.b
-		res.name = self.name
+		
+		return res
 
-		for k, v in kwargs.iteritems() :
-			setattr(res, k, v)
-
+	def cloneBare(self, **kwargs) :
+		"""Same as clone() but lets you redefine any parameter other than Weights and Bias"""
+		res = self.__class__(self.nbOutputs, **kwargs)
+		res.W = self.W
+		res.b = self.b
+		
 		return res
 
 	def toOutput(self, outputType, **kwargs) :
@@ -486,6 +491,11 @@ class Output_ABC(Hidden) :
 		h.b = self.b
 		return h
 
+	def clone(self, **kwargs) :
+		"""Returns a free output layer with the same weights, bias, activation function, learning scenario, and cost.
+		You can use kwargs to setup any other attribute of the new layer, just like you would for an instanciation"""
+		return Hidden.clone(self, learningScenario = self.learningScenario, costObject = self.costObject)
+
 	def _dot_representation(self) :
 		return '[label="%s: %sx%s" shape=invhouse]' % (self.name, self.nbInputs, self.nbOutputs)
 
@@ -504,12 +514,21 @@ class Classifier_ABC(Output_ABC):
 class SoftmaxClassifier(Classifier_ABC) :
 	"""A softmax (probabilistic) Classifier"""
 	def __init__(self, nbOutputs, learningScenario, costObject, temperature = 1, name = None, **kwargs) :
-		Classifier_ABC.__init__(self, nbOutputs, activation = MA.Softmax(temperature = temperature), learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
+		kwargs["activation"] = MA.Softmax(temperature = temperature)
+		kwargs["learningScenario"] = learningScenario
+		kwargs["costObject"] = costObject
+		kwargs["name"] = name
+		Classifier_ABC.__init__(self, nbOutputs, **kwargs)
 		self.targets = tt.ivector(name = "targets_" + self.name)
 	
 	def setCustomTheanoFunctions(self) :
 		"""defined theano_classify, that returns the argmax of the output"""
 		self.classify = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.outputs) ], updates = self.updates_lastOutputs)
+
+	def clone(self, **kwargs) :
+		"""Returns a free output layer with the same weights, bias, activation function, learning scenario, and cost.
+		You can use kwargs to setup any other attribute of the new layer, just like you would for an instanciation"""
+		return Hidden.cloneBare(self, learningScenario = self.learningScenario, costObject = self.costObject, **kwargs)
 
 	def _dot_representation(self) :
 		return '[label="SoftM %s: %s" shape=doublecircle]' % (self.name, self.nbOutputs)
