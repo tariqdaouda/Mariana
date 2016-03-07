@@ -2,7 +2,7 @@
 MARIANA
 ==============================
 
-As neural nets increase in complexity they also become harder to write and harder to teach. Our hypothesis is that these difficulties stem from the absence of a language that elegantly describe neural networks. Mariana (named after the deepest place on earth, the Mariana trench) is an attempt to create such a language within python. That being said, you can also call it as an *Extendable Python Machine Learning Framework build on top of Theano that focuses on ease of use*. The full documentation is available here_.
+As neural nets increase in complexity they also become harder to write and harder to teach. Our hypothesis is that these difficulties stem from the absence of a language that elegantly describe neural networks. Mariana (named after the deepest place on earth, the Mariana trench) is an attempt to create such a language within python. That being said, you can also call it an *Extendable Python Machine Learning Framework build on top of Theano that focuses on ease of use*. The full documentation is available here_.
 
 .. _here: http://bioinfo.iric.ca/~daoudat/Mariana/
 
