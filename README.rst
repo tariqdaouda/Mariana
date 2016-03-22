@@ -2,7 +2,7 @@
 MARIANA
 ==============================
 
-Named after the deepest place on earth (Mariana trench), Mariana is a Python Machine Learning Framework built on top of Theano, that focuses on ease of use. The full documentation is available here_.
+As neural nets increase in complexity they also become harder to write and harder to teach. Our hypothesis is that these difficulties stem from the absence of a language that elegantly describe neural networks. Mariana (named after the deepest place on earth, the Mariana trench) is an attempt to create such a language within python. That being said, you can also call it an *Extendable Python Machine Learning Framework build on top of Theano that focuses on ease of use*. The full documentation is available here_.
 
 .. _here: http://bioinfo.iric.ca/~daoudat/Mariana/
 
@@ -20,27 +20,17 @@ because if you know what these things are, you can turn one into the other in 2 
 
 In short:
 
-* No YAML
 * Very easy to use
 * Work with high level machine learning abstractions (layers, activations, regularizations, ....) 
 * Export you models into HTML or DOT for easy visualization and debugging
-* Great for Feed Forward nets: MLPs, Auto-Encoders, Embeddings, ConvNets,... (**check out the examples**)
-* Supports momentum
+* Great for Feed Forward nets: MLPs, Auto-Encoders, Embeddings, ConvNets, Momentum, ... (**check out the examples**)
 * Completely modular and extendable, plug in your own activations, regularizations etc...
 * Trainers can be used to encapsulate your training (even oversampling, ...) in a safe environement
 * Easily save your models and resume training
 * Free your imagination and experiment
 * No requirements concerning the format of the datasets
 
-Disclaimer
------------
-
-Mariana is in active developpement, I use it every day and bugs tend to be corrected very quickly. Mariana cannot do RNNs yet but it does everything else very well.
-
-A word about the **'>'**
-=========================
-
-When communicating about neural networks people often draw sets of connected layers. That's the idea behind Mariana: layers are first defined, then connected using the **'>'** operator.
+Mariana cannot do RNNs yet but it does everything else very well. It is in active developpement, I use it every day and bugs tend to be corrected very quickly. 
 
 Installation
 =============
@@ -77,6 +67,11 @@ Please have a look at the **examples/mnist_mlp.py**. It illustrates most of what
 There's also **examples/vanilla_mnist_perceptron_mlp.py**, wich demonstrate how to train an MLP (network with one hidden layer) or a Perceptron on the MNIST database without the use of a trainer.
 You can also check the examples for the **Convolutional nets, auto-encoders, embdeddings, ...**
 
+A word about the **'>'**
+=========================
+
+When communicating about neural networks people often draw sets of connected layers. That's the idea behind Mariana: layers are first defined, then connected using the **'>'** operator.
+
 Short Snippets
 ===============
 
@@ -98,24 +93,26 @@ Importations first
 	ls = MS.GradientDescent(lr = 0.01)
 	cost = MC.NegativeLogLikelihood()
 
-	i = ML.Input(28*28, name = "inputLayer")
+	inp = ML.Input(28*28, name = "inputLayer")
 	h = ML.Hidden(300, activation = MA.ReLU(), decorators = [MD.BinomialDropout(0.2)], regularizations = [ MR.L1(0.0001) ])
 	o = ML.SoftmaxClassifier(9, learningScenario = ls, costObject = cost, regularizations = [ MR.L1(0.0001) ])
 
-	MLP = i > h > o
+	MLP = inp > h > o
 
 Training, Testing and Propagating:
 
 .. code:: python
 
-	#train the model for output 'o' function will update parameters and return the current cost
-	print MLP.train(o, inputLayer = train_set[0][i : i +miniBatchSize], targets = train_set[1][i : i +miniBatchSize] )
+	for i in xrange(len(train_set[0])) :
+		#train the model for output 'o' function will update parameters and return the current cost
+		print MLP.train(o, inputLayer = train_set[0][i : i +miniBatchSize], targets = train_set[1][i : i +miniBatchSize] )
 
-	#the same as train but does not updated the parameters
-	print MLP.test(o, inputLayer = test_set[0][i : i +miniBatchSize], targets = test_set[1][i : i +miniBatchSize] )
-
-	#the propagate will return the output for the output layer 'o'
-	print MLP.propagate(o, inputLayer = test_set[0][i : i +miniBatchSize])
+	for i in xrange(len(test_set[0])) :
+		#the same as train but does not updated the parameters
+		print MLP.test(o, inputLayer = test_set[0][i : i +miniBatchSize], targets = test_set[1][i : i +miniBatchSize] )
+	
+		#the propagate will return the output for the output layer 'o'
+		print MLP.propagate(o, inputLayer = test_set[0][i : i +miniBatchSize])
 
 **This is an autoencoder with tied weights**
 
@@ -124,11 +121,11 @@ Training, Testing and Propagating:
 	ls = MS.GradientDescent(lr = 0.001)
 	cost = MC.MeanSquaredError()
 
-	i = ML.Input(10, name = "inputLayer")
+	inp = ML.Input(10, name = "inputLayer")
 	h = ML.Hidden(2, activation = MA.Tanh(), decorators = [ MD.GlorotTanhInit() ])
 	o = ML.Regression(10, activation = MA.Tanh(), costObject = cost, learningScenario = ls)
 
-	ae = i > h > o
+	ae = inp > h > o
 	ae.init()
 
 	#tied weights, we need to force the initialisation of the weight first
@@ -137,7 +134,7 @@ Training, Testing and Propagating:
 
 Another way is to use the Autoencode layer as output::
 
-	o = ML.Autoencode(i, activation = MA.Tanh(), costObject = cost, learningScenario = ls)
+	o = ML.Autoencode(inp, activation = MA.Tanh(), costObject = cost, learningScenario = ls)
 
 Can it run on GPU?
 ==================

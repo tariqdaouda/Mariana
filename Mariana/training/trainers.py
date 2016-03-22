@@ -191,7 +191,7 @@ class DefaultTrainer(Trainer_ABC) :
 		self.miniBatchSizes = {
 			"train" : trainMiniBatchSize,
 			"test" : testMiniBatchSize,
-			"validation" : testMiniBatchSize
+			"validation" : validationMiniBatchSize
 		}
 
 		self.stopCriteria = stopCriteria		
