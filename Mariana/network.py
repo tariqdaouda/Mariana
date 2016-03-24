@@ -136,9 +136,8 @@ class Network(object) :
 			self._mustInit = False
 	
 			for l in self.layers.itervalues() :
-				self.params.extend(l.getParams())
-				# self.params.extend(l.getSubtensorParams())
-
+				self.params.extend(l.getParameters())
+			
 			for o in self.outputs.itervalues() :
 				o._setTheanoFunctions()
 				for k, v in o.__dict__.iteritems() :
@@ -156,12 +155,49 @@ class Network(object) :
 
 		print "Available model functions:\n" % os
 
-	def save(self, filename) :
-		"save the model into filename.mariana.pkl"
+	def savePickle(self, filename) :
+		"save the model into a python pickle filename.mariana.pkl"
 		import cPickle
 		f = open(filename + '.mariana.pkl', 'wb')
 		cPickle.dump(self, f, -1)
 		f.close()
+
+	def save(self, filename) :
+		"save the model into a folder filename.mariana.model"
+		import numpy, tempfile, os, shutils, cPickle
+		tmpDir = tempfile.mkdtemp()
+
+		for l in self.layers :
+			for pName, param in l.getParameterDict().iteritems() :
+				fn = "%s-%s.npy" % (l.name, pName)
+				path = os.path.join( tmpDir, fn )
+				numpy.save(path, param)
+				l.initializations = []
+				getattr(l, pName).set_value(None)
+
+		path = os.path.join( tmpDir, "network.pkl" )
+		f = open(path, 'wb')
+		cPickle.dump(self, f, -1)
+		f.close()
+		shutil.move(tmpDir, filename + ".mariana.model")
+
+	@classmethod
+	def loadModel(self, folder) :
+		"""loads a model from a folder"""
+		import numpy, tempfile, os, shutils, cPickle
+
+		f = open(os.path.join(folder, "network.pkl"))
+		network = cPickle(f)
+		f.close()
+	
+		for l in network.layers :
+			for pName, param in l.getParameterDict().iteritems() :
+				fn = "%s-%s.npy" % (l.name, pName)
+				path = os.path.join( folder, fn )
+				val = numpy.load(path)
+				getattr(l, pName).set_value(val)
+
+		return network
 
 	def toDOT(self, name, forceInit = True) :
 		"""returns a string representing the network in the DOT language.

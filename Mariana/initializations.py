@@ -1,4 +1,4 @@
-import numpy, time
+import numpy
 import theano
 import theano.tensor as tt
 import Mariana.settings as MSET
@@ -15,8 +15,6 @@ __all__= [
 	"SmallUniformEmbeddings",
 	"Normal",
 	"NormalWeights",
-	"TiedTransposeWeights",
-	"TiedSameWeights",
 	"SingleValue",
 	"SingleValueWeights"
 	"SingleValueBias",
@@ -38,6 +36,7 @@ class Initialization_ABC(object) :
 
 	def initialize(self, layer) :
 		"""The function that all Initialization_ABCs must implement"""
+		print "ssasdfasd"
 		raise NotImplemented("This one should be implemented in child")
 
 class HardSet(Initialization_ABC) :
@@ -49,7 +48,7 @@ class HardSet(Initialization_ABC) :
 		self.hyperParameters = ['parameter']
 
 	def initialize(self, layer) :
-		setattr( layer, self.parameter,  theano.shared(value = self.value, name = "%s_%s" + (self.parameter, layer.name) ) )
+		setattr( layer, self.parameter,  theano.shared(value = self.value, name = "%s_%s" % (self.parameter, layer.name) ) )
 
 class GlorotTanhInit(Initialization_ABC) :
 	"""Set up the layer weights according to the tanh initialisation introduced by Glorot et al. 2010"""
@@ -75,7 +74,7 @@ class Uniform(Initialization_ABC) :
 	def initialize(self, layer) :
 		v = numpy.random.random(self.shape)
 		v = numpy.asarray(v, dtype=theano.config.floatX)
-		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" + (self.parameter, layer.name) ) )
+		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (self.parameter, layer.name) ) )
 
 class UniformWeights(Uniform) :
 	"""Small random weights from a unifrom distribution"""
@@ -103,7 +102,7 @@ class SmallUniform(Uniform) :
 		v = numpy.random.random(self.shape)
 		v /= sum(v)
 		v = numpy.asarray(v, dtype=theano.config.floatX)
-		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" + (self.parameter, layer.na
+		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (self.parameter, layer.name)) )
 
 class SmallUniformWeights(SmallUniform) :
 	"""Small random weights from a unifrom distribution (divided by the overall sum)"""
@@ -123,7 +122,7 @@ class SmallUniformEmbeddings(SmallUniform) :
 
 	def initialize(self, layer) :
 		self.shape = (layer.dictSize, layer.nbDimensions)
-		SmallUniform.initialize(self, layer
+		SmallUniform.initialize(self, layer)
 
 class Normal(Initialization_ABC) :
 	"""Random values from a normal distribution"""
@@ -136,7 +135,7 @@ class Normal(Initialization_ABC) :
 
 	def initialize(self, layer) :
 		v = nnumpy.random.normal(0, self.standardDev, (layer.nbInputs, layer.nbOutputs))
-		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" + (self.parameter, layer.name) ) )
+		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (self.parameter, layer.name) ) )
 
 class NormalWeights(Normal) :
 	"""Random weights from a normal distribution"""
@@ -149,28 +148,6 @@ class NormalWeights(Normal) :
 		self.shape = (layer.nbInputs, layer.nbOutputs)
 		Normal.initialize(self, layer)
 
-class TiedTransposeWeights(Initialization_ABC) :
-	"""Initialize the weights to be the transpose of a another layer weights"""
-	def __init__(self, otherLayer, *args, **kwargs) :
-		Initialization_ABC.__init__(self, *args, **kwargs)
-		self.otherLayer = otherLayer
-		self.otherLayerName = otherLayer.nane
-		self.hyperParameters.append("otherLayerName")
-
-	def initialize(self, layer) :
-		layer.W = self.otherLayer.W.T
-
-class TiedSameWeights(Initialization_ABC) :
-	"""Initialize the weights to be the same as the weights of a another layer weights"""
-	def __init__(self, otherLayer, *args, **kwargs) :
-		Initialization_ABC.__init__(self, *args, **kwargs)
-		self.otherLayer = otherLayer
-		self.otherLayerName = otherLayer.nane
-		self.hyperParameters.append("otherLayerName")
-
-	def initialize(self, layer) :
-		layer.W = self.otherLayer.W
-
 class SingleValue(Initialization_ABC) :
 	"""Initialize to a given value"""
 	def __init__(self, parameter, shape, value, *args, **kwargs) :
@@ -181,12 +158,8 @@ class SingleValue(Initialization_ABC) :
 		self.hyperParameters = ["parameter", "value"]
 
 	def initialize(self, layer) :
-		v = numpy.zeros(
-					self.shape,
-					dtype = theano.config.floatX
-				) + value
-		
-		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" + (self.parameter, layer.name) ) )
+		v = numpy.zeros( self.shape, dtype = theano.config.floatX) + self.value
+		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (self.parameter, layer.name) ) )
 
 class SingleValueWeights(SingleValue) :
 	"""Initialize the weights to a given value"""
@@ -206,7 +179,7 @@ class ZerosWeights(SingleValueWeights) :
 
 class SingleValueBias(SingleValue) :
 	"""Initialize the bias to a given value"""
-	def __init__(self, values, *args, **kwargs) :
+	def __init__(self, value, *args, **kwargs) :
 		SingleValue.__init__(self, 'b', None, value, *args, **kwargs)
 		self.hyperParameters = ["value"]
 
@@ -214,8 +187,8 @@ class SingleValueBias(SingleValue) :
 		self.shape = (layer.nbOutputs,)
 		SingleValue.initialize(self, layer)
 
-class ZerosBias(ValueBias) :
+class ZerosBias(SingleValueBias) :
 	"""Initialize the bias to zeros"""
 	def __init__(self, *args, **kwargs) :
-		SingleValueBias.__init__(self, value)
+		SingleValueBias.__init__(self, 0)
 		self.hyperParameters = []

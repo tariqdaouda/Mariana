@@ -6,6 +6,7 @@ import theano, numpy, time
 import theano.tensor as tt
 
 import Mariana.activations as MA
+import Mariana.initializations as MI
 import Mariana.settings as MSET
 
 import Mariana.network as MNET
@@ -26,7 +27,7 @@ class Layer_ABC(object) :
 	def __init__(self,
 		size,
 		saveOutputs=MSET.SAVE_OUTPUTS_DEFAULT,
-		initialisations=[],
+		initializations=[],
 		decorators=[],
 		name=None,
 		**kwrags
@@ -54,7 +55,7 @@ class Layer_ABC(object) :
 			self.last_outputs = None
 
 		self.decorators = decorators
-		self.initialisations = initialisations
+		self.initializations = initializations
 
 		self.feedsInto = OrderedDict()
 		self.feededBy = OrderedDict()
@@ -69,32 +70,49 @@ class Layer_ABC(object) :
 		# """Add a decorator to the layer"""
 		# self.decorators.append(decorator)
 
-	def getParams(self) :
+	def getParameters(self) :
 		"""returns the layer parameters"""
 		from theano.compile import SharedVariable
 		res = []
 		for v in self.__dict.itervalues() :
 			if isinstance(v, SharedVariable) :
 				res.append(v)
-		return v
+		return res
 
+	def getParameterNames(self) :
+		"""returns the layer parameters names"""
+		from theano.compile import SharedVariable
+		res = []
+		for k, v in self.__dict.iteritems() :
+			if isinstance(v, SharedVariable) :
+				res.append(k)
+		return res
+
+	def getParameterDict(self) :
+		"""returns the layer parameters as dictionary"""
+		from theano.compile import SharedVariable
+		res = {}
+		for v in self.__dict.itervalues() :
+			if isinstance(v, SharedVariable) :
+				res[k] = v
+		return res
 
 	def clone(self, **kwargs) :
 		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
 		raise NotImplemented("Should be implemented in child")
 
 	def _registerInput(self, inputLayer) :
-		"Registers a layer as an input to self. This function is first called by input layers. Initialisation can only start once all input layers have been registered"
+		"Registers a layer as an input to self. This function is first called by input layers. Initialization can only start once all input layers have been registered"
 		self._inputRegistrations.add(inputLayer.name)
 	
 	def _initParameters(self) :
 		"""creates the parameters if necessary"""
-		for init in self.intialisations :
-			init.initialise(self)
+		for init in self.initializations :
+			init.initialize(self)
 	
 	#theano hates abstract methods defined with a decorator
 	def _setOutputs(self) :
-		"""Sets the output of the layer. This function is called by _init() ans should be initialised in child"""
+		"""Sets the output of the layer. This function is called by _init() ans should be initialized in child"""
 		raise NotImplemented("Should be implemented in child")
 
 	def _decorate(self) :
@@ -105,9 +123,9 @@ class Layer_ABC(object) :
 		self._decorating = False
 
 	def _init(self) :
-		"Initialise the layer making it ready for training. This function is automatically called before train/test etc..."
+		"Initialize the layer making it ready for training. This function is automatically called before train/test etc..."
 		if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.feededBy) ) :
-			self.__initParameters()
+			self._initParameters()
 			self._setOutputs()
 			self._decorate()
 			if self.outputs is None :
@@ -118,26 +136,27 @@ class Layer_ABC(object) :
 				l._init()
 			self._mustInit = False
 
+	def _maleConnect(self, layer) :
+		"""What happens to A when A > B"""
+		pass
+
+	def _femaleConnect(self, layer) :
+		"""What happens to B when A > B"""
+		pass
+
 	def connect(self, layer) :
 		"""Connect the layer to another one. Using the '>' operator to connect to layers is actually calls this function.
 		This function returns the resulting network"""
-		def _connectLayer(me, layer) :
-			me.feedsInto[layer.name] = layer
-			layer.feededBy[me.name] = me
-			
-			me.network.addEdge(me, layer)
-			if layer.network is not None :
-				me.network.merge(me, layer)
-			layer.network = me.network
-
-		layer = layer
-		if isinstance(layer, Input) :
-			raise ValueError("Nothing can be connected to an input layer")
-
-		if isinstance(layer, Output_ABC) or issubclass(layer.__class__, Output_ABC) :
-			self.network.addOutput(layer)
-		_connectLayer(self, layer)
-
+		layer._femaleConnect(self)
+		layer.feededBy[self.name] = self
+		self._maleConnect(layer)
+		self.feedsInto[layer.name] = layer
+		
+		self.network.addEdge(self, layer)
+		if layer.network is None :
+			layer.network = self.network
+		else :
+	 		self.network.merge(self, layer)
 		return self.network
 
 	def disconnect(self, layer) :
@@ -194,14 +213,14 @@ class Embedding(Layer_ABC) :
 	"""This input layer will take care of creating the embeddings and training them. Embeddings are learned representations
 	of the inputs that are much loved in NLP."""
 
-	def __init__(self, size, nbDimentions, dictSize, learningScenario = None, name = None, **kwargs) :
+	def __init__(self, size, nbDimentions, dictSize, initializations = [MI.SmallUniformEmbeddings()], learningScenario = None, name = None, **kwargs) :
 		"""
 		:param size int: the size of the input vector (if your input is a sentence this should be the number of words in it).
 		:param nbDimentions int: the number of dimentions in wich to encode each word.
 		:param dictSize int: the total number of words. 
 		"""
 
-		Layer_ABC.__init__(self, size, nbDimentions, name = name, **kwargs)
+		Layer_ABC.__init__(self, size, nbDimentions, initializations=initializations, name = name, **kwargs)
 		self.network = MNET.Network()
 		self.network.addInput(self)
 		
@@ -229,7 +248,7 @@ class Embedding(Layer_ABC) :
 		self.preOutputs = self.embeddings[self.inputs]
 		self.outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
 		
-	def getParams(self) :
+	def getParameters(self) :
 		"""returns nothing"""
 		return [self.embeddings]
 
@@ -248,14 +267,16 @@ class Input(Layer_ABC) :
 
 		self.inputs = tt.matrix(name = self.name)
 	
-	def getParams(self) :
+	def getParameters(self) :
 		"""return nothing"""
 		return []
 
 	def _setOutputs(self) :
 		"initialises the output to be the same as the inputs"
 		self.outputs = self.inputs
-		
+	
+	def _femaleConnect(self, *args) :
+		raise ValueError("Nothing can be connected into an input layer")
 
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=invhouse]' % (self.name, self.nbOutputs)
@@ -273,16 +294,16 @@ class Composite(Layer_ABC):
 	def __init__(self, name = None):
 		Layer_ABC.__init__(self, size = None, name = name)
 
-	def getParams(self) :
+	def getParameters(self) :
 		return []
 
-	def _setOutputs(self) :
-		for layer in self.feededBy.itervalues() :
-			if self.nbInputs is None :
-				self.nbInputs = 0
-			self.nbInputs += layer.nbOutputs
-
+	def _femaleConnect(self, layer) :
+		if self.nbInputs is None :
+			self.nbInputs = 0
+		self.nbInputs += layer.nbOutputs
 		self.nbOutputs = self.nbInputs
+		
+	def _setOutputs(self) :
 		self.outputs = tt.concatenate( [l.outputs for l in self.feededBy.itervalues()], axis = 1 )
 
 	def _dot_representation(self) :
@@ -290,10 +311,11 @@ class Composite(Layer_ABC):
 
 class Hidden(Layer_ABC) :
 	"A hidden layer"
-	def __init__(self, size, activation = MA.ReLU(), learningScenario = None, name = None, regularizations = [], **kwargs) :
+	def __init__(self, size, activation = MA.ReLU(), initializations = [MI.SmallUniformWeights(), MI.ZerosBias()], learningScenario = None, name = None, regularizations = [], **kwargs) :
 		Layer_ABC.__init__(self,
 			size,
 			name=name,
+			initializations=initializations,
 			**kwargs
 		)
 
@@ -308,9 +330,21 @@ class Hidden(Layer_ABC) :
 
 		self.type = TYPE_HIDDEN_LAYER
 		
+	def _femaleConnect(self, layer) :
+		if self.nbInputs is None :
+			self.nbInputs = layer.nbOutputs
+		elif layer.nbOutputs != self.nbInputs :
+			raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
+
 	def _setOutputs(self) :
 		"""initialises weights and bias. By default weights are setup to random low values, use Mariana decorators
 		to change this behaviour."""
+		for layer in self.feededBy.itervalues() :
+			if self.inputs is None :
+				self.inputs = layer.outputs	
+			else :
+				self.inputs += layer.outputs	
+	
 		self.outputs = self.activation.function(tt.dot(self.inputs, self.W) + self.b)
 		for reg in self.regularizationObjects :
 			self.regularizations.append(reg.getFormula(self))
@@ -319,7 +353,7 @@ class Hidden(Layer_ABC) :
 		"""Return the weight values"""
 		return self.W.get_value()
 
-	def getParams(self) :
+	def getParameters(self) :
 		"""returns the layer parameters (Weights and bias)"""
 		return self.parameters
 
@@ -373,6 +407,9 @@ class Output_ABC(Hidden) :
 		self.test_cost = None
 		self.updates = None
 
+	def _maleConnect(self, *args) :
+		raise ValueError("An output layer cannot be connected to something")
+
 	def _backTrckDependencies(self) :
 		"""Finds all the hidden layers the ouput layer is influenced by"""
 		def _bckTrk(deps, layer) :
@@ -385,7 +422,7 @@ class Output_ABC(Hidden) :
 		self.dependencies = _bckTrk(self.dependencies, self)
 
 	def _userInit(self) :
-		"""Here you can specify custom intialisations of your layer. This called just before the costs are computed. By default does nothing"""
+		"""Here you can specify custom initializations of your layer. This called just before the costs are computed. By default does nothing"""
 		pass
 
 	def _setTheanoFunctions(self) :
