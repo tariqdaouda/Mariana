@@ -78,10 +78,6 @@ class Layer_ABC(object) :
 				res.append(v)
 		return v
 
-	def _initParameters(self) :
-		"""creates the parameters if necessary"""
-		for init in self.intialisations :
-			init.initialise(self)
 
 	def clone(self, **kwargs) :
 		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
@@ -90,20 +86,12 @@ class Layer_ABC(object) :
 	def _registerInput(self, inputLayer) :
 		"Registers a layer as an input to self. This function is first called by input layers. Initialisation can only start once all input layers have been registered"
 		self._inputRegistrations.add(inputLayer.name)
-
-	def _init(self) :
-		"Initialise the layer making it ready for training. This function is automatically called before train/test etc..."
-		if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.feededBy) ) :
-			self._setOutputs()
-			self._decorate()
-			if self.outputs is None :
-				raise ValueError("Invalid layer '%s' has no defined outputs" % self.name)
-
-			for l in self.feedsInto.itervalues() :
-				l._registerInput(self)
-				l._init()
-			self._mustInit = False
-
+	
+	def _initParameters(self) :
+		"""creates the parameters if necessary"""
+		for init in self.intialisations :
+			init.initialise(self)
+	
 	#theano hates abstract methods defined with a decorator
 	def _setOutputs(self) :
 		"""Sets the output of the layer. This function is called by _init() ans should be initialised in child"""
@@ -115,6 +103,20 @@ class Layer_ABC(object) :
 		for d in self.decorators :
 			d.decorate(self)
 		self._decorating = False
+
+	def _init(self) :
+		"Initialise the layer making it ready for training. This function is automatically called before train/test etc..."
+		if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.feededBy) ) :
+			self.__initParameters()
+			self._setOutputs()
+			self._decorate()
+			if self.outputs is None :
+				raise ValueError("Invalid layer '%s' has no defined outputs" % self.name)
+
+			for l in self.feedsInto.itervalues() :
+				l._registerInput(self)
+				l._init()
+			self._mustInit = False
 
 	def connect(self, layer) :
 		"""Connect the layer to another one. Using the '>' operator to connect to layers is actually calls this function.
@@ -211,10 +213,7 @@ class Embedding(Layer_ABC) :
 		self.nbInputs = size
 		self.nbOutputs = self.nbDimentions*self.nbInputs
 		
-		initEmb = numpy.asarray(numpy.random.random((self.dictSize, self.nbDimentions)), dtype=theano.config.floatX)
-		# initEmb = numpy.asarray(numpy.random.normal(0, 0.01, (self.dictSize, self.nbDimentions)), dtype=theano.config.floatX)
-		
-		self.embeddings = theano.shared(initEmb, name="emb_" + self.name)
+		self.embeddings = None
 		self.inputs = tt.imatrix(name = "embInp_" + self.name)
 
 	def getEmbeddings(self, idxs = None) :
@@ -312,61 +311,7 @@ class Hidden(Layer_ABC) :
 	def _setOutputs(self) :
 		"""initialises weights and bias. By default weights are setup to random low values, use Mariana decorators
 		to change this behaviour."""
-		from theano.compile import SharedVariable
-
-		for inputLayer in self.feededBy.itervalues() :
-			if self.nbInputs is None :
-				self.nbInputs = inputLayer.nbOutputs
-				self.inputs = inputLayer.outputs
-			elif self.nbInputs != inputLayer.nbOutputs :
-				raise ValueError("Input size to %s as previously been set to: %s. But %s has %s outputs" % (self.name, self.nbInputs, inputLayer.name, inputLayer.nbOutputs))
-			else :
-				self.inputs += inputLayer.outputs
-			
-		if self.W is None :
-			initWeights = numpy.random.random((self.nbInputs, self.nbOutputs))
-			initWeights = initWeights/sum(initWeights)
-			initWeights = numpy.asarray(initWeights, dtype=theano.config.floatX)
-			# initWeights = numpy.random.normal(0, 0.01, (self.nbInputs, self.nbOutputs))
-			
-			self.W = theano.shared(value = initWeights, name = "W_" + self.name)
-			self.parameters.append(self.W)
-		elif isinstance(self.W, SharedVariable) :
-			if self.W.get_value().shape != (self.nbInputs, self.nbOutputs) :
-				raise ValueError("weights have shape %s, but the layer has %s inputs and %s outputs" % (self.W.get_value().shape, self.nbInputs, self.nbOutputs))
-			self.parameters.append(self.W)
-		elif isinstance(self.W, numpy.ndarray) :
-			if self.W.shape != (self.nbInputs, self.nbOutputs) :
-				raise ValueError("weights have shape %s, but the layer has %s inputs and %s outputs" % (self.W.shape, self.nbInputs, self.nbOutputs))
-			self.W = theano.shared(value = self.W, name = "W_" + self.name)
-			self.parameters.append(self.W)
-		else :
-			if MSET.VERBOSE :
-				MCAN.friendly("Funny Weights", "Weights of layer %s, are neither a numpy array nor a theano SharedVariable, got: %s.\n I won't add them to the layer's parameters." % type(self.W))
-			# raise ValueError("Weights should be a numpy array or a theano SharedVariable, got: %s" % type(self.W))
-
-		if self.b is None :
-			initBias = numpy.zeros((self.nbOutputs,), dtype=theano.config.floatX)
-			self.b = theano.shared(value = initBias, name = "b_" + self.name)
-			self.parameters.append(self.b)
-		elif isinstance(self.b, SharedVariable) :
-			if self.b.get_value().shape[0] != self.nbOutputs :
-				raise ValueError("bias has a length of %s, but there are %s outputs" % (self.b.get_value().shape[0], self.nbOutputs))
-			self.parameters.append(self.b)
-		elif isinstance(self.b, numpy.ndarray) :
-			if self.b.shape != self.nbOutputs :
-				raise ValueError("bias has a length of %s, but there are %s outputs" % (self.b.shape[0], self.nbOutputs))
-			self.b = theano.shared(value = self.b, name = "b_" + self.name)
-			self.parameters.append(self.b)
-		else :
-			if MSET.VERBOSE :
-				MCAN.friendly("Funny Bias", "Bias of layer %s, is neither a numpy array nor a theano SharedVariable, got: %s.\n I won't add it to the layer's parameters." % type(self.W))
-			# raise ValueError("Bias should be a numpy array or a theano SharedVariable, got: %s" % type(self.b))
-
-		# self.outputs = theano.printing.Print('this is a very important value for %s' % self.name)(self.activation(tt.dot(self.inputs, self.W) + self.b))
 		self.outputs = self.activation.function(tt.dot(self.inputs, self.W) + self.b)
-		
-
 		for reg in self.regularizationObjects :
 			self.regularizations.append(reg.getFormula(self))
 

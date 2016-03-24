@@ -5,6 +5,7 @@ import Mariana.settings as MSET
 
 __all__= [
 	"Initialization_ABC",
+	"HardSet",
 	"GlorotTanhInit",
 	"Uniform",
 	"UniformWeights",
@@ -16,9 +17,9 @@ __all__= [
 	"NormalWeights",
 	"TiedTransposeWeights",
 	"TiedSameWeights",
-	"Value",
-	"ValueWeights"
-	"ValueBias",
+	"SingleValue",
+	"SingleValueWeights"
+	"SingleValueBias",
 	"ZerosWeights",
 	"ZerosBias"
 ]
@@ -38,6 +39,17 @@ class Initialization_ABC(object) :
 	def initialize(self, layer) :
 		"""The function that all Initialization_ABCs must implement"""
 		raise NotImplemented("This one should be implemented in child")
+
+class HardSet(Initialization_ABC) :
+	"""Sets the parameter to value (must have a correct shape)"""
+	def __init__(self, parameter, value, *args, **kwargs) :
+		Initialization_ABC.__init__(self, *args, **kwargs)
+		self.parameter = parameter
+		self.value = value
+		self.hyperParameters = ['parameter']
+
+	def initialize(self, layer) :
+		setattr( layer, self.parameter,  theano.shared(value = self.value, name = "%s_%s" + (self.parameter, layer.name) ) )
 
 class GlorotTanhInit(Initialization_ABC) :
 	"""Set up the layer weights according to the tanh initialisation introduced by Glorot et al. 2010"""
@@ -159,7 +171,7 @@ class TiedSameWeights(Initialization_ABC) :
 	def initialize(self, layer) :
 		layer.W = self.otherLayer.W
 
-class Value(Initialization_ABC) :
+class SingleValue(Initialization_ABC) :
 	"""Initialize to a given value"""
 	def __init__(self, parameter, shape, value, *args, **kwargs) :
 		Initialization_ABC.__init__(self, *args, **kwargs)
@@ -176,34 +188,34 @@ class Value(Initialization_ABC) :
 		
 		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" + (self.parameter, layer.name) ) )
 
-class ValueWeights(Value) :
+class SingleValueWeights(SingleValue) :
 	"""Initialize the weights to a given value"""
 	def __init__(self, value, *args, **kwargs) :
-		Value.__init__(self, 'W', None, value, *args, **kwargs)
+		SingleValue.__init__(self, 'W', None, value, *args, **kwargs)
 		self.hyperParameters = ["value"]
 
 	def initialize(self, layer) :
 		self.shape = (layer.nbInputs, layer.nbOutputs)
-		Value.initialize(self, layer)
+		SingleValue.initialize(self, layer)
 
-class ZerosWeights(ValueWeights) :
+class ZerosWeights(SingleValueWeights) :
 	"""Initialize the weights to zero"""
 	def __init__(self, value, *args, **kwargs) :
-		ValueWeights.__init__(self, 0)
+		SingleValueValueWeights.__init__(self, 0)
 		self.hyperParameters = []
 
-class ValueBias(Initialization_ABC) :
+class SingleValueBias(SingleValue) :
 	"""Initialize the bias to a given value"""
 	def __init__(self, values, *args, **kwargs) :
-		Value.__init__(self, 'b', None, value, *args, **kwargs)
+		SingleValue.__init__(self, 'b', None, value, *args, **kwargs)
 		self.hyperParameters = ["value"]
 
 	def initialize(self, layer) :
 		self.shape = (layer.nbOutputs,)
-		Value.initialize(self, layer)
+		SingleValue.initialize(self, layer)
 
 class ZerosBias(ValueBias) :
 	"""Initialize the bias to zeros"""
 	def __init__(self, *args, **kwargs) :
-		ValueBias.__init__(self, value)
+		SingleValueBias.__init__(self, value)
 		self.hyperParameters = []
