@@ -3,7 +3,7 @@ import theano
 import theano.tensor as tt
 import Mariana.settings as MSET
 
-__all__= ["Decorator_ABC", "OutputDecorator_ABC", "BinomialDropout", "GlorotTanhInit", "ZerosInit", "WeightSparsity", "InputSparsity"]
+__all__= ["Decorator_ABC", "OutputDecorator_ABC", "BinomialDropout", "WeightSparsity", "InputSparsity"]
 
 class Decorator_ABC(object) :
 	"""A decorator is a modifier that is applied on a layer. This class defines the interface that a decorator must offer.
@@ -61,43 +61,6 @@ class BinomialDropout(OutputDecorator_ABC):
 		
 	def decorate(self, layer) :
 		layer.outputs = self._decorate(layer.outputs)
-			
-class GlorotTanhInit(Decorator_ABC) :
-	"""Set up the layer to apply the tanh initialisation introduced by Glorot et al. 2010"""
-	def __init__(self, *args, **kwargs) :
-		Decorator_ABC.__init__(self, *args, **kwargs)
-
-	def decorate(self, layer) :
-		rng = numpy.random.RandomState(MSET.RANDOM_SEED)
-		layer.W = rng.uniform(
-					low = -numpy.sqrt(6. / (layer.nbInputs + layer.nbOutputs)),
-					high = numpy.sqrt(6. / (layer.nbInputs + layer.nbOutputs)),
-					size = (layer.nbInputs, layer.nbOutputs)
-				)
-
-class ZerosInit(Decorator_ABC) :
-	"""Initialze the weights at zeros"""
-	def __init__(self, *args, **kwargs) :
-		Decorator_ABC.__init__(self, *args, **kwargs)
-
-	def decorate(self, layer) :
-		layer.W = numpy.zeros(
-					(layer.nbInputs, layer.nbOutputs),
-					dtype = theano.config.floatX
-				)
-
-class ValueInit(Decorator_ABC) :
-	"""Initialize the weights at a given value"""
-	def __init__(self, value, *args, **kwargs) :
-		Decorator_ABC.__init__(self, *args, **kwargs)
-		self.value = value
-		self.hyperParameters.append("value")
-
-	def decorate(self, layer) :
-		layer.W = numpy.zeros(
-					(layer.nbInputs, layer.nbOutputs),
-					dtype = theano.config.floatX
-				) + value
 
 class WeightSparsity(Decorator_ABC):
 	"""Stochatically sets a certain ratio of the input weight to 0"""

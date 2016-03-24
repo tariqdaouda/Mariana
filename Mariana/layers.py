@@ -26,6 +26,7 @@ class Layer_ABC(object) :
 	def __init__(self,
 		size,
 		saveOutputs=MSET.SAVE_OUTPUTS_DEFAULT,
+		initialisations=[],
 		decorators=[],
 		name=None,
 		**kwrags
@@ -53,6 +54,7 @@ class Layer_ABC(object) :
 			self.last_outputs = None
 
 		self.decorators = decorators
+		self.initialisations = initialisations
 
 		self.feedsInto = OrderedDict()
 		self.feededBy = OrderedDict()
@@ -63,13 +65,23 @@ class Layer_ABC(object) :
 		self._mustInit = True
 		self._decorating = False
 
-	def addDecorator(self, decorator) :
-		"""Add a decorator to the layer"""
-		self.decorators.append(decorator)
+	#def addDecorator(self, decorator) :
+		# """Add a decorator to the layer"""
+		# self.decorators.append(decorator)
 
 	def getParams(self) :
 		"""returns the layer parameters"""
-		raise NotImplemented("Should be implemented in child")
+		from theano.compile import SharedVariable
+		res = []
+		for v in self.__dict.itervalues() :
+			if isinstance(v, SharedVariable) :
+				res.append(v)
+		return v
+
+	def _initParameters(self) :
+		"""creates the parameters if necessary"""
+		for init in self.intialisations :
+			init.initialise(self)
 
 	def clone(self, **kwargs) :
 		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
@@ -300,7 +312,6 @@ class Hidden(Layer_ABC) :
 	def _setOutputs(self) :
 		"""initialises weights and bias. By default weights are setup to random low values, use Mariana decorators
 		to change this behaviour."""
-		from theano.tensor.var import TensorVariable
 		from theano.compile import SharedVariable
 
 		for inputLayer in self.feededBy.itervalues() :
