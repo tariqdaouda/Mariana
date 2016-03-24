@@ -266,4 +266,5 @@ class Network(object) :
 			try :
 				return maps[k]
 			except KeyError :
+				print maps
 				raise e
