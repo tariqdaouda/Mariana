@@ -5,13 +5,23 @@ __all__ = ["LearningScenario_ABC", "Fixed", "GradientDescent", "MomentumGradient
 
 class LearningScenario_ABC(object):
  	"""
- 	This is the interface all scenarii must expose. In order for the trainer/recorder to know which attributes are hyper-parameters,
+ 	This is the interface all scenari must expose. In order for the trainer/recorder to know which attributes are hyper-parameters,
  	this class must also include a list attribute **self.hyperParameters** containing the names all attributes that must be considered
  	as hyper-parameters.
  	"""
 	def __init__(self, *args, **kwargs):
 		self.name = self.__class__.__name__
  		self.hyperParameters = []
+
+	def apply(self, layer, cost) :
+		"""Apply to a layer and update networks's log"""
+		hyps = {}
+		for k in self.hyperParameters :
+			hyps[k] = getattr(self, k)
+
+		message = "%s follows learning scenario %s" % (layer.name, self.__class__.__name__)
+		layer.network.logLayerEvent(layer, message, hyps)
+		return self.getUpdates(layer, cost)
 
 	def getUpdates(self, layer, cost) :
 		"""return the updates for the parameters of layer. Must be implemented in child"""
@@ -42,7 +52,7 @@ class GradientDescent(LearningScenario_ABC):
 
  	def getUpdates(self, layer, cost) :
  		updates = []
-		for param in layer.getParameters() :
+ 		for param in layer.getParameters() :
 			gparam = tt.grad(cost, param)
  			updates.append((param, param - self.lr * gparam))
  

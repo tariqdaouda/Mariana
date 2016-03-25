@@ -12,6 +12,16 @@ class Cost_ABC(object) :
 		self.name = self.__class__.__name__
 		self.hyperParameters = []
 
+	def apply(self, layer, targets, outputs, purpose) :
+		"""Apply to a layer and update networks's log. Purpose is supposed to be a sting such as 'train' or 'test'"""
+		hyps = {}
+		for k in self.hyperParameters :
+			hyps[k] = getattr(self, k)
+
+		message = "%s uses cost %s for %s" % (layer.name, self.__class__.__name__, purpose)
+		layer.network.logLayerEvent(layer, message, hyps)
+		return self.costFct(targets, outputs)
+
 	def costFct(self, targets, outputs) :
 		"""The cost function. Must be implemented in child"""
 		raise NotImplemented("Must be implemented in child")

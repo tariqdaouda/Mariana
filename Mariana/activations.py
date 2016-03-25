@@ -8,6 +8,16 @@ class Activation_ABC(object):
 		self.hyperParameters = []
 		self.name = self.__class__.__name__
 
+	def apply(self, layer, x) :
+		"""Apply to a layer and update networks's log"""
+		hyps = {}
+		for k in self.hyperParameters :
+			hyps[k] = getattr(self, k)
+
+		message = "%s uses activation %s" % (layer.name, self.__class__.__name__)
+		layer.network.logLayerEvent(layer, message, hyps)
+		return self.function(x)
+
 	def function(self, x) :
 		"""the actual activation function that will be applied to the neurones."""
 		raise NotImplemented("Must be implemented in child")

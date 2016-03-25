@@ -73,4 +73,7 @@ def printResults(ae, o, data) :
 
 data = makeData()
 ae, o = ae2(data)
+
+ae.printLog()
+
 printResults(ae, o, data)

@@ -6,6 +6,16 @@ class SingleLayerRegularizer_ABC(object) :
 	def __init__(self, *args, **kwargs) :
 		self.name = self.__class__.__name__
 
+	def apply(self, layer) :
+		"""Apply to a layer and update networks's log"""
+		hyps = {}
+		for k in self.hyperParameters :
+			hyps[k] = getattr(self, k)
+
+		message = "%s uses %s regularization" % (layer.name, self.__class__.__name__)
+		layer.network.logLayerEvent(layer, message, hyps)
+		return self.getFormula(layer, x)
+
 	def getFormula(self, layer) :
 		"""Returns the expression to be added to the cost"""
 		raise NotImplemented("Must be implemented in child")

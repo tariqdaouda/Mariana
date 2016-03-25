@@ -30,7 +30,7 @@ class MLPTests(unittest.TestCase):
 		cost = MC.NegativeLogLikelihood()
 
 		i = ML.Input(2, 'inp')
-		h = ML.Hidden(4, activation = MA.Tanh(), initalizations = [MI.GlorotTanhInit()], regularizations = [MR.L1(0), MR.L2(0)])
+		h = ML.Hidden(4, activation = MA.Tanh(), initializations = [MI.GlorotTanhInit()], regularizations = [MR.L1(0), MR.L2(0)])
 		o = ML.SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
 
 		mlp = i > h > o
@@ -43,7 +43,7 @@ class MLPTests(unittest.TestCase):
 
 		return mlp
 
-	# @unittest.skip("skipping")
+	@unittest.skip("skipping")
 	def test_xor(self) :
 		mlp = self.trainMLP_xor()
 		o = mlp.outputs.values()[0]
@@ -69,7 +69,7 @@ class MLPTests(unittest.TestCase):
 
 		os.remove('test_save.mariana.pkl')
 
-	@unittest.skip("skipping")
+	# @unittest.skip("skipping")
 	def test_ae(self) :
 
 		data = []

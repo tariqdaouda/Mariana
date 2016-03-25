@@ -66,36 +66,22 @@ class Layer_ABC(object) :
 		self._mustInit = True
 		self._decorating = False
 
-	#def addDecorator(self, decorator) :
-		# """Add a decorator to the layer"""
-		# self.decorators.append(decorator)
-
-	def getParameters(self) :
-		"""returns the layer parameters"""
-		from theano.compile import SharedVariable
-		res = []
-		for v in self.__dict.itervalues() :
-			if isinstance(v, SharedVariable) :
-				res.append(v)
-		return res
-
-	def getParameterNames(self) :
-		"""returns the layer parameters names"""
-		from theano.compile import SharedVariable
-		res = []
-		for k, v in self.__dict.iteritems() :
-			if isinstance(v, SharedVariable) :
-				res.append(k)
-		return res
-
 	def getParameterDict(self) :
-		"""returns the layer parameters as dictionary"""
+		"""returns the layer's parameters as dictionary"""
 		from theano.compile import SharedVariable
 		res = {}
-		for v in self.__dict.itervalues() :
-			if isinstance(v, SharedVariable) :
+		for k, v in self.__dict__.iteritems() :
+			if k != 'last_outputs' and isinstance(v, SharedVariable) :
 				res[k] = v
 		return res
+
+	def getParameters(self) :
+		"""returns the layer's parameters"""
+		return self.getParameterDict().values()
+
+	def getParameterNames(self) :
+		"""returns the layer's parameters names"""
+		return self.getParameterDict().keys()
 
 	def clone(self, **kwargs) :
 		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
@@ -108,7 +94,7 @@ class Layer_ABC(object) :
 	def _initParameters(self) :
 		"""creates the parameters if necessary"""
 		for init in self.initializations :
-			init.initialize(self)
+			init.apply(self)
 	
 	#theano hates abstract methods defined with a decorator
 	def _setOutputs(self) :
@@ -119,7 +105,7 @@ class Layer_ABC(object) :
 		"""applies decorators"""
 		self._decorating = True
 		for d in self.decorators :
-			d.decorate(self)
+			d.apply(self)
 		self._decorating = False
 
 	def _init(self) :
@@ -147,16 +133,17 @@ class Layer_ABC(object) :
 	def connect(self, layer) :
 		"""Connect the layer to another one. Using the '>' operator to connect to layers is actually calls this function.
 		This function returns the resulting network"""
+		if layer.network is None :
+			layer.network = self.network
+		else :
+			self.network.merge(self, layer)
+		self.network.addEdge(self, layer)
+
 		layer._femaleConnect(self)
 		layer.feededBy[self.name] = self
 		self._maleConnect(layer)
 		self.feedsInto[layer.name] = layer
 		
-		self.network.addEdge(self, layer)
-		if layer.network is None :
-			layer.network = self.network
-		else :
-	 		self.network.merge(self, layer)
 		return self.network
 
 	def disconnect(self, layer) :
@@ -248,10 +235,6 @@ class Embedding(Layer_ABC) :
 		self.preOutputs = self.embeddings[self.inputs]
 		self.outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
 		
-	def getParameters(self) :
-		"""returns nothing"""
-		return [self.embeddings]
-
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=invhouse]' % (self.name, self.nbOutputs)
 
@@ -267,10 +250,6 @@ class Input(Layer_ABC) :
 
 		self.inputs = tt.matrix(name = self.name)
 	
-	def getParameters(self) :
-		"""return nothing"""
-		return []
-
 	def _setOutputs(self) :
 		"initialises the output to be the same as the inputs"
 		self.outputs = self.inputs
@@ -293,9 +272,6 @@ class Composite(Layer_ABC):
 	"""
 	def __init__(self, name = None):
 		Layer_ABC.__init__(self, size = None, name = name)
-
-	def getParameters(self) :
-		return []
 
 	def _femaleConnect(self, layer) :
 		if self.nbInputs is None :
@@ -323,8 +299,7 @@ class Hidden(Layer_ABC) :
 		self.learningScenario=learningScenario
 		self.W = None
 		self.b = None
-		self.parameters = []
-
+		
 		self.regularizationObjects = regularizations
 		self.regularizations = []
 
@@ -344,18 +319,21 @@ class Hidden(Layer_ABC) :
 				self.inputs = layer.outputs	
 			else :
 				self.inputs += layer.outputs	
-	
-		self.outputs = self.activation.function(tt.dot(self.inputs, self.W) + self.b)
+		
+		if self.W  is None:
+			raise ValueError("No initialization was defined for weights (self.W)")
+		
+		if self.b is None:
+			MI.ZerosBias().apply(self)
+			# raise ValueError("No initialization was defined for bias (self.b)")
+
+		self.outputs = self.activation.apply(self, tt.dot(self.inputs, self.W) + self.b)
 		for reg in self.regularizationObjects :
 			self.regularizations.append(reg.getFormula(self))
 
 	def getW(self) :
 		"""Return the weight values"""
 		return self.W.get_value()
-
-	def getParameters(self) :
-		"""returns the layer parameters (Weights and bias)"""
-		return self.parameters
 
 	def clone(self, **kwargs) :
 		"""Returns a free layer with the same weights and bias and activation function.
@@ -410,6 +388,10 @@ class Output_ABC(Hidden) :
 	def _maleConnect(self, *args) :
 		raise ValueError("An output layer cannot be connected to something")
 
+	def _femaleConnect(self, layer) :
+		Hidden._femaleConnect(self, layer)
+		self.network.addOutput(self)
+
 	def _backTrckDependencies(self) :
 		"""Finds all the hidden layers the ouput layer is influenced by"""
 		def _bckTrk(deps, layer) :
@@ -432,8 +414,8 @@ class Output_ABC(Hidden) :
 		self._backTrckDependencies()
 		self._userInit()
 
-		self.cost = self.costObject.costFct(self.targets, self.outputs)
-		self.test_cost = self.costObject.costFct(self.targets, self.outputs)
+		self.cost = self.costObject.apply(self, self.targets, self.outputs, "training")
+		self.test_cost = self.costObject.apply(self, self.targets, self.outputs, "testing")
 
 		for l in self.dependencies.itervalues() :
 			if l.__class__  is not Composite :
@@ -443,13 +425,13 @@ class Output_ABC(Hidden) :
 				except AttributeError :
 					pass
 
-		self.updates = self.learningScenario.getUpdates(self, self.cost)
+		self.updates = self.learningScenario.apply(self, self.cost)
 
 		for l in self.dependencies.itervalues() :
 			try :
-				updates = l.learningScenario.getUpdates(l, self.cost)
+				updates = l.learningScenario.apply(l, self.cost)
 			except AttributeError :
-				updates = self.learningScenario.getUpdates(l, self.cost)
+				updates = self.learningScenario.apply(l, self.cost)
 			self.updates.extend(updates)
 
 		self.updates_lastOutputs = []

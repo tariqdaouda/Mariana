@@ -24,6 +24,16 @@ class Decorator_ABC(object) :
 	def __call__(self, *args, **kwargs) :
 		self.decorate(*args, **kwargs)
 
+	def apply(self, layer) :
+		"""Apply to a layer and update networks's log"""
+		hyps = {}
+		for k in self.hyperParameters :
+			hyps[k] = getattr(self, k)
+
+		message = "%s is decorated by %s" % (layer.name, self.__class__.__name__)
+		layer.network.logLayerEvent(layer, message, hyps)
+		return self.decorate(layer)
+
 	def decorate(self, layer) :
 		"""The function that all decorator_ABCs must implement"""
 		raise NotImplemented("This one should be implemented in child")

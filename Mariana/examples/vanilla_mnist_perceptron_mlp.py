@@ -1,6 +1,7 @@
 import numpy
 
 import Mariana.activations as MA
+import Mariana.initializations as MI
 import Mariana.decorators as MD
 import Mariana.layers as ML
 import Mariana.costs as MC
@@ -26,8 +27,8 @@ def Perceptron(ls, cost) :
 def MLP(ls, cost) :
 	
 	i = ML.Input(28*28, name = 'inp')
-	h = ML.Hidden(500, activation = MA.Tanh(), decorators = [MD.GlorotTanhInit()], regularizations = [ MR.L1(0), MR.L2(0.0001) ], name = "hid" )
-	o = ML.SoftmaxClassifier(10, decorators = [MD.ZerosInit()], learningScenario = ls, costObject = cost, name = "out", regularizations = [ MR.L1(0), MR.L2(0.0001) ] )
+	h = ML.Hidden(500, activation = MA.Tanh(), decorators = [MD.BinomialDropout(0.2)], initializations = [MI.GlorotTanhInit()], regularizations = [ MR.L1(0), MR.L2(0.0001) ], name = "hid" )
+	o = ML.SoftmaxClassifier(10, initializations = [MI.ZerosWeights()], learningScenario = ls, costObject = cost, name = "out", regularizations = [ MR.L1(0), MR.L2(0.0001) ] )
 
 	mlp = i > h > o
 	
@@ -44,7 +45,10 @@ if __name__ == "__main__" :
 	maxEpochs = 1000
 	miniBatchSize = 20
 	
+	#get the model
 	model = MLP(ls, cost)
+	model.printLog()
+
 	o = model.outputs.values()[0]
 	
 	epoch = 0

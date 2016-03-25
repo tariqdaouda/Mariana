@@ -57,10 +57,55 @@ class Network(object) :
 		self.regularizations = OrderedDict()
 		self.edges = set()
 
-		self.params = []
+		self.parameters = []
 
 		self._mustInit = True
 		self.outputMaps = {}
+		self.log = []
+
+	def logEvent(self, entity, message, parameters = {}) :
+		"Adds a log event to self.log. Entity can be anything hashable, Message should be a string and parameters and dict: param_name => value"
+		import time, types
+		assert type(message) is types.StringType
+		assert type(parameters) is types.DictType
+			
+		entry = {
+			"date": time.ctime(),
+			"timestamp": time.time(),
+			"message": message,
+			"parameters": parameters,
+			"entity": entity
+		}
+		self.log.append(entry)
+	
+	def logNetworkEvent(self, message, parameters = {}) :
+		self.logEvent("Network", message, parameters)
+
+	def logLayerEvent(self, layer, message, parameters = {}) :
+		"Adds a log event to self.log. Message should be a string and parameters and dict: param_name => value"
+		import time, types
+		assert type(message) is types.StringType
+		assert type(parameters) is types.DictType
+		self.logEvent(layer, message, parameters)
+
+	def printLog(self) :
+		"Print a very pretty version of self.log"
+		self.init()
+
+		t = " The story of how it all began "
+		t = "="*len(t) + "\n" + t + "\n" + "="*len(t)
+		
+		es = []
+		for e in self.log :
+			ps = []
+			for param, value in e["parameters"].iteritems() :
+				ps.append( "    -%s: %s" % (param, value) )
+			ps = '\n'.join(ps)
+			es.append("-[%s]@%s(%s), %s.\n%s" % (e["entity"], e["timestamp"], e["date"], e["message"], ps))
+			
+		es = '\n'.join(es)
+
+		print "\n" + t + "\n" + es + "\n"
 
 	def addEdge(self, layer1, layer2) :
 		"""Add a connection between two layers"""
@@ -84,6 +129,8 @@ class Network(object) :
 		except KeyError :
 			self.layerConnectionCount[layer2.name] = 1
 
+		self.logNetworkEvent("New edge %s > %s" % (layer1.name, layer2.name))
+
 	def removeEdge(self, layer1, layer2) :
 		"""Remove the connection between two layers"""
 		def _del(self, layer) :
@@ -100,13 +147,17 @@ class Network(object) :
 		_del(self, layer1)
 		_del(self, layer2)
 
+		self.logNetworkEvent("Removed edge %s > %s" % (layer1.name, layer2.name))
+
 	def addInput(self, i) :
 		"""adds an input to the layer"""
 		self.inputs[i.name] = i
+		self.logNetworkEvent("New input layer %s" % (i.name))
 
 	def addOutput(self, o) :
 		"""adds an output o to the network"""
 		self.outputs[o.name] = o
+		self.logNetworkEvent("New output layer %s" % (o.name))
 
 	def merge(self, fromLayer, toLayer) :
 		"""Merges the networks of two layers together."""
@@ -121,12 +172,15 @@ class Network(object) :
 		for o in toLayer.network.outputs.itervalues() :
 			self.addOutput(o)
 
+		self.log.extend(toLayer.network.log)
+
 		self.layers.update(toLayer.network.layers)
 		self.edges = self.edges.union(toLayer.network.edges)
 
 	def init(self) :
 		"Initialiases the network by initialising every layer."
-
+		self.logNetworkEvent("Initialization begins!")
+		
 		if self._mustInit :
 			print "\n" + MSET.OMICRON_SIGNATURE
 
@@ -136,7 +190,7 @@ class Network(object) :
 			self._mustInit = False
 	
 			for l in self.layers.itervalues() :
-				self.params.extend(l.getParameters())
+				self.parameters.extend(l.getParameters())
 			
 			for o in self.outputs.itervalues() :
 				o._setTheanoFunctions()
@@ -266,5 +320,4 @@ class Network(object) :
 			try :
 				return maps[k]
 			except KeyError :
-				print maps
 				raise e

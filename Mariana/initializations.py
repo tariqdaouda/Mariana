@@ -34,9 +34,17 @@ class Initialization_ABC(object) :
 	def __call__(self, *args, **kwargs) :
 		self.initialize(*args, **kwargs)
 
+	def apply(self, layer) :
+		hyps = {}
+		for k in self.hyperParameters :
+			hyps[k] = getattr(self, k)
+
+		message = "%s was initialized using %s" % (layer.name, self.__class__.__name__)
+		layer.network.logEvent(layer, message, hyps)
+		self.initialize(layer)
+
 	def initialize(self, layer) :
 		"""The function that all Initialization_ABCs must implement"""
-		print "ssasdfasd"
 		raise NotImplemented("This one should be implemented in child")
 
 class HardSet(Initialization_ABC) :
@@ -134,7 +142,7 @@ class Normal(Initialization_ABC) :
 		self.hyperParameters = ["parameter", "standardDev"]
 
 	def initialize(self, layer) :
-		v = nnumpy.random.normal(0, self.standardDev, (layer.nbInputs, layer.nbOutputs))
+		v = nnumpy.random.normal(0, self.standardDev, self.shape)
 		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (self.parameter, layer.name) ) )
 
 class NormalWeights(Normal) :
@@ -173,8 +181,8 @@ class SingleValueWeights(SingleValue) :
 
 class ZerosWeights(SingleValueWeights) :
 	"""Initialize the weights to zero"""
-	def __init__(self, value, *args, **kwargs) :
-		SingleValueValueWeights.__init__(self, 0)
+	def __init__(self, *args, **kwargs) :
+		SingleValueWeights.__init__(self, 0)
 		self.hyperParameters = []
 
 class SingleValueBias(SingleValue) :
