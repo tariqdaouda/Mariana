@@ -30,20 +30,19 @@ class MLPTests(unittest.TestCase):
 		cost = MC.NegativeLogLikelihood()
 
 		i = ML.Input(2, 'inp')
-		h = ML.Hidden(4, activation = MA.Tanh(), initializations = [MI.GlorotTanhInit()], regularizations = [MR.L1(0), MR.L2(0)])
+		h = ML.Hidden(10, activation = MA.Tanh(), regularizations = [MR.L1(0), MR.L2(0)])
 		o = ML.SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
 
 		mlp = i > h > o
 
 		self.xor_ins = numpy.array(self.xor_ins)
 		self.xor_outs = numpy.array(self.xor_outs)
-		for i in xrange(1000) :
-			ii = i%len(self.xor_ins)
-			mlp.train(o, inp = [ self.xor_ins[ ii ] ], targets = [ self.xor_outs[ ii ] ] )
+		for i in xrange(10000) :
+			mlp.train(o, inp = self.xor_ins, targets = self.xor_outs )
 
 		return mlp
 
-	@unittest.skip("skipping")
+	# @unittest.skip("skipping")
 	def test_xor(self) :
 		mlp = self.trainMLP_xor()
 		o = mlp.outputs.values()[0]
@@ -53,15 +52,16 @@ class MLPTests(unittest.TestCase):
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[3] ] )[0], 0 )
 
-	@unittest.skip("skipping")
-	def test_save_load(self) :
+	# @unittest.skip("skipping")
+	def test_save_load_pickle(self) :
 		import cPickle, os
 
 		mlp = self.trainMLP_xor()
-		mlp.save("test_save")
+		mlp.savePickle("test_save")
 		mlp2 = cPickle.load(open('test_save.mariana.pkl'))
 
 		o = mlp2.outputs.values()[0]
+
 		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[0] ] )[0], 0 )
 		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[1] ] )[0], 1 )
 		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
@@ -97,7 +97,7 @@ class MLPTests(unittest.TestCase):
 		for i in xrange(len(res)) :
 			self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
 
-	@unittest.skip("skipping")
+	#@unittest.skip("skipping")
 	def test_composite(self) :
 		ls = MS.GradientDescent(lr = 0.1)
 		cost = MC.NegativeLogLikelihood()
@@ -123,7 +123,7 @@ class MLPTests(unittest.TestCase):
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[3] ] )[0], 0 )
 
-	@unittest.skip("skipping")
+	#@unittest.skip("skipping")
 	def test_embedding(self) :
 		"""the first 3 and the last 3 should be diametrically opposed"""
 		data = [[0], [1], [2], [3], [4], [5]]
@@ -146,7 +146,7 @@ class MLPTests(unittest.TestCase):
 			v = numpy.dot(embeddings[i], embeddings[i+len(data)/2])
 			self.assertTrue(v < -1)
 
-	@unittest.skip("skipping")
+	#@unittest.skip("skipping")
 	def test_conv(self) :
 		import Mariana.convolution as MCONV
 		import theano

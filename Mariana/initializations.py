@@ -129,7 +129,7 @@ class SmallUniformEmbeddings(SmallUniform) :
 		self.hyperParameters = []
 
 	def initialize(self, layer) :
-		self.shape = (layer.dictSize, layer.nbDimensions)
+		self.shape = (layer.dictSize, layer.nbDimentions)
 		SmallUniform.initialize(self, layer)
 
 class Normal(Initialization_ABC) :
