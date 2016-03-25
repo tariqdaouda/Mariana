@@ -89,7 +89,7 @@ class Network(object) :
 		self.logEvent(layer, message, parameters)
 
 	def printLog(self) :
-		"Print a very pretty version of self.log"
+		"Print a very pretty version of self.log. The log should contain all meaningful events in a chronological order"
 		self.init()
 
 		t = " The story of how it all began "
@@ -180,7 +180,7 @@ class Network(object) :
 	def init(self) :
 		"Initialiases the network by initialising every layer."
 		self.logNetworkEvent("Initialization begins!")
-		
+
 		if self._mustInit :
 			print "\n" + MSET.OMICRON_SIGNATURE
 
