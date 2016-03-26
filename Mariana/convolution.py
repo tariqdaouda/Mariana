@@ -116,6 +116,7 @@ class Flatten(ML.Layer_ABC) :
 
 		self.nbInputs = self.nbInputChannels
 		self.outputs = self.inputs.flatten(self.outdim)
+		self.testOutputs = self.inputs.flatten(self.outdim)
 	
 	def _dot_representation(self) :
 		return '[label="%s: %s->%s" shape=invhouse]' % (self.name, self.nbInputChannels, self.nbOutputs)
@@ -168,6 +169,7 @@ class InputChanneler(ConvLayer_ABC, ML.Layer_ABC) :
 			inps.append(l.outputs)
 
 		self.outputs = tt.stack(inps).reshape((-1, self.nbChannels, self.height, self.width))
+		self.testOutputs = tt.stack(inps).reshape((-1, self.nbChannels, self.height, self.width))
 
 class Input(ConvLayer_ABC, ML.Layer_ABC) :
 	"""The input to a convolution network. This is different from a regular Input layer in the sense that it also holds channels information.
@@ -195,7 +197,7 @@ class Input(ConvLayer_ABC, ML.Layer_ABC) :
 	def _setOutputs(self) :
 		"initialises the output to be the same as the inputs"
 		self.outputs = self.inputs
-		self.test_outputs = self.inputs
+		self.testOutputs = self.inputs
 
 class Embedding(ConvLayer_ABC, ML.Layer_ABC) :
 	"""This input layer will take care of creating the embeddings and training them. Embeddings are learned representations
@@ -254,6 +256,7 @@ class Embedding(ConvLayer_ABC, ML.Layer_ABC) :
 		self.preOutputs = self.embeddings[self.inputs]
 		# self.outputs = self.preOutputs.T.dimshuffle('x', 0, 2, 1)#.reshape((self.inputs.shape[0], self.nbChannels, self.height, self.width))
 		self.outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbChannels, self.height, self.width))
+		self.testOutputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbChannels, self.height, self.width))
 		
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=invhouse]' % (self.name, self.shape)
@@ -342,3 +345,4 @@ class Convolution2D(ConvLayer_ABC, ML.Hidden) :
 		self.nbFlatOutputs = self.nbChannels * self.height * self.width
 
 		self.outputs = self.activation.apply(self, self.pooled + self.b.dimshuffle('x', 0, 'x', 'x'))
+		self.testOutputs = self.activation.apply(self, self.pooled + self.b.dimshuffle('x', 0, 'x', 'x'))

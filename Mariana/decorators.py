@@ -1,4 +1,4 @@
-import numpy, time
+import numpy
 import theano
 import theano.tensor as tt
 import Mariana.settings as MSET
@@ -6,16 +6,7 @@ import Mariana.settings as MSET
 __all__= ["Decorator_ABC", "OutputDecorator_ABC", "BinomialDropout", "WeightSparsity", "InputSparsity"]
 
 class Decorator_ABC(object) :
-	"""A decorator is a modifier that is applied on a layer. This class defines the interface that a decorator must offer.
-	Due to some of Mariana's black magic, it is possible to modify shared variable the same way as any regular variable::
-
-		layer.W = numpy.zeros(
-				(layer.nbInputs, layer.nbOutputs),
-				dtype = theano.config.floatX
-			)
-
-	Mariana will take care of the ugly stuff such as the casting, and making sure that the variable reference in the graph does not change.
-	"""
+	"""A decorator is a modifier that is applied on a layer."""
 
 	def __init__(self, *args, **kwargs) :
 		self.hyperParameters = []
@@ -59,7 +50,7 @@ class BinomialDropout(OutputDecorator_ABC):
 
 		assert (ratio >= 0 and ratio <= 1) 
 		self.ratio = ratio
-		self.seed = time.time()
+		self.seed = MSET.RANDOM_SEED
 		self.hyperParameters.extend(["ratio"])
 
 	def _decorate(self, outputs) :
@@ -71,6 +62,8 @@ class BinomialDropout(OutputDecorator_ABC):
 		
 	def decorate(self, layer) :
 		layer.outputs = self._decorate(layer.outputs)
+		if not self.trainOnly :
+			layer.testOutputs = self._decorate(layer.testOutputs)
 
 class WeightSparsity(Decorator_ABC):
 	"""Stochatically sets a certain ratio of the input weight to 0"""
@@ -79,7 +72,7 @@ class WeightSparsity(Decorator_ABC):
 
 		assert (ratio >= 0 and ratio <= 1) 
 		self.ratio = ratio
-		self.seed = time.time()
+		self.seed = MSET.RANDOM_SEED
 		self.hyperParameters.extend(["ratio"])
 
 	def decorate(self, layer) :
@@ -98,7 +91,7 @@ class InputSparsity(Decorator_ABC):
 
 		assert (ratio >= 0 and ratio <= 1) 
 		self.ratio = ratio
-		self.seed = time.time()
+		self.seed = MSET.RANDOM_SEED
 		self.hyperParameters.extend(["ratio"])
 
 	def decorate(self, layer) :

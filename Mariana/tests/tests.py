@@ -62,10 +62,10 @@ class MLPTests(unittest.TestCase):
 
 		o = mlp2.outputs.values()[0]
 
-		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[0] ] )[0], 0 )
-		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[1] ] )[0], 1 )
-		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
-		self.assertEqual(mlp2.classify( o, inp = [ self.xor_ins[3] ] )[0], 0 )
+		self.assertEqual(mlp2.predict( o, inp = [ self.xor_ins[0] ] )[0], 0 )
+		self.assertEqual(mlp2.predict( o, inp = [ self.xor_ins[1] ] )[0], 1 )
+		self.assertEqual(mlp2.predict( o, inp = [ self.xor_ins[2] ] )[0], 1 )
+		self.assertEqual(mlp2.predict( o, inp = [ self.xor_ins[3] ] )[0], 0 )
 
 		os.remove('test_save.mariana.pkl')
 
@@ -118,10 +118,10 @@ class MLPTests(unittest.TestCase):
 			ii = i%len(self.xor_ins)
 			mlp.train(o, inp = [ self.xor_ins[ ii ] ], targets = [ self.xor_outs[ ii ] ])
 
-		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[0] ] )[0], 0 )
-		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[1] ] )[0], 1 )
-		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
-		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[3] ] )[0], 0 )
+		self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[0] ] )[0], 0 )
+		self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[1] ] )[0], 1 )
+		self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[2] ] )[0], 1 )
+		self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[3] ] )[0], 0 )
 
 	# @unittest.skip("skipping")
 	def test_embedding(self) :

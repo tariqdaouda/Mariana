@@ -180,9 +180,9 @@ class Network(object) :
 
 	def init(self) :
 		"Initialiases the network by initialising every layer."
-		self.logNetworkEvent("Initialization begins!")
 
 		if self._mustInit :
+			self.logNetworkEvent("Initialization begins!")
 			print "\n" + MSET.OMICRON_SIGNATURE
 
 			for inp in self.inputs.itervalues() :

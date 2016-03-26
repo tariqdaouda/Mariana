@@ -46,6 +46,8 @@ class Layer_ABC(object) :
 		self.inputs = None
 		self.nbOutputs = size
 		self.outputs = None # this is a symbolic var
+		self.testOutputs = None # this is a symbolic var
+		
 		self.saveOutputs = saveOutputs
 
 		if saveOutputs :
@@ -256,7 +258,8 @@ class Embedding(Layer_ABC) :
 	def _setOutputs(self) :
 		self.preOutputs = self.embeddings[self.inputs]
 		self.outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
-		
+		self.testOutputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
+
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=invhouse]' % (self.name, self.nbOutputs)
 
@@ -275,6 +278,7 @@ class Input(Layer_ABC) :
 	def _setOutputs(self) :
 		"initialises the output to be the same as the inputs"
 		self.outputs = self.inputs
+		self.testOutputs = self.inputs
 	
 	def _femaleConnect(self, *args) :
 		raise ValueError("Nothing can be connected into an input layer")
@@ -303,6 +307,7 @@ class Composite(Layer_ABC):
 		
 	def _setOutputs(self) :
 		self.outputs = tt.concatenate( [l.outputs for l in self.feededBy.itervalues()], axis = 1 )
+		self.testOutputs = tt.concatenate( [l.outputs for l in self.feededBy.itervalues()], axis = 1 )
 
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=tripleoctogon]' % (self.name, self.nbOutputs)
@@ -350,6 +355,8 @@ class Hidden(Layer_ABC) :
 			# raise ValueError("No initialization was defined for bias (self.b)")
 
 		self.outputs = self.activation.apply(self, tt.dot(self.inputs, self.W) + self.b)
+		self.testOutputs = self.activation.apply(self, tt.dot(self.inputs, self.W) + self.b)
+
 		for reg in self.regularizationObjects :
 			self.regularizations.append(reg.getFormula(self))
 
@@ -438,14 +445,19 @@ class Output_ABC(Hidden) :
 		pass
 
 	def _setTheanoFunctions(self) :
-		"""Creates theano_train/theano_test/theano_propagate functions and calls setCustomTheanoFunctions to
-		create user custom theano functions."""
+		"""Creates train, test, propagate, propagateTest functions and calls setCustomTheanoFunctions to
+		create user custom theano functions::
+			* train: update parameters and return cost
+			* test: do not update parameters and return cost without adding regularizations
+			* propagate: return the outputs of the layer
+			* propagateTest: return the test outputs of the layer (some decorators may not be applied)
+		"""
 
 		self._backTrckDependencies()
 		self._userInit()
 
 		self.cost = self.costObject.apply(self, self.targets, self.outputs, "training")
-		self.test_cost = self.costObject.apply(self, self.targets, self.outputs, "testing")
+		self.test_cost = self.costObject.apply(self, self.targets, self.testOutputs, "testing")
 
 		for l in self.dependencies.itervalues() :
 			if l.__class__  is not Composite :
@@ -472,6 +484,7 @@ class Output_ABC(Hidden) :
 		self.train = MWRAP.TheanoFunction("train", self, [self.cost], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
 		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], { "targets" : self.targets }, updates = self.updates_lastOutputs, allow_input_downcast=True)
 		self.propagate = MWRAP.TheanoFunction("propagate", self, [self.outputs], updates = self.updates_lastOutputs, allow_input_downcast=True)
+		self.propagateTest = MWRAP.TheanoFunction("propagate", self, [self.testOutputs], updates = self.updates_lastOutputs, allow_input_downcast=True)
 
 		self.setCustomTheanoFunctions()
 
@@ -519,8 +532,12 @@ class SoftmaxClassifier(Classifier_ABC) :
 		self.targets = tt.ivector(name = "targets_" + self.name)
 	
 	def setCustomTheanoFunctions(self) :
-		"""defined theano_classify, that returns the argmax of the output"""
+		"""defines classify and predict::
+			*classify: return the argmax of the outputs
+			*predict: return the argmax of the test outputs (some decorators may not be applied)"""
+
 		self.classify = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.outputs) ], updates = self.updates_lastOutputs)
+		self.predict = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.testOutputs) ], updates = self.updates_lastOutputs)
 
 	def clone(self, **kwargs) :
 		"""Returns a free output layer with the same weights, bias, activation function, learning scenario, and cost.
