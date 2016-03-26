@@ -11,9 +11,9 @@ with open(path.join(here, 'DESCRIPTION.rst'), encoding='utf-8') as f:
 setup(
     name='Mariana',
 
-    version='0.1b0',
+    version='0.2b1',
 
-    description="Crazy deep architectures made easy",
+    description="The Cutest Deep Learning Framework",
     long_description=long_description,
     
     url='https://github.com/tariqdaouda/mariana',
@@ -43,7 +43,7 @@ setup(
         'Programming Language :: Python :: 2.7',
     ],
 
-    keywords='Machine Learning deep-learning neural networks',
+    keywords='Machine Learning deeplearning neural networks',
 
     packages=find_packages(exclude=['trash']),
 
