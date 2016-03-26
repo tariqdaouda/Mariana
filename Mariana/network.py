@@ -101,11 +101,12 @@ class Network(object) :
 			for param, value in e["parameters"].iteritems() :
 				ps.append( "    -%s: %s" % (param, value) )
 			ps = '\n'.join(ps)
-			es.append("-[%s]@%s(%s), %s.\n%s" % (e["entity"], e["timestamp"], e["date"], e["message"], ps))
+			# es.append("-[%s]@%s(%s), %s.\n%s" % (e["entity"], e["timestamp"], e["date"], e["message"], ps))
+			es.append("-@%s(%s):\n  %s -> %s.\n%s" % (e["timestamp"], e["date"], e["entity"], e["message"], ps))
 			
 		es = '\n'.join(es)
 
-		print "\n" + t + "\n" + es + "\n"
+		print "\n" + t + "\n\n" + es + "\n"
 
 	def addEdge(self, layer1, layer2) :
 		"""Add a connection between two layers"""

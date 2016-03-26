@@ -83,6 +83,10 @@ class Layer_ABC(object) :
 		"""returns the layer's parameters names"""
 		return self.getParameterDict().keys()
 
+	def getParameterShape(self, param) :
+		"""Should return the shape of the parameter. This has to be implemented in order for the initializations to work (and maybe some other stuff as well)"""
+		raise NotImplemented("Should be implemented in child")
+		
 	def clone(self, **kwargs) :
 		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
 		raise NotImplemented("Should be implemented in child")
@@ -91,6 +95,16 @@ class Layer_ABC(object) :
 		"Registers a layer as an input to self. This function is first called by input layers. Initialization can only start once all input layers have been registered"
 		self._inputRegistrations.add(inputLayer.name)
 	
+	def _whateverFirstInit(self) :
+		"""The first function called during initialization. Does nothing by default, you can put in it
+		whatever pre-action you want performed on the layer prior to normal initialization"""
+		pass
+
+	def _whateverLastInit(self) :
+		"""The last function called during initialization. Does nothing by default, you can put in it
+		whatever post-action you want performed on the layer post normal initialization"""
+		pass
+
 	def _initParameters(self) :
 		"""creates the parameters if necessary"""
 		for init in self.initializations :
@@ -111,9 +125,11 @@ class Layer_ABC(object) :
 	def _init(self) :
 		"Initialize the layer making it ready for training. This function is automatically called before train/test etc..."
 		if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.feededBy) ) :
+			self._whateverFirstInit()
 			self._initParameters()
 			self._setOutputs()
 			self._decorate()
+			self._whateverLastInit()
 			if self.outputs is None :
 				raise ValueError("Invalid layer '%s' has no defined outputs" % self.name)
 
@@ -222,6 +238,12 @@ class Embedding(Layer_ABC) :
 		self.embeddings = None
 		self.inputs = tt.imatrix(name = "embInp_" + self.name)
 
+	def getParameterShape(self, param) :
+		if param == "embeddings" :
+			return (self.dictSize, self.nbDimentions)
+		else :
+			raise ValueError("Unknow parameter: %s" % param)
+	
 	def getEmbeddings(self, idxs = None) :
 		"""returns the embeddings.
 		
@@ -308,7 +330,7 @@ class Hidden(Layer_ABC) :
 	def _femaleConnect(self, layer) :
 		if self.nbInputs is None :
 			self.nbInputs = layer.nbOutputs
-		elif layer.nbOutputs != self.nbInputs :
+		elif self.nbInputs != layer.nbOutputs :
 			raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
 
 	def _setOutputs(self) :
@@ -318,7 +340,7 @@ class Hidden(Layer_ABC) :
 			if self.inputs is None :
 				self.inputs = layer.outputs	
 			else :
-				self.inputs += layer.outputs	
+				self.inputs += layer.outputs
 		
 		if self.W  is None:
 			raise ValueError("No initialization was defined for weights (self.W)")
@@ -330,6 +352,14 @@ class Hidden(Layer_ABC) :
 		self.outputs = self.activation.apply(self, tt.dot(self.inputs, self.W) + self.b)
 		for reg in self.regularizationObjects :
 			self.regularizations.append(reg.getFormula(self))
+
+	def getParameterShape(self, param) :
+		if param == "W" :
+			return (self.nbInputs, self.nbOutputs)
+		elif param == "b" :
+			return (self.nbOutputs,)
+		else :
+			raise ValueError("Unknow parameter: %s" % param)
 
 	def getW(self) :
 		"""Return the weight values"""

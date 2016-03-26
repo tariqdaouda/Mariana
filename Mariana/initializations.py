@@ -64,50 +64,44 @@ class GlorotTanhInit(Initialization_ABC) :
 		Initialization_ABC.__init__(self, *args, **kwargs)
 
 	def initialize(self, layer) :
+		shape = layer.getParameterShape("W")
 		rng = numpy.random.RandomState(MSET.RANDOM_SEED)
 		layer.W = rng.uniform(
 					low = -numpy.sqrt(6. / (layer.nbInputs + layer.nbOutputs)),
 					high = numpy.sqrt(6. / (layer.nbInputs + layer.nbOutputs)),
-					size = (layer.nbInputs, layer.nbOutputs)
+					size = shape
 				)
 
 class Uniform(Initialization_ABC) :
 	"""Random values from a unifrom distribution (divided by the overall sum)."""
-	def __init__(self, parameter, shape, *args, **kwargs) :
+	def __init__(self, parameter, *args, **kwargs) :
 		Initialization_ABC.__init__(self, *args, **kwargs)
 		self.parameter = parameter
-		self.shape = shape
 		self.hyperParameters = ['parameter']
 
 	def initialize(self, layer) :
-		v = numpy.random.random(self.shape)
+		shape = layer.getParameterShape(self.parameter)
+		v = numpy.random.random(shape)
 		v = numpy.asarray(v, dtype=theano.config.floatX)
 		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (self.parameter, layer.name) ) )
 
 class UniformWeights(Uniform) :
 	"""Small random weights from a unifrom distribution"""
 	def __init__(self, *args, **kwargs) :
-		Uniform.__init__(self, 'W', None, *args, **kwargs)
+		Uniform.__init__(self, 'W', *args, **kwargs)
 		self.hyperParameters = []
-
-	def initialize(self, layer) :
-		self.shape = (layer.nbInputs, layer.nbOutputs)
-		Uniform.initialize(self, layer)
 
 class UniformEmbeddings(Uniform) :
 	"""Random embeddings from a unifrom distribution"""
 	def __init__(self, *args, **kwargs) :
-		Uniform.__init__(self, 'embeddings', None, *args, **kwargs)
+		Uniform.__init__(self, 'embeddings', *args, **kwargs)
 		self.hyperParameters = []
-
-	def initialize(self, layer) :
-		self.shape = (layer.dictSize, layer.nbDimensions)
-		Uniform.initialize(self, layer)
 
 class SmallUniform(Uniform) :
 	"""Random values from a unifrom distribution (divided by the overall sum)."""
 	def initialize(self, layer) :
-		v = numpy.random.random(self.shape)
+		shape = layer.getParameterShape(self.parameter)
+		v = numpy.random.random(shape)
 		v /= sum(v)
 		v = numpy.asarray(v, dtype=theano.config.floatX)
 		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (self.parameter, layer.name)) )
@@ -115,69 +109,53 @@ class SmallUniform(Uniform) :
 class SmallUniformWeights(SmallUniform) :
 	"""Small random weights from a unifrom distribution (divided by the overall sum)"""
 	def __init__(self, *args, **kwargs) :
-		SmallUniform.__init__(self, 'W', None, *args, **kwargs)
+		SmallUniform.__init__(self, 'W', *args, **kwargs)
 		self.hyperParameters = []
-
-	def initialize(self, layer) :
-		self.shape = (layer.nbInputs, layer.nbOutputs)
-		SmallUniform.initialize(self, layer)
 
 class SmallUniformEmbeddings(SmallUniform) :
 	"""Small random embeddings from a unifrom distribution (divided by the overall sum)"""
 	def __init__(self, *args, **kwargs) :
-		SmallUniform.__init__(self, 'embeddings', None, *args, **kwargs)
+		SmallUniform.__init__(self, 'embeddings', *args, **kwargs)
 		self.hyperParameters = []
-
-	def initialize(self, layer) :
-		self.shape = (layer.dictSize, layer.nbDimentions)
-		SmallUniform.initialize(self, layer)
 
 class Normal(Initialization_ABC) :
 	"""Random values from a normal distribution"""
 	def __init__(self, parameter, standardDev, shape, *args, **kwargs) :
 		Initialization_ABC.__init__(self, *args, **kwargs)
 		self.parameter = parameter
-		self.shape = shape
 		self.standardDev = standardDev
 		self.hyperParameters = ["parameter", "standardDev"]
 
 	def initialize(self, layer) :
-		v = nnumpy.random.normal(0, self.standardDev, self.shape)
+		shape = layer.getParameterShape(self.parameter)
+		v = numpy.random.normal(0, self.standardDev, shape)
 		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (self.parameter, layer.name) ) )
 
 class NormalWeights(Normal) :
 	"""Random weights from a normal distribution"""
 	def __init__(self, standardDev, *args, **kwargs) :
-		Normal.__init__(self, 'W', None, *args, **kwargs)
+		Normal.__init__(self, 'W', *args, **kwargs)
 		self.standardDev = standardDev
 		self.hyperParameters = ["standardDev"]
 
-	def initialize(self, layer) :
-		self.shape = (layer.nbInputs, layer.nbOutputs)
-		Normal.initialize(self, layer)
-
 class SingleValue(Initialization_ABC) :
 	"""Initialize to a given value"""
-	def __init__(self, parameter, shape, value, *args, **kwargs) :
+	def __init__(self, parameter, value, *args, **kwargs) :
 		Initialization_ABC.__init__(self, *args, **kwargs)
 		self.parameter = parameter
-		self.shape = shape
 		self.value = value
 		self.hyperParameters = ["parameter", "value"]
 
 	def initialize(self, layer) :
-		v = numpy.zeros( self.shape, dtype = theano.config.floatX) + self.value
+		shape = layer.getParameterShape(self.parameter)
+		v = numpy.zeros( shape, dtype = theano.config.floatX) + self.value
 		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (self.parameter, layer.name) ) )
 
 class SingleValueWeights(SingleValue) :
 	"""Initialize the weights to a given value"""
 	def __init__(self, value, *args, **kwargs) :
-		SingleValue.__init__(self, 'W', None, value, *args, **kwargs)
+		SingleValue.__init__(self, 'W', value, *args, **kwargs)
 		self.hyperParameters = ["value"]
-
-	def initialize(self, layer) :
-		self.shape = (layer.nbInputs, layer.nbOutputs)
-		SingleValue.initialize(self, layer)
 
 class ZerosWeights(SingleValueWeights) :
 	"""Initialize the weights to zero"""
@@ -188,12 +166,8 @@ class ZerosWeights(SingleValueWeights) :
 class SingleValueBias(SingleValue) :
 	"""Initialize the bias to a given value"""
 	def __init__(self, value, *args, **kwargs) :
-		SingleValue.__init__(self, 'b', None, value, *args, **kwargs)
+		SingleValue.__init__(self, 'b', value, *args, **kwargs)
 		self.hyperParameters = ["value"]
-
-	def initialize(self, layer) :
-		self.shape = (layer.nbOutputs,)
-		SingleValue.initialize(self, layer)
 
 class ZerosBias(SingleValueBias) :
 	"""Initialize the bias to zeros"""

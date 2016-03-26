@@ -9,8 +9,25 @@ __all__ = ["ConvPooler_ABC", "NoPooling", "MaxPooling2D", "Flatten", "ConvLayer_
 class ConvPooler_ABC(object) :
 	"""The interface that all poolers must implement"""
 	def __init__(self, *args, **kwrags) :
-		pass
-		
+		self.hyperParameters = []
+	
+	def apply(self, layer) :
+		hyps = {}
+		for k in self.hyperParameters :
+			hyps[k] = getattr(self, k)
+
+		message = "%s uses pooler %s" % (layer.name, self.__class__.__name__)
+		layer.network.logEvent(layer, message, hyps)
+		return self.pool(layer)
+
+	def getOutputHeight(self, convLayer) :
+		"""Returns image height after pooling"""
+		raise NotImplemented("Must be implemented in child")
+
+	def getOutputWidth(self, convLayer) :
+		"""Returns image width after pooling"""
+		raise NotImplemented("Must be implemented in child")
+	
 	def pool(self, convLayer) :
 		"""This function takes the convolution layer and performs some pooling (usually down sampling).
 		It must return a tuple (outputs, mapHeight, mapWidth)
@@ -38,19 +55,24 @@ class MaxPooling2D(ConvPooler_ABC) :
 		ConvPooler_ABC.__init__(self)
 		self.heightDownscaleFactor = heightDownscaleFactor
 		self.widthDownscaleFactor = widthDownscaleFactor
+		self.hyperParameters = ['heightDownscaleFactor', 'widthDownscaleFactor']
 	
+	def getOutputHeight(self, convLayer) :
+		hOutputs = convLayer.inputHeight - convLayer.filterHeight + 1
+		hImage = hOutputs // self.heightDownscaleFactor
+		return hImage
+		
+	def getOutputWidth(self, convLayer) :
+		wOutputs = convLayer.inputWidth - convLayer.filterWidth + 1
+		wImage = wOutputs // self.widthDownscaleFactor
+		return wImage
+
 	def pool(self, convLayer) :
 		from theano.tensor.signal import pool
 		ds = (self.heightDownscaleFactor, self.widthDownscaleFactor)
 		output = pool.pool_2d( convLayer.convolution, ds, ignore_border = True )
 		
-		hOutputs = convLayer.inputHeight - convLayer.filterHeight + 1
-		wOutputs = convLayer.inputWidth - convLayer.filterWidth + 1
-
-		hImage = hOutputs // self.heightDownscaleFactor
-		wImage = wOutputs // self.widthDownscaleFactor
-		
-		return output, hImage, wImage
+		return output
 
 class Flatten(ML.Layer_ABC) :
 
@@ -64,9 +86,12 @@ class Flatten(ML.Layer_ABC) :
 		self.inputWidth = None
 		self.nbInputChannels = None
 
-	def getParams(self) :
-		return []
-
+	def _femaleConnect(self, layer) :
+		if self.nbOutputs is None :
+			self.nbOutputs = layer.nbFlatOutputs
+		elif self.nbOutputs != layer.nbFlatOutputs :
+			raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, layer.nbFlatOutputs) )
+	
 	def _setOutputs(self) :
 		for inputLayer in self.feededBy.itervalues() :
 			if self.nbInputChannels is None :
@@ -86,7 +111,6 @@ class Flatten(ML.Layer_ABC) :
 
 			if self.inputs is None :
 				self.inputs = inputLayer.outputs
-				self.nbOutputs = inputLayer.nbFlatOutputs
 			else :
 				self.inputs += inputLayer.outputs
 
@@ -119,23 +143,31 @@ class InputChanneler(ConvLayer_ABC, ML.Layer_ABC) :
 		ML.Layer_ABC.__init__(self, None, **kwargs)
 		self.height = height
 		self.width = width
-	
-	def getParams(self) :
-		return []
 
+	def _femaleConnect(self, layer) :
+		if self.nbInputs is None :
+			self.nbInputs = layer.nbOutputs
+		elif self.nbInputs != layer.nbOutputs :
+			raise ValueError("Input size to '%s' has previously been set to: %s. But '%s' has %s outputs" % (self.name, self.nbInputs, layer.name, layer.nbOutputs)) 
+		
+		if not self.nbChannels :
+			self.nbChannels = 1
+		else :
+			self.nbChannels += 1
+		
+		if not self.nbOutputs :
+			self.nbOutputs = 1
+		else :
+			self.nbOutputs += 1
+
+		self.nbFlatOutputs = self.nbChannels * self.height * self.width
+	
 	def _setOutputs(self) :
 		inps = []
 		for l in self.feededBy.itervalues() :
-			if self.nbInputs is None :
-				self.nbInputs = l.nbOutputs
-			elif self.nbInputs != l.nbOutputs :
-				raise ValueError("Input size to '%s' has previously been set to: %s. But '%s' has %s outputs" % (self.name, self.nbInputs, l.name, l.nbOutputs)) 
 			inps.append(l.outputs)
 
-		self.nbChannels = len(inps)
-		self.nbOutputs = len(inps)
 		self.outputs = tt.stack(inps).reshape((-1, self.nbChannels, self.height, self.width))
-		self.nbFlatOutputs = self.nbChannels * self.height * self.width
 
 class Input(ConvLayer_ABC, ML.Layer_ABC) :
 	"""The input to a convolution network. This is different from a regular Input layer in the sense that it also holds channels information.
@@ -159,9 +191,6 @@ class Input(ConvLayer_ABC, ML.Layer_ABC) :
 		
 		self.inputs = tt.tensor4(name = self.name)
 		self.nbFlatOutputs = self.height * self.width * self.nbChannels
-
-	def getParams(self) :
-		return []
 
 	def _setOutputs(self) :
 		"initialises the output to be the same as the inputs"
@@ -194,10 +223,9 @@ class Embedding(ConvLayer_ABC, ML.Layer_ABC) :
 		
 		self.height = 1
 		self.width = size
-		initEmb = numpy.asarray(numpy.random.normal(0, 0.01, (self.dictSize, self.nbDimentions, 1)), dtype=theano.config.floatX)
 		self.shape = (self.dictSize, 1, self.nbDimentions)
 
-		self.embeddings = theano.shared(initEmb, name="emb_" + self.name)
+		self.embeddings = None
 		self.inputs = tt.imatrix(name = "embInp_" + self.name)
 
 		# if self.saveOutputs :
@@ -205,6 +233,13 @@ class Embedding(ConvLayer_ABC, ML.Layer_ABC) :
 		# 	self.last_outputs = theano.shared(value = numpy.array(initLO)) # this will be a shared variable with the last values of outputs
 		# else :
 		# 	self.last_outputs = None
+
+
+	def getParameterShape(self, param) :
+		if param == "embeddings" :
+			return (self.dictSize, self.nbDimentions, 1)
+		else :
+			raise ValueError("Unknow parameter: %s" % param)
 
 	def getEmbeddings(self, idxs = None) :
 		"""returns the embeddings.
@@ -219,10 +254,6 @@ class Embedding(ConvLayer_ABC, ML.Layer_ABC) :
 		self.preOutputs = self.embeddings[self.inputs]
 		# self.outputs = self.preOutputs.T.dimshuffle('x', 0, 2, 1)#.reshape((self.inputs.shape[0], self.nbChannels, self.height, self.width))
 		self.outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbChannels, self.height, self.width))
-		
-	def getParams(self) :
-		"""returns nothing"""
-		return [self.embeddings]
 		
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=invhouse]' % (self.name, self.shape)
@@ -249,30 +280,56 @@ class Convolution2D(ConvLayer_ABC, ML.Hidden) :
 		self.pooler = pooler
 		self.nbFlatOutputs = None
 
-	def _addInputs(self) :
+	def _femaleConnect(self, layer) :
 		try :
-			for inputLayer in self.feededBy.itervalues() :
-				if self.nbInputChannels is None :
-					self.nbInputChannels = inputLayer.nbChannels
-				elif self.nbInputChannels != inputLayer.nbChannels :
-					raise ValueError("Number of input channels to '%s' as previously been set to: %s. But '%s' has %s channels" % (self.name, self.nbInputChannels, inputLayer.name, inputLayer.nbChannels))
-				
-				if self.inputHeight is None :
-					self.inputHeight = inputLayer.height
-				elif self.inputHeight != inputLayer.height :
-					raise ValueError("Input height to '%s' as previously been set to: %s. But '%s' is %s" % (self.name, self.inputHeight, inputLayer.name, inputLayer.height))
-				
-				if self.inputWidth is None :
-					self.inputWidth = inputLayer.width
-				elif self.inputWidth != inputLayer.width :
-					raise ValueError("Input width to '%s' as previously been set to: %s. But '%s' is %s" % (self.name, self.inputWidth, inputLayer.name, inputLayer.width))
-
-				if self.inputs is None :
-					self.inputs = inputLayer.outputs
-				else :
-					self.inputs += inputLayer.outputs
+			if self.nbInputChannels is None :
+				self.nbInputChannels = layer.nbChannels
+				self.nbInputs = self.nbInputChannels
+			elif self.nbInputChannels != layer.nbChannels :
+				raise ValueError("Number of input channels to '%s' as previously been set to: %s. But '%s' has %s channels" % (self.name, self.nbInputChannels, layer.name, layer.nbChannels))
+			
+			if self.inputHeight is None :
+				self.inputHeight = layer.height
+			elif self.inputHeight != layer.height :
+				raise ValueError("Input height to '%s' as previously been set to: %s. But '%s' is %s" % (self.name, self.inputHeight, layer.name, layer.height))
+			
+			if self.inputWidth is None :
+				self.inputWidth = layer.width
+			elif self.inputWidth != layer.width :
+				raise ValueError("Input width to '%s' as previously been set to: %s. But '%s' is %s" % (self.name, self.inputWidth, layer.name, layer.width))
+		
 		except AttributeError :
 			raise ValueError("Input must be a convolution layer")
+
+		self.height = self.pooler.getOutputHeight(self)
+		self.width = self.pooler.getOutputWidth(self)
+		self.nbFlatOutputs = self.nbChannels * self.height * self.width
+	
+	def getParameterShape(self, param) :
+		if param == "W" :
+			return (self.nbOutputs, self.nbInputChannels, self.filterHeight, self.filterWidth) 
+		elif param == "b" :
+			return (self.nbOutputs,)
+		else :
+			raise ValueError("Unknow parameter: %s" % param)
+
+	def _setOutputs(self) :
+		from theano.tensor.nnet import conv
+		# self.filterShape = (self.nbOutputs, self.nbInputChannels, self.filterHeight, self.filterWidth) 
+
+		# initWeights = numpy.random.normal(0, 0.01, self.filterShape)
+		# initWeights = numpy.asarray(initWeights, dtype = theano.config.floatX)
+		# self.W = theano.shared(value = initWeights, name = self.name + "_W", borrow = True)
+		
+		# initB = numpy.zeros((self.filterShape[0],), dtype = theano.config.floatX)
+		# self.b = theano.shared(value = initB, borrow = True)
+
+		for layer in self.feededBy.itervalues() :
+			
+			if self.inputs is None :
+				self.inputs = layer.outputs
+			else :
+				self.inputs += layer.outputs
 
 		if self.filterHeight > self.inputHeight :
 			raise ValueError("Filter height for '%s' cannot be bigger than its input height: '%s' > '%s'" % (self.name, self.filterHeight, self.inputHeight))
@@ -280,28 +337,8 @@ class Convolution2D(ConvLayer_ABC, ML.Hidden) :
 		if self.filterWidth > self.inputWidth :
 			raise ValueError("Filter width for '%s' cannot be bigger than its input width: '%s' > '%s'" % (self.name, self.filterWidth, self.inputWidth))
 
-		self.nbInputs = self.nbInputChannels
-
-	def _setOutputs(self) :
-		from theano.tensor.nnet import conv
-
-		self._addInputs()
-
-		self.filterShape = (self.nbOutputs, self.nbInputChannels, self.filterHeight, self.filterWidth) 
-
-		initWeights = numpy.random.normal(0, 0.01, self.filterShape)
-		initWeights = numpy.asarray(initWeights, dtype = theano.config.floatX)
-		self.W = theano.shared(value = initWeights, name = self.name + "_W", borrow = True)
-		
-		initB = numpy.zeros((self.filterShape[0],), dtype = theano.config.floatX)
-		self.b = theano.shared(value = initB, borrow = True)
-
-		self.convolution = conv.conv2d( input = self.inputs, filters = self.W, filter_shape = self.filterShape )
-		self.pooled, self.height, self.width = self.pooler.pool(self)
+		self.convolution = conv.conv2d( input = self.inputs, filters = self.W, filter_shape = self.getParameterShape('W') )
+		self.pooled = self.pooler.apply(self)
 		self.nbFlatOutputs = self.nbChannels * self.height * self.width
 
-		self.outputs = self.activation.function(self.pooled + self.b.dimshuffle('x', 0, 'x', 'x'))
-		
-	def getParams(self) :
-		"""returns the layer parameters (Weights and bias)"""
-		return [self.W, self.b]
+		self.outputs = self.activation.apply(self, self.pooled + self.b.dimshuffle('x', 0, 'x', 'x'))

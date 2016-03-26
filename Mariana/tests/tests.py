@@ -97,7 +97,7 @@ class MLPTests(unittest.TestCase):
 		for i in xrange(len(res)) :
 			self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
 
-	@unittest.skip("skipping")
+	# @unittest.skip("skipping")
 	def test_composite(self) :
 		ls = MS.GradientDescent(lr = 0.1)
 		cost = MC.NegativeLogLikelihood()
@@ -123,7 +123,7 @@ class MLPTests(unittest.TestCase):
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
 		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[3] ] )[0], 0 )
 
-	@unittest.skip("skipping")
+	# @unittest.skip("skipping")
 	def test_embedding(self) :
 		"""the first 3 and the last 3 should be diametrically opposed"""
 		data = [[0], [1], [2], [3], [4], [5]]
@@ -209,7 +209,6 @@ class MLPTests(unittest.TestCase):
 
 		examples, targets = makeDataset(1000, 128, 6)
 		model = getModel(128, 3)
-
 		miniBatchSize = 32
 		for epoch in xrange(100) :
 			for i in xrange(0, len(examples), miniBatchSize) :
