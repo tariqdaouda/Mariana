@@ -24,6 +24,8 @@ net = emb > o
 
 miniBatchSize = 2
 print "before:"
+net.init()
+
 print emb.getEmbeddings()
 
 for i in xrange(2000) :

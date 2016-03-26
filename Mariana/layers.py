@@ -26,7 +26,6 @@ class Layer_ABC(object) :
 
 	def __init__(self,
 		size,
-		saveOutputs=MSET.SAVE_OUTPUTS_DEFAULT,
 		initializations=[],
 		decorators=[],
 		name=None,
@@ -48,14 +47,6 @@ class Layer_ABC(object) :
 		self.outputs = None # this is a symbolic var
 		self.testOutputs = None # this is a symbolic var
 		
-		self.saveOutputs = saveOutputs
-
-		if saveOutputs :
-			initLO = numpy.zeros(self.nbOutputs, dtype=theano.config.floatX)
-			self.last_outputs = theano.shared(value = numpy.matrix(initLO)) # this will be a shared variable with the last values of outputs
-		else :
-			self.last_outputs = None
-
 		self.decorators = decorators
 		self.initializations = initializations
 
@@ -171,13 +162,6 @@ class Layer_ABC(object) :
 		self.network.removeEdge(self, layer)
 		self.network._mustInit = True
 
-	def getOutputs(self) :
-		"""Return the last outputs of the layer"""
-		try :
-			return self.last_outputs.get_value()
-		except AttributeError :
-			raise AttributeError("Impossible to get the last ouputs of this layer, if you want them to be stored create with saveOutputs = True")
-
 	def _dot_representation(self) :
 		"returns the representation of the node in the graph DOT format"
 		return '[label="%s: %sx%s"]' % (self.name, self.nbInputs, self.nbOutputs)
@@ -251,10 +235,13 @@ class Embedding(Layer_ABC) :
 		
 		:param list idxs: if provided will return the embeddings only for those indexes 
 		"""
-		if idxs :
-			return self.embeddings.get_value()[idxs]
-		return self.embeddings.get_value()
-
+		try :
+			if idxs :
+				return self.embeddings.get_value()[idxs]
+			return self.embeddings.get_value()
+		except AttributeError :
+			raise ValueError("It looks like the network has not been initialized yet")
+	
 	def _setOutputs(self) :
 		self.preOutputs = self.embeddings[self.inputs]
 		self.outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
@@ -370,7 +357,17 @@ class Hidden(Layer_ABC) :
 
 	def getW(self) :
 		"""Return the weight values"""
-		return self.W.get_value()
+		try :
+			return self.W.get_value()
+		except AttributeError :
+			raise ValueError("It looks like the network has not been initialized yet")
+		
+	def getb(self) :
+		"""Return the bias values"""
+		try :
+			return self.b.get_value()
+		except AttributeError :
+			raise ValueError("It looks like the network has not been initialized yet")
 
 	def clone(self, **kwargs) :
 		"""Returns a free layer with the same weights and bias and activation function.
@@ -417,7 +414,6 @@ class Output_ABC(Hidden) :
 		self.dependencies = OrderedDict()
 		self.costObject = costObject
 		self.learningScenario = learningScenario
-		self.updates_lastOutputs = None
 		self.cost = None
 		self.test_cost = None
 		self.updates = None
@@ -468,23 +464,17 @@ class Output_ABC(Hidden) :
 					pass
 
 		self.updates = self.learningScenario.apply(self, self.cost)
-
 		for l in self.dependencies.itervalues() :
 			try :
 				updates = l.learningScenario.apply(l, self.cost)
 			except AttributeError :
 				updates = self.learningScenario.apply(l, self.cost)
 			self.updates.extend(updates)
-
-		self.updates_lastOutputs = []
-		for l in self.network.layers.itervalues() :
-			if ( l.last_outputs is not None ) and ( l.outputs is not None ) :
-				self.updates.append( (l.last_outputs, l.outputs ) )
 	
 		self.train = MWRAP.TheanoFunction("train", self, [self.cost], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
-		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], { "targets" : self.targets }, updates = self.updates_lastOutputs, allow_input_downcast=True)
-		self.propagate = MWRAP.TheanoFunction("propagate", self, [self.outputs], updates = self.updates_lastOutputs, allow_input_downcast=True)
-		self.propagateTest = MWRAP.TheanoFunction("propagate", self, [self.testOutputs], updates = self.updates_lastOutputs, allow_input_downcast=True)
+		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
+		self.propagate = MWRAP.TheanoFunction("propagate", self, [self.outputs], updates = self.updates, allow_input_downcast=True)
+		self.propagateTest = MWRAP.TheanoFunction("propagate", self, [self.testOutputs], updates = self.updates, allow_input_downcast=True)
 
 		self.setCustomTheanoFunctions()
 
@@ -536,8 +526,8 @@ class SoftmaxClassifier(Classifier_ABC) :
 			*classify: return the argmax of the outputs
 			*predict: return the argmax of the test outputs (some decorators may not be applied)"""
 
-		self.classify = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.outputs) ], updates = self.updates_lastOutputs)
-		self.predict = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.testOutputs) ], updates = self.updates_lastOutputs)
+		self.classify = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.outputs) ], updates = self.updates)
+		self.predict = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.testOutputs) ], updates = self.updates)
 
 	def clone(self, **kwargs) :
 		"""Returns a free output layer with the same weights, bias, activation function, learning scenario, and cost.

@@ -7,5 +7,3 @@ SAVE_MESSAGE_LOG_FILE = "Mariana_logs.txt"
 
 #The random used for initialising weights
 RANDOM_SEED = None
-
-SAVE_OUTPUTS_DEFAULT = False

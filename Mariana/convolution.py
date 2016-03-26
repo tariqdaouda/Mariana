@@ -2,6 +2,7 @@ import theano, numpy, time
 import theano.tensor as tt
 
 import Mariana.layers as ML
+import Mariana.initializations as MI
 import Mariana.network as MNET
 
 __all__ = ["ConvPooler_ABC", "NoPooling", "MaxPooling2D", "Flatten", "ConvLayer_ABC", "InputChanneler", "Input", "Convolution2D"]
@@ -36,11 +37,19 @@ class ConvPooler_ABC(object) :
 
 class NoPooling(ConvPooler_ABC) :
 	"""No pooling. The convolution is kept as is"""
-	def pool(self, convLayer) :
+	
+	def getOutputHeight(self, convLayer) :
+		"""Returns image height after pooling"""
 		hOutputs = convLayer.inputHeight - convLayer.filterHeight + 1
+		return hOutputs
+
+	def getOutputWidth(self, convLayer) :
+		"""Returns image width after pooling"""
 		wOutputs = convLayer.inputWidth - convLayer.filterWidth + 1
-		
-		return convLayer.convolution, hOutputs, wOutputs
+		return wOutputs
+
+	def pool(self, convLayer) :
+		return convLayer.convolution
 
 class MaxPooling2D(ConvPooler_ABC) :
 	"""
@@ -199,26 +208,18 @@ class Input(ConvLayer_ABC, ML.Layer_ABC) :
 		self.outputs = self.inputs
 		self.testOutputs = self.inputs
 
-class Embedding(ConvLayer_ABC, ML.Layer_ABC) :
+class Embedding(ConvLayer_ABC, ML.Embedding) :
 	"""This input layer will take care of creating the embeddings and training them. Embeddings are learned representations
 	of the inputs that are much loved in NLP."""
 
-	def __init__(self, size, nbDimentions, dictSize, learningScenario = None, name = None, **kwargs) :
+	def __init__(self, size, nbDimentions, dictSize, initializations = [MI.SmallUniformEmbeddings()], learningScenario = None, name = None, **kwargs) :
 		"""
 		:param size int: the size of the input vector (if your input is a sentence this should be the number of words in it).
 		:param nbDimentions int: the number of dimentions in wich to encode each word.
 		:param dictSize int: the total number of words. 
 		"""
 		ConvLayer_ABC.__init__(self, nbDimentions, **kwargs)
-		ML.Layer_ABC.__init__(self, size, saveOutputs = False, name = name,  **kwargs)
-
-		self.network = MNET.Network()
-		self.network.addInput(self)
-		
-		self.learningScenario = learningScenario
-		self.type = ML.TYPE_INPUT_LAYER
-		self.dictSize = dictSize
-		self.nbDimentions = nbDimentions
+		ML.Embedding.__init__(self, size, nbDimentions, dictSize, name = name,  **kwargs)
 		
 		self.nbInputs = size
 		self.nbOutputs = self.nbDimentions*self.nbInputs
@@ -228,29 +229,12 @@ class Embedding(ConvLayer_ABC, ML.Layer_ABC) :
 		self.shape = (self.dictSize, 1, self.nbDimentions)
 
 		self.embeddings = None
-		self.inputs = tt.imatrix(name = "embInp_" + self.name)
-
-		# if self.saveOutputs :
-		# 	initLO = numpy.zeros((self.nbChannels, self.height, self.width), dtype=theano.config.floatX)
-		# 	self.last_outputs = theano.shared(value = numpy.array(initLO)) # this will be a shared variable with the last values of outputs
-		# else :
-		# 	self.last_outputs = None
-
 
 	def getParameterShape(self, param) :
 		if param == "embeddings" :
 			return (self.dictSize, self.nbDimentions, 1)
 		else :
 			raise ValueError("Unknow parameter: %s" % param)
-
-	def getEmbeddings(self, idxs = None) :
-		"""returns the embeddings.
-		
-		:param list idxs: if provided will return the embeddings only for those indexes 
-		"""
-		if idxs :
-			return self.embeddings.get_value()[idxs]
-		return self.embeddings.get_value()
 
 	def _setOutputs(self) :
 		self.preOutputs = self.embeddings[self.inputs]
