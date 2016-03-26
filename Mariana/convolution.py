@@ -219,7 +219,7 @@ class Embedding(ConvLayer_ABC, ML.Embedding) :
 		:param dictSize int: the total number of words. 
 		"""
 		ConvLayer_ABC.__init__(self, nbDimentions, **kwargs)
-		ML.Embedding.__init__(self, size, nbDimentions, dictSize, initializations = initializations, learningScenario = learningScenario, name = name,  **kwargs)
+		ML.Embedding.__init__(self, size, nbDimentions, dictSize, initializations=initializations, learningScenario = learningScenario, name = name,  **kwargs)
 		
 		self.nbInputs = size
 		self.nbOutputs = self.nbDimentions*self.nbInputs

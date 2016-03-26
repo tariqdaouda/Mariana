@@ -209,7 +209,7 @@ class Embedding(Layer_ABC) :
 		:param dictSize int: the total number of words. 
 		"""
 
-		Layer_ABC.__init__(self, size, nbDimentions, initializations=initializations, name = name, **kwargs)
+		Layer_ABC.__init__(self, size, initializations=initializations, name = name, **kwargs)
 		self.network = MNET.Network()
 		self.network.addInput(self)
 		
@@ -451,7 +451,6 @@ class Output_ABC(Hidden) :
 
 		self._backTrckDependencies()
 		self._userInit()
-
 		self.cost = self.costObject.apply(self, self.targets, self.outputs, "training")
 		self.test_cost = self.costObject.apply(self, self.targets, self.testOutputs, "testing")
 
@@ -470,11 +469,11 @@ class Output_ABC(Hidden) :
 			except AttributeError :
 				updates = self.learningScenario.apply(l, self.cost)
 			self.updates.extend(updates)
-	
+
 		self.train = MWRAP.TheanoFunction("train", self, [self.cost], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
-		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
-		self.propagate = MWRAP.TheanoFunction("propagate", self, [self.outputs], updates = self.updates, allow_input_downcast=True)
-		self.propagateTest = MWRAP.TheanoFunction("propagate", self, [self.testOutputs], updates = self.updates, allow_input_downcast=True)
+		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], { "targets" : self.targets }, allow_input_downcast=True)
+		self.propagate = MWRAP.TheanoFunction("propagate", self, [self.outputs], allow_input_downcast=True)
+		self.propagateTest = MWRAP.TheanoFunction("propagate", self, [self.testOutputs], allow_input_downcast=True)
 
 		self.setCustomTheanoFunctions()
 
@@ -526,8 +525,8 @@ class SoftmaxClassifier(Classifier_ABC) :
 			*classify: return the argmax of the outputs
 			*predict: return the argmax of the test outputs (some decorators may not be applied)"""
 
-		self.classify = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.outputs) ], updates = self.updates)
-		self.predict = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.testOutputs) ], updates = self.updates)
+		self.classify = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.outputs) ])
+		self.predict = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.testOutputs) ])
 
 	def clone(self, **kwargs) :
 		"""Returns a free output layer with the same weights, bias, activation function, learning scenario, and cost.
@@ -559,7 +558,7 @@ class Autoencode(Output_ABC) :
 	
 	def setCustomTheanoFunctions(self) :
 		self.train = MWRAP.TheanoFunction("train", self, [self.cost], {}, updates = self.updates, allow_input_downcast=True)
-		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], {}, updates = self.updates_lastOutputs, allow_input_downcast=True)
+		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], {}, allow_input_downcast=True)
 
 	def _dot_representation(self) :
 		return '[label="%s: AE(%s)" shape=circle]' % (self.name, self.layer.name)
