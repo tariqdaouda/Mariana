@@ -55,10 +55,12 @@ class MLPTests(unittest.TestCase):
 	# @unittest.skip("skipping")
 	def test_save_load_pickle(self) :
 		import cPickle, os
+		import Mariana.network as MN
 
 		mlp = self.trainMLP_xor()
 		mlp.savePickle("test_save")
-		mlp2 = cPickle.load(open('test_save.mariana.pkl'))
+		# mlp2 = cPickle.load(open('test_save.mariana.pkl'))
+		mlp2 = MN.loadModel("test_save.mariana.pkl")
 
 		o = mlp2.outputs.values()[0]
 
@@ -68,6 +70,24 @@ class MLPTests(unittest.TestCase):
 		self.assertEqual(mlp2.predict( o, inp = [ self.xor_ins[3] ] )[0], 0 )
 
 		os.remove('test_save.mariana.pkl')
+
+	# @unittest.skip("skipping")
+	def test_save_load(self) :
+		import cPickle, os, shutil
+		import Mariana.network as MN
+
+		mlp = self.trainMLP_xor()
+		mlp.save("test_save")
+		mlp2 = MN.loadModel("test_save.mariana.model")
+
+		o = mlp2.outputs.values()[0]
+
+		self.assertEqual(mlp2.predict( o, inp = [ self.xor_ins[0] ] )[0], 0 )
+		self.assertEqual(mlp2.predict( o, inp = [ self.xor_ins[1] ] )[0], 1 )
+		self.assertEqual(mlp2.predict( o, inp = [ self.xor_ins[2] ] )[0], 1 )
+		self.assertEqual(mlp2.predict( o, inp = [ self.xor_ins[3] ] )[0], 0 )
+
+		shutil.rmtree('test_save.mariana.model')
 
 	# @unittest.skip("skipping")
 	def test_ae(self) :

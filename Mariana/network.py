@@ -5,6 +5,17 @@ import types
 
 __all__= ["Network", "OutputMap"]
 
+def loadModel( filename ) :
+	"""Load a model saved using Mariana"""
+	import os, cPickle
+	if os.path.isdir(filename) :
+		return Network.load(filename)
+	else :
+		f = open(filename)
+		res = cPickle.load(f)
+		f.close()
+		return res
+
 class OutputMap(object):
 	"""
 	Encapsulates outputs as well as their theano functions.
@@ -100,9 +111,9 @@ class Network(object) :
 			ps = []
 			for param, value in e["parameters"].iteritems() :
 				ps.append( "    -%s: %s" % (param, value) )
-			ps = '\n'.join(ps)
+			ps = '\n' + '\n'.join(ps)
 			# es.append("-[%s]@%s(%s), %s.\n%s" % (e["entity"], e["timestamp"], e["date"], e["message"], ps))
-			es.append("-@%s(%s):\n  %s -> %s.\n%s" % (e["timestamp"], e["date"], e["entity"], e["message"], ps))
+			es.append("-@%s(%s):\n  %s -> %s.%s" % (e["timestamp"], e["date"], e["entity"], e["message"], ps))
 			
 		es = '\n'.join(es)
 
@@ -219,14 +230,15 @@ class Network(object) :
 
 	def save(self, filename) :
 		"save the model into a folder filename.mariana.model"
-		import numpy, tempfile, os, shutils, cPickle
+		import numpy, theano, tempfile, os, shutil, cPickle
 		tmpDir = tempfile.mkdtemp()
 
-		for l in self.layers :
+		for l in self.layers.itervalues() :
 			for pName, param in l.getParameterDict().iteritems() :
 				fn = "%s-%s.npy" % (l.name, pName)
 				path = os.path.join( tmpDir, fn )
-				numpy.save(path, param)
+				val = param.get_value()
+				numpy.save(path, val)
 				l.initializations = []
 				getattr(l, pName).set_value(None)
 
@@ -235,21 +247,25 @@ class Network(object) :
 		cPickle.dump(self, f, -1)
 		f.close()
 		shutil.move(tmpDir, filename + ".mariana.model")
+		try :
+			shutil.rmtree(tmpDir)
+		except :
+			pass
 
 	@classmethod
-	def loadModel(self, folder) :
+	def load(self, folder) :
 		"""loads a model from a folder"""
-		import numpy, tempfile, os, shutils, cPickle
-
+		import numpy, theano, tempfile, os, cPickle
 		f = open(os.path.join(folder, "network.pkl"))
-		network = cPickle(f)
+		network = cPickle.load(f)
 		f.close()
 	
-		for l in network.layers :
+		for l in network.layers.itervalues() :
 			for pName, param in l.getParameterDict().iteritems() :
 				fn = "%s-%s.npy" % (l.name, pName)
 				path = os.path.join( folder, fn )
 				val = numpy.load(path)
+				val = numpy.asarray(val, dtype=theano.config.floatX)
 				getattr(l, pName).set_value(val)
 
 		return network
