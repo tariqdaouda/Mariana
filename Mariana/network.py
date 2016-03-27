@@ -3,7 +3,7 @@ from wrappers import TheanoFunction
 import Mariana.settings as MSET
 import types
 
-__all__= ["Network", "OutputMap"]
+__all__= ["loadModel", "Network", "OutputMap"]
 
 def loadModel( filename ) :
 	"""Load a model saved using Mariana"""
