@@ -235,7 +235,7 @@ class Network(object) :
 
 		for l in self.layers.itervalues() :
 			for pName, param in l.getParameterDict().iteritems() :
-				fn = "%s-%s.npy" % (l.name, pName)
+				fn = "%s_%s.npy" % (l.name, pName)
 				path = os.path.join( tmpDir, fn )
 				val = param.get_value()
 				numpy.save(path, val)
@@ -262,7 +262,7 @@ class Network(object) :
 	
 		for l in network.layers.itervalues() :
 			for pName, param in l.getParameterDict().iteritems() :
-				fn = "%s-%s.npy" % (l.name, pName)
+				fn = "%s_%s.npy" % (l.name, pName)
 				path = os.path.join( folder, fn )
 				val = numpy.load(path)
 				val = numpy.asarray(val, dtype=theano.config.floatX)

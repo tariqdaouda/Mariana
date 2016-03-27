@@ -59,7 +59,6 @@ class MLPTests(unittest.TestCase):
 
 		mlp = self.trainMLP_xor()
 		mlp.savePickle("test_save")
-		# mlp2 = cPickle.load(open('test_save.mariana.pkl'))
 		mlp2 = MN.loadModel("test_save.mariana.pkl")
 
 		o = mlp2.outputs.values()[0]
