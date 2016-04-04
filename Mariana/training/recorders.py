@@ -25,7 +25,7 @@ class GGPlot2(Recorder_ABC):
  	:param list saveBestsFor: Name of the sets for wich the best models should be saved
  	"""
 
- 	def __init__(self, filename, saveBestsFor = ["train", "test", "validation"], printRate=1, writeRate=1):
+ 	def __init__(self, filename, saveBestsFor = ["test", "validation"], printRate=1, writeRate=1):
 		
 		self.filename = filename.replace(".csv", "") + ".ggplot2.csv"
 	
@@ -75,7 +75,7 @@ class GGPlot2(Recorder_ABC):
 				if outputName not in self.bestScores[theSet] or score < self.bestScores[theSet][outputName][0] :
 					self.bestScores[theSet][outputName] = (score, self.length)
 					if theSet in self.saveBestsFor :
-						model.save(self.getBestModelFilename(outputName, theSet))
+						model.savePickle(self.getBestModelFilename(outputName, theSet))
 
 				muchData = store["hyperParameters"]
 				muchData.update(store["runInfos"]) 

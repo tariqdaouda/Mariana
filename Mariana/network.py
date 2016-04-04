@@ -233,14 +233,15 @@ class Network(object) :
 		import numpy, theano, tempfile, os, shutil, cPickle
 		tmpDir = tempfile.mkdtemp()
 
+		vals = {}
 		for l in self.layers.itervalues() :
 			for pName, param in l.getParameterDict().iteritems() :
 				fn = "%s_%s.npy" % (l.name, pName)
 				path = os.path.join( tmpDir, fn )
 				val = param.get_value()
 				numpy.save(path, val)
-				l.initializations = []
 				getattr(l, pName).set_value(None)
+				vals["%s-%s" % (l.appelido, pName)] = val
 
 		path = os.path.join( tmpDir, "network.pkl" )
 		f = open(path, 'wb')
@@ -251,6 +252,10 @@ class Network(object) :
 			shutil.rmtree(tmpDir)
 		except :
 			pass
+		
+		for l in self.layers.itervalues() :
+			for pName, param in l.getParameterDict().iteritems() :
+				getattr(l, pName).set_value(vals["%s-%s" % (l.appelido, pName)])
 
 	@classmethod
 	def load(self, folder) :
