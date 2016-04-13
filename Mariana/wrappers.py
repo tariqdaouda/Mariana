@@ -50,6 +50,8 @@ class TheanoFunction(object) :
 		self.additional_input_expressions = additional_input_expressions
 		self.outputs = output_expressions
 		self.updates = updates
+		
+		# print "wrappers -->>", self.inputs
 		self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs, updates = self.updates, **kwargs)
 
 		warningMsg = False

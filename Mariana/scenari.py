@@ -1,18 +1,15 @@
 import theano, numpy
 import theano.tensor as tt
+from Mariana.abstraction import Abstraction_ABC
 
 __all__ = ["LearningScenario_ABC", "Fixed", "GradientDescent", "MomentumGradientDescent", "GradientFloor"]
 
-class LearningScenario_ABC(object):
+class LearningScenario_ABC(Abstraction_ABC):
  	"""
  	This is the interface all scenari must expose. In order for the trainer/recorder to know which attributes are hyper-parameters,
- 	this class must also include a list attribute **self.hyperParameters** containing the names all attributes that must be considered
+ 	this class must also include a list attribute **self.hyperParameters** containing the names of all attributes that must be considered
  	as hyper-parameters.
  	"""
-	def __init__(self, *args, **kwargs):
-		self.name = self.__class__.__name__
- 		self.hyperParameters = []
-
 	def apply(self, layer, cost) :
 		"""Apply to a layer and update networks's log"""
 		hyps = {}
@@ -21,19 +18,21 @@ class LearningScenario_ABC(object):
 
 		message = "%s follows learning scenario %s" % (layer.name, self.__class__.__name__)
 		layer.network.logLayerEvent(layer, message, hyps)
+		# print self
+		# print "lkjahsdf", layer
 		return self.getUpdates(layer, cost)
 
 	def getUpdates(self, layer, cost) :
 		"""return the updates for the parameters of layer. Must be implemented in child"""
 		raise NotImplemented("Must be implemented in child")
 
-	def update(self, trainerStore) :
-		"""reads the store of the trainer (trainer.store) and does something to the hyper-parameters.
-		This function should be used to implement things such as decreasing the learning rate with the epochs.
-		Implementing this function is optional, by default it does nothing. The prefered method is to 
-		declare hyper-parameters as theano shared variables, define theano functions that update their values,
-		and finaly call those functions here."""
-		pass
+	# def update(self, trainerStore) :
+	# 	"""reads the store of the trainer (trainer.store) and does something to the hyper-parameters.
+	# 	This function should be used to implement things such as decreasing the learning rate with the epochs.
+	# 	Implementing this function is optional, by default it does nothing. The prefered method is to 
+	# 	declare hyper-parameters as theano shared variables, define theano functions that update their values,
+	# 	and finaly call those functions here."""
+	# 	pass
 
 class Fixed(LearningScenario_ABC):
 	"No learning, the layer weights stay fixed"
@@ -52,6 +51,8 @@ class GradientDescent(LearningScenario_ABC):
 
  	def getUpdates(self, layer, cost) :
  		updates = []
+ 		print layer
+ 		print layer.getParameters()
  		for param in layer.getParameters() :
 			gparam = tt.grad(cost, param)
  			updates.append((param, param - self.lr * gparam))

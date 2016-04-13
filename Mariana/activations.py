@@ -1,12 +1,10 @@
 import theano.tensor as tt
+from Mariana.abstraction import Abstraction_ABC
 
 __all__ = ["Activation_ABC", "Pass", "Sigmoid", "Tanh", "ReLU", "Softmax"]
 
-class Activation_ABC(object):
-	"""All activations must inherit fron this class"""
-	def __init__(self, *args, **kwargs):
-		self.hyperParameters = []
-		self.name = self.__class__.__name__
+class Activation_ABC(Abstraction_ABC):
+	"""All activations must inherit from this class"""
 
 	def apply(self, layer, x) :
 		"""Apply to a layer and update networks's log"""

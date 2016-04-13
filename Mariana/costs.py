@@ -1,16 +1,13 @@
 import theano
 import theano.tensor as tt
+from Mariana.abstraction import Abstraction_ABC
 
 __all__ = ["Cost_ABC", "Null", "NegativeLogLikelihood", "MeanSquaredError", "CrossEntropy", "CategoricalCrossEntropy", "BinaryCrossEntropy"]
 
-class Cost_ABC(object) :
+class Cost_ABC(Abstraction_ABC) :
 	"""This is the interface a Cost must expose. In order for the trainer/recorder to know which attributes are hyper-parameters,
- 	this class must also include a list attribute **self.hyperParameters** containing the names all attributes that must be considered
+ 	this class must also include a list attribute **self.hyperParameters** containing the names of all attributes that must be considered
  	as hyper-parameters."""
-
-	def __init__(self, *args, **kwargs) :
-		self.name = self.__class__.__name__
-		self.hyperParameters = []
 
 	def apply(self, layer, targets, outputs, purpose) :
 		"""Apply to a layer and update networks's log. Purpose is supposed to be a sting such as 'train' or 'test'"""

@@ -3,18 +3,15 @@ from wrappers import TheanoFunction
 import Mariana.settings as MSET
 import types
 
-__all__= ["loadModel", "Network", "OutputMap"]
+__all__= ["Network", "OutputMap"]
 
-def loadModel( filename ) :
-	"""Load a model saved using Mariana"""
-	import os, cPickle
-	if os.path.isdir(filename) :
-		return Network.load(filename)
-	else :
-		f = open(filename)
-		res = cPickle.load(f)
-		f.close()
-		return res
+TYPE_INPUT_LAYER = 0
+TYPE_OUTPUT_LAYER = 1
+TYPE_HIDDEN_LAYER = 2
+
+def loadModel(filename) :
+	"""Shorthand for Network.load"""
+	return Network.load(filename)
 
 class OutputMap(object):
 	"""
@@ -52,7 +49,8 @@ class OutputMap(object):
 	def __repr__(self) :
 		os = []
 		for o, v in self.outputFcts.iteritems() :
-			os.append(o)
+			os.append(o.name)
+		
 		os = ', '.join(os)
 		return "<theano fct '%s' for output layer: '%s'>" % (self.name, os)
 
@@ -63,10 +61,13 @@ class Network(object) :
 		self.layers = OrderedDict()
 		self.outputs = OrderedDict()
 		self.layerAppelidos = {}
-		self.layerConnectionCount = {}
-
-		self.regularizations = OrderedDict()
+		# self.layerConnectionCount = {}
+	
 		self.edges = set()
+		self.edgesNames = set()
+
+		self.outConnections = {}
+		self.inConnections = {}
 
 		self.parameters = []
 
@@ -97,7 +98,7 @@ class Network(object) :
 		import time, types
 		assert type(message) is types.StringType
 		assert type(parameters) is types.DictType
-		self.logEvent(layer, message, parameters)
+		self.logEvent(layer.name, message, parameters)
 
 	def printLog(self) :
 		"Print a very pretty version of self.log. The log should contain all meaningful events in a chronological order"
@@ -119,75 +120,80 @@ class Network(object) :
 
 		print "\n" + t + "\n\n" + es + "\n"
 
-	def addEdge(self, layer1, layer2) :
+	def _addEdge(self, layer1Name, layer2Name) :
 		"""Add a connection between two layers"""
-		for layer in (layer1, layer2) :
-			try :
-				if self.layerAppelidos[layer.name] != layer.appelido :
-					raise ValueError("There's already a layer by the name of '%s'" % (layer.name))
-			except KeyError :
-				self.layerAppelidos[layer.name] = layer.appelido
 
-		self.layers[layer1.name] = layer1
-		self.layers[layer2.name] = layer2
-		self.edges.add( (layer1, layer2))
-		try :
-			self.layerConnectionCount[layer1.name] += 1
-		except KeyError :
-			self.layerConnectionCount[layer1.name] = 1
+		layer1 = self.layers[layer1Name]
+		layer2 = self.layers[layer2Name]
+
+		self.edges.add( (layer1, layer2) )
+		self.edgesNames.add( (layer1.name, layer2.name) )
 
 		try :
-			self.layerConnectionCount[layer2.name] += 1
-		except KeyError :
-			self.layerConnectionCount[layer2.name] = 1
+			self.outConnections[layer1].add(layer2)
+		except :
+			self.outConnections[layer1] = set([layer2])
+
+		try :
+			self.inConnections[layer2].add(layer1)
+		except :
+			self.inConnections[layer2] = set([layer1])
 
 		self.logNetworkEvent("New edge %s > %s" % (layer1.name, layer2.name))
 
-	def removeEdge(self, layer1, layer2) :
-		"""Remove the connection between two layers"""
-		def _del(self, layer) :
-			ds = [self.inputs, self.outputs, self.layers]
-			if self.layerConnectionCount[layer.name] < 1 :
-				for d in ds :
-					if layer.name in d :
-						del(d[layer.name])
+	def _addLayer(self, h) :
+		"""adds a layer to the network"""
+		global TYPE_INPUT_LAYER, TYPE_OUTPUT_LAYER
+		
+		try :
+			if self.layerAppelidos[h.name] != h.appelido :
+				raise ValueError("There's already a layer by the name of '%s'" % (h.name))
+		except KeyError :
+			self.layerAppelidos[h.name] = h.appelido
+		
+		self.layers[h.name] = h
+		try :
+			self.inConnections[h] = self.inConnections[h].union(h.network.inConnections[h])
+			self.outConnections[h] = self.outConnections[h].union(h.network.outConnections[h])
+		except KeyError :
+			try :
+				self.inConnections[h] = h.network.inConnections[h]
+				self.outConnections[h] = h.network.outConnections[h]
+			except KeyError :
+				self.inConnections[h] = set()
+				self.outConnections[h] = set()
 
-		self.edges.remove( (layer1, layer2))
-		self.layerConnectionCount[layer1.name] -= 1
-		self.layerConnectionCount[layer2.name] -= 1
-
-		_del(self, layer1)
-		_del(self, layer2)
-
-		self.logNetworkEvent("Removed edge %s > %s" % (layer1.name, layer2.name))
-
-	def addInput(self, i) :
-		"""adds an input to the layer"""
-		self.inputs[i.name] = i
-		self.logNetworkEvent("New input layer %s" % (i.name))
-
-	def addOutput(self, o) :
-		"""adds an output o to the network"""
-		self.outputs[o.name] = o
-		self.logNetworkEvent("New output layer %s" % (o.name))
+		# print "------>>>", h, self.inputs
+		if h.type == TYPE_INPUT_LAYER :
+			self.inputs[h.name] = h
+			self.logNetworkEvent("New Input layer %s" % (h.name))
+		elif h.type == TYPE_OUTPUT_LAYER :
+			self.outputs[h.name] = h
+			self.logNetworkEvent("New Output layer %s" % (h.name))
+		else :
+			self.logNetworkEvent("New Hidden layer %s" % (h.name))
+		
+		h.network = self
 
 	def merge(self, fromLayer, toLayer) :
 		"""Merges the networks of two layers together."""
+		
+		# print "11---", fromLayer.name, toLayer.name#, self.edgesNames
+		self.logNetworkEvent("Merging nets: %s and %s" % (fromLayer.name, toLayer.name))
+
 		if fromLayer.name not in self.layers :
 			raise ValueError("from layer '%s' is not part of this network" % fromLayer.name)
 
-		for inp in toLayer.network.inputs.itervalues() :
-			self.addInput(inp)
+		for l in toLayer.network.layers.itervalues() :
+			self._addLayer(l)
 
-		self.addEdge(fromLayer, toLayer)
+		for e in toLayer.network.edgesNames :
+			self._addEdge(e[0], e[1])
 
-		for o in toLayer.network.outputs.itervalues() :
-			self.addOutput(o)
-
-		self.log.extend(toLayer.network.log)
-
-		self.layers.update(toLayer.network.layers)
-		self.edges = self.edges.union(toLayer.network.edges)
+		self._addEdge(fromLayer.name, toLayer.name)
+		
+		# fromLayer.network = self
+		# toLayer.network = self
 
 	def init(self) :
 		"Initialiases the network by initialising every layer."
@@ -196,24 +202,31 @@ class Network(object) :
 			self.logNetworkEvent("Initialization begins!")
 			print "\n" + MSET.OMICRON_SIGNATURE
 
+			if len(self.inputs) < 1 :
+				# print "asdfasdf"
+				raise ValueError("Network has no inputs")
+
 			for inp in self.inputs.itervalues() :
 				inp._init()
 
-			self._mustInit = False
 	
 			for l in self.layers.itervalues() :
 				self.parameters.extend(l.getParameters())
-			
-			for o in self.outputs.itervalues() :
-				o._setTheanoFunctions()
+	
+			for o in self.layers.itervalues() :
+				# o._setTheanoFunctions()
 				for k, v in o.__dict__.iteritems() :
 					if ( v.__class__ is TheanoFunction ) or issubclass(v.__class__, TheanoFunction) :
 						if k not in self.outputMaps :
 							self.outputMaps[k] = OutputMap(k, self)
 						self.outputMaps[k].addOutput(o, v)
+			
+			self._mustInit = False
+			# print "----", self.outputMaps
 
 	def help(self) :
 		"""prints the list of available model functions, such as train, test,..."""
+		self.init()
 		os = []
 		for o in self.outputMaps.itervalues() :
 			os.append(repr(o))
@@ -221,60 +234,107 @@ class Network(object) :
 
 		print "Available model functions:\n" % os
 
-	def savePickle(self, filename) :
-		"save the model into a python pickle filename.mariana.pkl"
-		import cPickle
-		f = open(filename + '.mariana.pkl', 'wb')
-		cPickle.dump(self, f, -1)
-		f.close()
-
 	def save(self, filename) :
-		"save the model into a folder filename.mariana.model"
-		import numpy, theano, tempfile, os, shutil, cPickle
-		tmpDir = tempfile.mkdtemp()
-
-		vals = {}
-		for l in self.layers.itervalues() :
-			for pName, param in l.getParameterDict().iteritems() :
-				fn = "%s_%s.npy" % (l.name, pName)
-				path = os.path.join( tmpDir, fn )
-				val = param.get_value()
-				numpy.save(path, val)
-				getattr(l, pName).set_value(None)
-				vals["%s-%s" % (l.appelido, pName)] = val
-
-		path = os.path.join( tmpDir, "network.pkl" )
-		f = open(path, 'wb')
-		cPickle.dump(self, f, -1)
-		f.close()
-		shutil.move(tmpDir, filename + ".mariana.model")
-		try :
-			shutil.rmtree(tmpDir)
-		except :
-			pass
+		import cPickle, pickle
+		self.init()
 		
-		for l in self.layers.itervalues() :
-			for pName, param in l.getParameterDict().iteritems() :
-				getattr(l, pName).set_value(vals["%s-%s" % (l.appelido, pName)])
+		ext = '.mar.mdl.pkl'
+		if filename.find(ext) < 0 :
+			fn = filename + ext
+		else :
+			fn = filename
+
+		res = {
+			"edges": self.edgesNames,
+			"log": self.log,
+			"layers": {}
+		}
+
+		res["layers"]= {l.name: l.clone() for l in self.layers.itervalues() }
+		f = open(fn, 'wb', pickle.HIGHEST_PROTOCOL)
+		cPickle.dump(res, f)
+		f.close()
 
 	@classmethod
-	def load(self, folder) :
-		"""loads a model from a folder"""
-		import numpy, theano, tempfile, os, cPickle
-		f = open(os.path.join(folder, "network.pkl"))
-		network = cPickle.load(f)
-		f.close()
+	def load(cls, filename) :
+		"""Loads a model from disk"""
+		import cPickle
+
+		f = open(filename)
+		model = cPickle.load(f)
+
+		for l1, l2 in model["edges"] :
+			network = model["layers"][l1] > model["layers"][l2]
+
+		# network = model["layers"][l1].network
+		# network.log = model["log"]
+		
+		return network
+
+	def saveParameters(self, filename) :
+		"""Save model parameters in HDF5 or numpy files if not succesfull"""
+		try :
+			self.saveParametersH5(filename)
+		except :
+			self.saveParametersNPY(filename)
+
+	def saveParametersH5(self, filename) :
+		"""Save model parameters in a HDF5 file with extension .mar.prm.h5 """
+		try :
+			import h5py
+		except :
+			raise ValueError("You need to install h5py to be able to save parameters")
 	
-		for l in network.layers.itervalues() :
+		import time
+		
+		self.init()
+		
+		ext = '.mar.prm.h5'
+		if filename.find(ext) < 0 :
+			fn = filename + ext
+		else :
+			fn = filename
+
+		f = h5py.File(fn, 'w')
+		f.attrs['saveTime'] = time.time()
+		f.attrs['nbLayers'] = len(self.layers)
+		f.attrs['nbEdges'] = len(self.edges)
+		f.attrs['nbInputs'] = len(self.inputs)
+		f.attrs['nbOutputs'] = len(self.outputs)
+		gLayers = f.create_group('layers')
+
+		for l in self.layers.itervalues():
+			gLayer = f.create_group(l.name)
+			for pName, param in l.getParameterDict().iteritems() :
+				val = param.get_value()
+				dSet = gLayer.create_dataset(pName, val.shape, dtype=val.dtype)
+				dSet[:] = val
+		
+		f.flush()
+		f.close()
+
+	def saveParametersNPY(self, filename) :
+		"""Save model parameters in numpy binary files grouped into a folder"""
+		import os, numpy
+		
+		self.init()
+		
+		ext = '.mar.prm.npy'
+		if filename.find(ext) < 0 :
+			folder = filename + ext
+		else :
+			folder = filename
+
+		if not os.path.isdir(folder) :
+			os.mkdir(folder)
+
+		for l in self.layers.itervalues() :
 			for pName, param in l.getParameterDict().iteritems() :
 				fn = "%s_%s.npy" % (l.name, pName)
 				path = os.path.join( folder, fn )
-				val = numpy.load(path)
-				val = numpy.asarray(val, dtype=theano.config.floatX)
-				getattr(l, pName).set_value(val)
-
-		return network
-
+				val = param.get_value()
+				numpy.save(path, val)
+				
 	def toDOT(self, name, forceInit = True) :
 		"""returns a string representing the network in the DOT language.
 		If forceInit, the network will first try to initialize each layer
@@ -336,10 +396,20 @@ class Network(object) :
 		try :
 			return object.__getattribute__(self, k)
 		except AttributeError as e :
-			maps = object.__getattribute__(self, 'outputMaps')
-			init = object.__getattribute__(self, 'init')
-			init()
-			try :
-				return maps[k]
-			except KeyError :
+			# a bit too hacky, bu solves the following: Pickle asks for attribute not found in networks which triggers initialisations
+			# of free outputs, and then theano complains that the layer.outputs are None, and everything crashes miserably. 
+			if k == "__getstate__" or k == "__slots__" :
 				raise e
+			
+			outs = object.__getattribute__(self, 'outputs')
+			if len(outs) > 0 :
+				init = object.__getattribute__(self, 'init')
+				init()
+
+				maps = object.__getattribute__(self, 'outputMaps')
+				try :
+					return maps[k]
+				except KeyError :
+					raise e
+			raise e
+	

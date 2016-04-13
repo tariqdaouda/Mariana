@@ -2,6 +2,7 @@ import numpy
 import theano
 import theano.tensor as tt
 import Mariana.settings as MSET
+from Mariana.abstraction import Abstraction_ABC
 
 __all__= [
 	"Initialization_ABC",
@@ -22,15 +23,11 @@ __all__= [
 	"ZerosBias"
 ]
 
-class Initialization_ABC(object) :
+class Initialization_ABC(Abstraction_ABC) :
 	"""This class defines the interface that an Initialization must offer. As a general good practice every init should only take care of a single
 	parameter, but you are free to do whatever you want. 
 	"""
 
-	def __init__(self, *args, **kwargs) :
-		self.hyperParameters = []
-		self.name = self.__class__.__name__
-		
 	def __call__(self, *args, **kwargs) :
 		self.initialize(*args, **kwargs)
 
@@ -40,7 +37,7 @@ class Initialization_ABC(object) :
 			hyps[k] = getattr(self, k)
 
 		message = "%s was initialized using %s" % (layer.name, self.__class__.__name__)
-		layer.network.logEvent(layer, message, hyps)
+		layer.network.logLayerEvent(layer, message, hyps)
 		self.initialize(layer)
 
 	def initialize(self, layer) :
@@ -56,7 +53,7 @@ class HardSet(Initialization_ABC) :
 		self.hyperParameters = ['parameter']
 
 	def initialize(self, layer) :
-		setattr( layer, self.parameter,  theano.shared(value = self.value, name = "%s_%s" % (self.parameter, layer.name) ) )
+		setattr( layer, self.parameter,  theano.shared(value = self.value, name = "%s_%s" % (layer.name, self.parameter) ) )
 
 class GlorotTanhInit(Initialization_ABC) :
 	"""Set up the layer weights according to the tanh initialisation introduced by Glorot et al. 2010"""
@@ -66,11 +63,13 @@ class GlorotTanhInit(Initialization_ABC) :
 	def initialize(self, layer) :
 		shape = layer.getParameterShape("W")
 		rng = numpy.random.RandomState(MSET.RANDOM_SEED)
-		layer.W = rng.uniform(
+		
+		W = rng.uniform(
 					low = -numpy.sqrt(6. / (layer.nbInputs + layer.nbOutputs)),
 					high = numpy.sqrt(6. / (layer.nbInputs + layer.nbOutputs)),
 					size = shape
 				)
+		Layer.W = theano.shared(W)
 
 class Uniform(Initialization_ABC) :
 	"""Random values from a unifrom distribution (divided by the overall sum)."""
@@ -83,7 +82,7 @@ class Uniform(Initialization_ABC) :
 		shape = layer.getParameterShape(self.parameter)
 		v = numpy.random.random(shape)
 		v = numpy.asarray(v, dtype=theano.config.floatX)
-		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (self.parameter, layer.name) ) )
+		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
 
 class UniformWeights(Uniform) :
 	"""Small random weights from a unifrom distribution"""
@@ -104,7 +103,7 @@ class SmallUniform(Uniform) :
 		v = numpy.random.random(shape)
 		v /= sum(v)
 		v = numpy.asarray(v, dtype=theano.config.floatX)
-		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (self.parameter, layer.name)) )
+		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter)) )
 
 class SmallUniformWeights(SmallUniform) :
 	"""Small random weights from a unifrom distribution (divided by the overall sum)"""
@@ -129,7 +128,7 @@ class Normal(Initialization_ABC) :
 	def initialize(self, layer) :
 		shape = layer.getParameterShape(self.parameter)
 		v = numpy.random.normal(0, self.standardDev, shape)
-		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (self.parameter, layer.name) ) )
+		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
 
 class NormalWeights(Normal) :
 	"""Random weights from a normal distribution"""
@@ -149,7 +148,7 @@ class SingleValue(Initialization_ABC) :
 	def initialize(self, layer) :
 		shape = layer.getParameterShape(self.parameter)
 		v = numpy.zeros( shape, dtype = theano.config.floatX) + self.value
-		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (self.parameter, layer.name) ) )
+		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
 
 class SingleValueWeights(SingleValue) :
 	"""Initialize the weights to a given value"""

@@ -18,7 +18,7 @@ class ConvPooler_ABC(object) :
 			hyps[k] = getattr(self, k)
 
 		message = "%s uses pooler %s" % (layer.name, self.__class__.__name__)
-		layer.network.logEvent(layer, message, hyps)
+		layer.network.logLayerEvent(layer, message, hyps)
 		return self.pool(layer)
 
 	def getOutputHeight(self, convLayer) :
@@ -102,7 +102,7 @@ class Flatten(ML.Layer_ABC) :
 			raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, layer.nbFlatOutputs) )
 	
 	def _setOutputs(self) :
-		for inputLayer in self.feededBy.itervalues() :
+		for inputLayer in self.network.inConnections[self] :
 			if self.nbInputChannels is None :
 				self.nbInputChannels = inputLayer.nbChannels
 			elif self.nbInputChannels != inputLayer.nbChannels :
@@ -174,7 +174,7 @@ class InputChanneler(ConvLayer_ABC, ML.Layer_ABC) :
 	
 	def _setOutputs(self) :
 		inps = []
-		for l in self.feededBy.itervalues() :
+		for l in self.network.inConnections[self] :
 			inps.append(l.outputs)
 
 		self.outputs = tt.stack(inps).reshape((-1, self.nbChannels, self.height, self.width))
@@ -311,7 +311,7 @@ class Convolution2D(ConvLayer_ABC, ML.Hidden) :
 		# initB = numpy.zeros((self.filterShape[0],), dtype = theano.config.floatX)
 		# self.b = theano.shared(value = initB, borrow = True)
 
-		for layer in self.feededBy.itervalues() :
+		for layer in self.network.inConnections[self] :
 			
 			if self.inputs is None :
 				self.inputs = layer.outputs

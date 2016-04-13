@@ -75,7 +75,7 @@ class GGPlot2(Recorder_ABC):
 				if outputName not in self.bestScores[theSet] or score < self.bestScores[theSet][outputName][0] :
 					self.bestScores[theSet][outputName] = (score, self.length)
 					if theSet in self.saveBestsFor :
-						model.savePickle(self.getBestModelFilename(outputName, theSet))
+						model.saveParameters(self.getBestModelFilename(outputName, theSet))
 
 				muchData = store["hyperParameters"]
 				muchData.update(store["runInfos"]) 

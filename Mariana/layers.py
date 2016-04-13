@@ -11,13 +11,9 @@ import Mariana.settings as MSET
 
 import Mariana.network as MNET
 import Mariana.wrappers as MWRAP
+import Mariana.candies as MCAN
 
 __all__ = ["Layer_ABC", "Output_ABC", "Classifier_ABC", "Input", "Hidden", "Composite", "Embedding", "SoftmaxClassifier", "Regression", "Autoencode"]
-
-TYPE_UNDEF_LAYER = -1
-TYPE_INPUT_LAYER = 0
-TYPE_HIDDEN_LAYER = 1
-TYPE_OUTPUT_LAYER = 2
 
 class Layer_ABC(object) :
 	"The interface that every layer should expose"
@@ -26,10 +22,13 @@ class Layer_ABC(object) :
 
 	def __init__(self,
 		size,
+		layerType,
+		activation = MA.Pass(),
+		regularizations = [],
 		initializations=[],
+		learningScenario=None,
 		decorators=[],
-		name=None,
-		**kwrags
+		name=None
 	) :
 
 		#a unique tag associated to the layer
@@ -39,7 +38,7 @@ class Layer_ABC(object) :
 		else :
 			self.name = "%s_%s" %(self.__class__.__name__, self.appelido)
 
-		self.type = TYPE_UNDEF_LAYER 
+		self.type = layerType 
 
 		self.nbInputs = None
 		self.inputs = None
@@ -47,18 +46,38 @@ class Layer_ABC(object) :
 		self.outputs = None # this is a symbolic var
 		self.testOutputs = None # this is a symbolic var
 		
+		self.activation = activation
+		self.regularizationObjects = regularizations
+		self.regularizations = []
 		self.decorators = decorators
 		self.initializations = initializations
+		self.learningScenario=learningScenario
 
-		self.feedsInto = OrderedDict()
-		self.feededBy = OrderedDict()
+		self.network = MNET.Network()
+		self.network._addLayer(self)
 
-		self.network = None
 		self._inputRegistrations = set()
 
 		self._mustInit = True
+		self._mustReset = True
 		self._decorating = False
 
+		self.creationArguments = None
+
+	def _setCreationArguments(self) :
+		"""Remembers the arguments used to create the layer. This function must be called at the end of the constructor to allow for layer cloning."""
+		import inspect
+		frame = inspect.currentframe()
+		frame = inspect.getouterframes(frame)[1][0]
+		
+		definedArgs, argsName, kwName, values = inspect.getargvalues(frame)
+		if "frame" in definedArgs : raise ValueError("Please choose another argument name than 'frame'.")
+		if "inspect" in definedArgs : raise ValueError("Please choose another argument name than 'inspect'.")
+
+		self.creationArguments = {k : values[k] for k in definedArgs[1:]}
+		if kwName is not None :
+			self.creationArguments.update(values[kwName])
+		
 	def getParameterDict(self) :
 		"""returns the layer's parameters as dictionary"""
 		from theano.compile import SharedVariable
@@ -80,9 +99,21 @@ class Layer_ABC(object) :
 		"""Should return the shape of the parameter. This has to be implemented in order for the initializations to work (and maybe some other stuff as well)"""
 		raise NotImplemented("Should be implemented in child")
 		
-	def clone(self, **kwargs) :
-		"""Returns a free layer with the same weights and bias. You can use kwargs to setup any attribute of the new layer"""
-		raise NotImplemented("Should be implemented in child")
+	def clone(self, reset = False) :
+		"""Returns a free layer with the same parameters. You can use kwargs to setup any attribute of the new layer"""
+		if self.creationArguments is None :
+			MCAN.fatal("Unclonable layer '%s'" % self.name, "self.creationArguments is not defined.\nPlease add a call to Layer_ABC._setCreationArguments(self) at the end of the constructor.")
+		
+		obj = self.__class__( **self.creationArguments)
+		obj._mustInit = True
+		if reset :
+			obj._mustReset = True
+		else :
+			obj._mustReset = False
+			for k, v in self.getParameterDict().iteritems() :
+				setattr(obj, k, v)
+
+		return obj
 
 	def _registerInput(self, inputLayer) :
 		"Registers a layer as an input to self. This function is first called by input layers. Initialization can only start once all input layers have been registered"
@@ -105,28 +136,59 @@ class Layer_ABC(object) :
 	
 	#theano hates abstract methods defined with a decorator
 	def _setOutputs(self) :
-		"""Sets the output of the layer. This function is called by _init() ans should be initialized in child"""
+		"""Defines the outputs and testOutputs of the layer before the application of the activation function. This function is called by _init() ans should be written in child."""
 		raise NotImplemented("Should be implemented in child")
 
 	def _decorate(self) :
 		"""applies decorators"""
-		self._decorating = True
 		for d in self.decorators :
 			d.apply(self)
-		self._decorating = False
+	
+	def _activate(self) :
+		self.outputs = self.activation.apply(self, self.outputs)
+		self.testOutputs = self.activation.apply(self, self.testOutputs)
+	
+	def _listRegularizations(self) :
+		for reg in self.regularizationObjects :
+			self.regularizations.append(reg.getFormula(self))
+
+	def _setTheanoFunctions(self) :
+		"""Creates propagate/propagateTest theano function that returns the layer's outputs.
+		propagateTest returns the testOutputs, some decorators might not be applied.
+		This is called after decorating"""
+		self.propagate = MWRAP.TheanoFunction("propagate", self, [self.outputs], allow_input_downcast=True)
+		self.propagateTest = MWRAP.TheanoFunction("propagateTest", self, [self.testOutputs], allow_input_downcast=True)
+	
+	def setCustomTheanoFunctions(self) :
+		"""This is where you should put the definitions of your custom theano functions. Theano functions
+		must be declared as self attributes using a wrappers.TheanoFunction object, cf. wrappers documentation.
+		This is called just before _whateverLastInit.
+		"""
+		pass
 
 	def _init(self) :
 		"Initialize the layer making it ready for training. This function is automatically called before train/test etc..."
-		if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.feededBy) ) :
-			self._whateverFirstInit()
-			self._initParameters()
+		# print self, self._mustInit,  len(self._inputRegistrations) == len(self.network.inConnections[self]), self.network.outConnections[self] 
+		# print self, self.network.outConnections[self] 
+		if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.network.inConnections[self]) ) :
+			if self._mustReset :
+				self._whateverFirstInit()
+				self._initParameters()
+				self._mustReset = False
+
 			self._setOutputs()
+			self._activate()
+			self._listRegularizations()
 			self._decorate()
+			self._setTheanoFunctions()
+			self.setCustomTheanoFunctions()
 			self._whateverLastInit()
+
 			if self.outputs is None :
 				raise ValueError("Invalid layer '%s' has no defined outputs" % self.name)
 
-			for l in self.feedsInto.itervalues() :
+			for l in self.network.outConnections[self] :
+				# print "		fasdfasdf", l
 				l._registerInput(self)
 				l._init()
 			self._mustInit = False
@@ -140,27 +202,19 @@ class Layer_ABC(object) :
 		pass
 
 	def connect(self, layer) :
-		"""Connect the layer to another one. Using the '>' operator to connect to layers is actually calls this function.
+		"""Connect the layer to another one. Using the '>' operator to connect two layers actually calls this function.
 		This function returns the resulting network"""
-		if layer.network is None :
-			layer.network = self.network
-		else :
-			self.network.merge(self, layer)
-		self.network.addEdge(self, layer)
+		# if layer.network is None :
+		# 	layer.network = self.network
+		# else :
+		# 	self.network.merge(self, layer)
+		# self.network.addEdge(self, layer)
+		self.network.merge(self, layer)
 
 		layer._femaleConnect(self)
-		layer.feededBy[self.name] = self
 		self._maleConnect(layer)
-		self.feedsInto[layer.name] = layer
 		
 		return self.network
-
-	def disconnect(self, layer) :
-		"""Severs a connection"""
-		del(self.feedsInto[layer.name])
-		del(layer.feededBy[self.name])
-		self.network.removeEdge(self, layer)
-		self.network._mustInit = True
 
 	def _dot_representation(self) :
 		"returns the representation of the node in the graph DOT format"
@@ -169,10 +223,6 @@ class Layer_ABC(object) :
 	def __gt__(self, pathOrLayer) :
 		"""Alias to connect, make it possible to write things such as layer1 > layer2"""
 		return self.connect(pathOrLayer)
-
-	def __div__(self, pathOrLayer) :
-		"""Alias to disconnect, make it possible to write things such as layer1 / layer2"""
-		return self.disconnect(pathOrLayer)
 
 	def __repr__(self) :
 		return "(Mariana %s '%s': %sx%s )" % (self.__class__.__name__, self.name, self.nbInputs, self.nbOutputs)
@@ -202,19 +252,18 @@ class Embedding(Layer_ABC) :
 	"""This input layer will take care of creating the embeddings and training them. Embeddings are learned representations
 	of the inputs that are much loved in NLP."""
 
-	def __init__(self, size, nbDimentions, dictSize, initializations = [MI.SmallUniformEmbeddings()], learningScenario = None, name = None, **kwargs) :
+	def __init__(self, size, nbDimentions, dictSize, initializations = [MI.SmallUniformEmbeddings()], **kwargs) :
 		"""
 		:param size int: the size of the input vector (if your input is a sentence this should be the number of words in it).
 		:param nbDimentions int: the number of dimentions in wich to encode each word.
 		:param dictSize int: the total number of words. 
 		"""
 
-		Layer_ABC.__init__(self, size, initializations=initializations, name = name, **kwargs)
-		self.network = MNET.Network()
-		self.network.addInput(self)
+		Layer_ABC.__init__(self, size, layerType=MNET.TYPE_INPUT_LAYER,  initializations=initializations, **kwargs)
+		# self.network = MNET.Network()
+		# self.network.addInput(self)
 		
-		self.learningScenario = learningScenario
-		self.type = TYPE_INPUT_LAYER
+		# self.learningScenario = learningScenario
 		self.dictSize = dictSize
 		self.nbDimentions = nbDimentions
 		
@@ -223,6 +272,8 @@ class Embedding(Layer_ABC) :
 		
 		self.embeddings = None
 		self.inputs = tt.imatrix(name = "embInp_" + self.name)
+
+		self._setCreationArguments()
 
 	def getParameterShape(self, param) :
 		if param == "embeddings" :
@@ -240,7 +291,7 @@ class Embedding(Layer_ABC) :
 				return self.embeddings.get_value()[idxs]
 			return self.embeddings.get_value()
 		except AttributeError :
-			raise ValueError("It looks like the network has not been initialized yet")
+			raise ValueError("It looks like the network has not been initialized yet. Try calling self.network.init() first.")
 	
 	def _setOutputs(self) :
 		self.preOutputs = self.embeddings[self.inputs]
@@ -253,15 +304,16 @@ class Embedding(Layer_ABC) :
 class Input(Layer_ABC) :
 	"An input layer"
 	def __init__(self, size, name = None, **kwargs) :
-		Layer_ABC.__init__(self, size, name = name, **kwargs)
+		Layer_ABC.__init__(self, size, layerType=MNET.TYPE_INPUT_LAYER, name = name, **kwargs)
 		self.kwargs = kwargs
-		self.type = TYPE_INPUT_LAYER
 		self.nbInputs = size
-		self.network = MNET.Network()
-		self.network.addInput(self)
+		# self.network = MNET.Network()
+		# self.network.addInput(self)
 
 		self.inputs = tt.matrix(name = self.name)
-	
+
+		self._setCreationArguments()
+
 	def _setOutputs(self) :
 		"initialises the output to be the same as the inputs"
 		self.outputs = self.inputs
@@ -284,7 +336,8 @@ class Composite(Layer_ABC):
 	The output of c will be single vector: [layer1.output, layer2.output]
 	"""
 	def __init__(self, name = None):
-		Layer_ABC.__init__(self, size = None, name = name)
+		Layer_ABC.__init__(self, layerType=MNET.TYPE_HIDDEN_LAYER, size = None, name = name)
+		self._setCreationArguments()
 
 	def _femaleConnect(self, layer) :
 		if self.nbInputs is None :
@@ -293,32 +346,31 @@ class Composite(Layer_ABC):
 		self.nbOutputs = self.nbInputs
 		
 	def _setOutputs(self) :
-		self.outputs = tt.concatenate( [l.outputs for l in self.feededBy.itervalues()], axis = 1 )
-		self.testOutputs = tt.concatenate( [l.outputs for l in self.feededBy.itervalues()], axis = 1 )
-
+		self.outputs = tt.concatenate( [l.outputs for l in self.network.inConnections[self]], axis = 1 )
+		self.testOutputs = tt.concatenate( [l.outputs for l in self.network.inConnections[self]], axis = 1 )
+		
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=tripleoctogon]' % (self.name, self.nbOutputs)
 
-class Hidden(Layer_ABC) :
-	"A hidden layer"
-	def __init__(self, size, activation = MA.ReLU(), initializations = [MI.SmallUniformWeights(), MI.ZerosBias()], learningScenario = None, name = None, regularizations = [], **kwargs) :
+class WeightBias_ABC(Layer_ABC) :
+	"A layer with weigth and bias"
+	
+	def __init__(self, size, layerType, activation = MA.ReLU(), initializations = [MI.SmallUniformWeights(), MI.ZerosBias()], **kwargs) :
 		Layer_ABC.__init__(self,
 			size,
-			name=name,
+			layerType=layerType,
+			activation = activation,
 			initializations=initializations,
 			**kwargs
 		)
 
-		self.activation=activation
-		self.learningScenario=learningScenario
+		# self.activation=activation
 		self.W = None
 		self.b = None
 		
-		self.regularizationObjects = regularizations
-		self.regularizations = []
-
-		self.type = TYPE_HIDDEN_LAYER
-		
+		# self.regularizationObjects = regularizations
+		# self.regularizations = []
+	
 	def _femaleConnect(self, layer) :
 		if self.nbInputs is None :
 			self.nbInputs = layer.nbOutputs
@@ -328,7 +380,8 @@ class Hidden(Layer_ABC) :
 	def _setOutputs(self) :
 		"""initialises weights and bias. By default weights are setup to random low values, use Mariana decorators
 		to change this behaviour."""
-		for layer in self.feededBy.itervalues() :
+		# for layer in self.feededBy.itervalues() :
+		for layer in self.network.inConnections[self] :
 			if self.inputs is None :
 				self.inputs = layer.outputs	
 			else :
@@ -341,11 +394,11 @@ class Hidden(Layer_ABC) :
 			MI.ZerosBias().apply(self)
 			# raise ValueError("No initialization was defined for bias (self.b)")
 
-		self.outputs = self.activation.apply(self, tt.dot(self.inputs, self.W) + self.b)
-		self.testOutputs = self.activation.apply(self, tt.dot(self.inputs, self.W) + self.b)
+		# self.outputs = self.activation.apply(self, tt.dot(self.inputs, self.W) + self.b)
+		# self.testOutputs = self.activation.apply(self, tt.dot(self.inputs, self.W) + self.b)
 
-		for reg in self.regularizationObjects :
-			self.regularizations.append(reg.getFormula(self))
+		self.outputs = tt.dot(self.inputs, self.W) + self.b
+		self.testOutputs = tt.dot(self.inputs, self.W) + self.b
 
 	def getParameterShape(self, param) :
 		if param == "W" :
@@ -369,90 +422,53 @@ class Hidden(Layer_ABC) :
 		except AttributeError :
 			raise ValueError("It looks like the network has not been initialized yet")
 
-	def clone(self, **kwargs) :
-		"""Returns a free layer with the same weights and bias and activation function.
-		You can use kwargs to setup any other attribute of the new layer, just like you would for an instanciation"""
-		res = self.__class__(self.nbOutputs, activation = self.activation, **kwargs)
-		res.W = self.W
-		res.b = self.b
-		
-		return res
+class Hidden(WeightBias_ABC) :
+	"A hidden layer with weigth and bias"
+	def __init__(self, size, **kwargs) :
+		WeightBias_ABC.__init__(self, size, MNET.TYPE_HIDDEN_LAYER, **kwargs)
+		self._setCreationArguments()
 
-	def cloneBare(self, **kwargs) :
-		"""Same as clone() but lets you redefine any parameter other than Weights and Bias.
-		This function can be very handy if you are trying to salvage old pickled layers that were created using an older version of Mariana."""
-		res = self.__class__(self.nbOutputs, **kwargs)
-		res.W = self.W
-		res.b = self.b
-		
-		return res
-
-	def toOutput(self, outputType, **kwargs) :
-		"returns an output layer with the same activation function, weights and bias"
-		if "activation" in kwargs :
-			act = kwargs["activation"]
-		else :
-			act = self.activation
-
-		o = outputType(self.nbOutputs, activation = act, name = self.name, **kwargs)
-		o.W = self.W
-		o.b = self.b
-		return o
-
-class Output_ABC(Hidden) :
-	"""The interface that every output layer should expose. This interface also provides tyhe model functions:
-
+class Output_ABC(WeightBias_ABC) :
+	"""The interface that every output layer should expose. This interface also provides the model functions:
 		* train: upadates the parameters and returns the cost
 		* test: returns the cost, ignores trainOnly decoartors
-		* propagate: returns the outputs of the network, ignores trainOnly decoartors
 		"""
 
-	def __init__(self, size, activation, learningScenario, costObject, name = None, **kwargs) :
-		Hidden.__init__(self, size, activation = activation, name = name, **kwargs)
-		self.type = TYPE_OUTPUT_LAYER
+	def __init__(self, size, costObject, **kwargs) :
+		WeightBias_ABC.__init__(self, size, MNET.TYPE_OUTPUT_LAYER, **kwargs)
+		# Hidden.__init__(self, size, activation = activation, name = name, **kwargs)
+		self.type = MNET.TYPE_OUTPUT_LAYER
 		self.targets = None
 		self.dependencies = OrderedDict()
 		self.costObject = costObject
-		self.learningScenario = learningScenario
+		# self.learningScenario = learningScenario
 		self.cost = None
 		self.test_cost = None
 		self.updates = None
 
-	def _maleConnect(self, *args) :
-		raise ValueError("An output layer cannot be connected to something")
-
-	def _femaleConnect(self, layer) :
-		Hidden._femaleConnect(self, layer)
-		self.network.addOutput(self)
+	# def _maleConnect(self, *args) :
+	# 	raise ValueError("An output layer cannot be connected to something")
 
 	def _backTrckDependencies(self) :
 		"""Finds all the hidden layers the ouput layer is influenced by"""
 		def _bckTrk(deps, layer) :
-			for l in layer.feededBy.itervalues() :
-				if l.__class__ is not Input :
+			for l in layer.network.inConnections[layer] :
+				if len(l.getParameters()) > 0 :
 					deps[l.name] = l
 					_bckTrk(deps, l)
 			return deps
 
 		self.dependencies = _bckTrk(self.dependencies, self)
 
-	def _userInit(self) :
-		"""Here you can specify custom initializations of your layer. This called just before the costs are computed. By default does nothing"""
-		pass
-
-	def _setTheanoFunctions(self) :
-		"""Creates train, test, propagate, propagateTest functions and calls setCustomTheanoFunctions to
-		create user custom theano functions::
+	def setCustomTheanoFunctions(self) :
+		"""Adds train, test, model functions::
 			* train: update parameters and return cost
 			* test: do not update parameters and return cost without adding regularizations
-			* propagate: return the outputs of the layer
-			* propagateTest: return the test outputs of the layer (some decorators may not be applied)
 		"""
 
 		self._backTrckDependencies()
-		self._userInit()
 		self.cost = self.costObject.apply(self, self.targets, self.outputs, "training")
-		self.test_cost = self.costObject.apply(self, self.targets, self.testOutputs, "testing")
+		self.test_cost = self.costObject.apply(self, self.targets, self.outputs, "testing")
 
 		for l in self.dependencies.itervalues() :
 			if l.__class__  is not Composite :
@@ -466,72 +482,55 @@ class Output_ABC(Hidden) :
 		for l in self.dependencies.itervalues() :
 			try :
 				updates = l.learningScenario.apply(l, self.cost)
-			except AttributeError :
+			except :
 				updates = self.learningScenario.apply(l, self.cost)
 			self.updates.extend(updates)
 
+		# self.propagate = MWRAP.TheanoFunction("propagate", self, [self.outputs], allow_input_downcast=True)
+		# self.propagateTest = MWRAP.TheanoFunction("propagate", self, [self.testOutputs], allow_input_downcast=True)
+
+		# self.setCustomTheanoFunctions()
+
 		self.train = MWRAP.TheanoFunction("train", self, [self.cost], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
 		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], { "targets" : self.targets }, allow_input_downcast=True)
-		self.propagate = MWRAP.TheanoFunction("propagate", self, [self.outputs], allow_input_downcast=True)
-		self.propagateTest = MWRAP.TheanoFunction("propagate", self, [self.testOutputs], allow_input_downcast=True)
 
-		self.setCustomTheanoFunctions()
-
-	def setCustomTheanoFunctions(self) :
-		"""This is where you should put the definitions of your custom theano functions. Theano functions
-		must be declared as self attributes using a wrappers.TheanoFunction object, cf. wrappers documentation.
-		"""
-		pass
-
-	def toHidden(self, **kwargs) :
-		"returns a hidden layer with the same activation function, weights and bias"
-		h = Hidden(self.nbOutputs, activation = self.activation, name = self.name + "_toHidden", **kwargs)
-		h.W = self.W
-		h.b = self.b
-		return h
-
-	def clone(self, **kwargs) :
-		"""Returns a free output layer with the same weights, bias, activation function, learning scenario, and cost.
-		You can use kwargs to setup any other attribute of the new layer, just like you would for an instanciation"""
-		return Hidden.clone(self, learningScenario = self.learningScenario, costObject = self.costObject)
+	def _whateverLastInit(self) :
+		self._setTheanoFunctions()
 
 	def _dot_representation(self) :
 		return '[label="%s: %sx%s" shape=invhouse]' % (self.name, self.nbInputs, self.nbOutputs)
 
-class Classifier_ABC(Output_ABC):
-	"""The interface that every classifier should expose. Classifiers should provide a model function
-	classify, that returns the result of the classification, updates self.last_outputs and ignores trainOnly
-	decorators"""
+# class Classifier_ABC(Output_ABC):
+# 	"""The interface that every classifier should expose. Classifiers should provide a model function
+# 	classify, that returns the result of the classification, updates self.last_outputs and ignores trainOnly
+# 	decorators"""
 
-	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
-		Output_ABC.__init__(self, nbOutputs, activation, learningScenario, costObject, name, **kwargs)
+# 	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
+# 		Output_ABC.__init__(self, nbOutputs, activation=activation, learningScenario=learningScenario, costObject=costObject, name=name, **kwargs)
+# 		self._setCreationArguments()
 
-	def setCustomTheanoFunctions(self) :
-		"""Classifiers must define a 'classify' function that returns the result of the classification"""
-		raise NotImplemented("theano classify must be defined in child's setCustomTheanoFunctions()")
+# 	def setCustomTheanoFunctions(self) :
+# 		"""Classifiers must define a 'classify' function that returns the result of the classification"""
+# 		raise NotImplemented("theano classify must be defined in child's setCustomTheanoFunctions()")
 
-class SoftmaxClassifier(Classifier_ABC) :
+class SoftmaxClassifier(Output_ABC) :
 	"""A softmax (probabilistic) Classifier"""
 	def __init__(self, nbOutputs, learningScenario, costObject, temperature = 1, name = None, **kwargs) :
 		kwargs["activation"] = MA.Softmax(temperature = temperature)
 		kwargs["learningScenario"] = learningScenario
 		kwargs["costObject"] = costObject
 		kwargs["name"] = name
-		Classifier_ABC.__init__(self, nbOutputs, **kwargs)
+		Output_ABC.__init__(self, nbOutputs, **kwargs)
 		self.targets = tt.ivector(name = "targets_" + self.name)
+		self._setCreationArguments()
 	
 	def setCustomTheanoFunctions(self) :
 		"""defines classify and predict::
 			*classify: return the argmax of the outputs
 			*predict: return the argmax of the test outputs (some decorators may not be applied)"""
-
+		Output_ABC.setCustomTheanoFunctions(self)
 		self.classify = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.outputs) ])
 		self.predict = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.testOutputs) ])
-
-	def clone(self, **kwargs) :
-		"""Returns a free output layer with the same weights, bias, activation function, learning scenario, and cost.
-		You can use kwargs to setup any other attribute of the new layer, just like you would for an instanciation"""
-		return Hidden.cloneBare(self, learningScenario = self.learningScenario, costObject = self.costObject, **kwargs)
 
 	def _dot_representation(self) :
 		return '[label="SoftM %s: %s" shape=doublecircle]' % (self.name, self.nbOutputs)
@@ -541,6 +540,7 @@ class Regression(Output_ABC) :
 	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
 		Output_ABC.__init__(self, nbOutputs, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.targets = tt.matrix(name = "targets")
+		self._setCreationArguments()
 	
 	def _dot_representation(self) :
 		return '[label="Reg %s: %s" shape=circle]' % (self.name, self.nbOutputs)
@@ -549,12 +549,14 @@ class Autoencode(Output_ABC) :
 	"""An auto encoding layer. This one takes another layer as inputs and tries to reconstruct its activations.
 	You could achieve the same result with a Regresison layer, but this one has the advantage of not needing to be fed specific inputs"""
 
-	def __init__(self, layer, activation, learningScenario, costObject, name = None, **kwargs) :
+	def __init__(self, targetLayerName, activation, learningScenario, costObject, name = None, **kwargs) :
 		Output_ABC.__init__(self, layer.nbOutputs, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
-		self.layer = layer
+		self.targetLayerName = targetLayerName
+		self._setCreationArguments()
 
-	def _userInit(self):
-		self.targets = self.layer.outputs
+	def _setTheanoFunctions(self) :
+		self.targets = self.network[self.targetLayerName].outputs
+		Output_ABC._setTheanoFunctions(self)
 	
 	def setCustomTheanoFunctions(self) :
 		self.train = MWRAP.TheanoFunction("train", self, [self.cost], {}, updates = self.updates, allow_input_downcast=True)

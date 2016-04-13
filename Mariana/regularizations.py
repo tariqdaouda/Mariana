@@ -1,10 +1,9 @@
+from Mariana.abstraction import Abstraction_ABC
+
 __all__ = ["SingleLayerRegularizer_ABC", "L1", "L2", "ActivationL1"]
 
-class SingleLayerRegularizer_ABC(object) :
+class SingleLayerRegularizer_ABC(Abstraction_ABC) :
 	"""An abstract regularization to be applied to a layer."""
-
-	def __init__(self, *args, **kwargs) :
-		self.name = self.__class__.__name__
 
 	def apply(self, layer) :
 		"""Apply to a layer and update networks's log"""
@@ -31,7 +30,7 @@ class L1(SingleLayerRegularizer_ABC) :
 	def __init__(self, factor) :
 		SingleLayerRegularizer_ABC.__init__(self)
 		self.factor = factor
-		self.hyperparameters = ["factor"]
+		self.hyperParameters = ["factor"]
 
 	def getFormula(self, layer) :
 		return self.factor * ( abs(layer.W).sum() )
@@ -46,7 +45,7 @@ class L2(SingleLayerRegularizer_ABC) :
 	def __init__(self, factor) :
 		SingleLayerRegularizer_ABC.__init__(self)
 		self.factor = factor
-		self.hyperparameters = ["factor"]
+		self.hyperParameters = ["factor"]
 
 	def getFormula(self, layer) :
 		return self.factor * ( (layer.W * layer.W).sum() )
@@ -64,7 +63,7 @@ class ActivationL1(SingleLayerRegularizer_ABC) :
 	def __init__(self, factor) :
 		SingleLayerRegularizer_ABC.__init__(self)
 		self.factor = factor
-		self.hyperparameters = ["factor"]
+		self.hyperParameters = ["factor"]
 
 	def getFormula(self, layer) :
 		return self.factor * ( abs(layer.outputs).sum() )
