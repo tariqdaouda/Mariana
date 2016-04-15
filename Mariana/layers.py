@@ -145,8 +145,8 @@ class Layer_ABC(object) :
 			d.apply(self)
 	
 	def _activate(self) :
-		self.outputs = self.activation.apply(self, self.outputs)
-		self.testOutputs = self.activation.apply(self, self.testOutputs)
+		self.outputs = self.activation.apply(self, self.outputs, 'training')
+		self.testOutputs = self.activation.apply(self, self.testOutputs, 'testing')
 	
 	def _listRegularizations(self) :
 		for reg in self.regularizationObjects :

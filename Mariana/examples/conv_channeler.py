@@ -48,6 +48,7 @@ class Conv :
 		
 	def train(self, inputs, targets) :
 		#The inputs have to be reshaped into a 4d matrix before passing them to the conv layers
+		#Because of that it is MUCH slower than ConvWithChanneler
 		inps = inputs.reshape((-1, 1, 28, 28))
 		return self.model.train("out", inp = inps, targets = targets)
 
@@ -98,7 +99,7 @@ if __name__ == "__main__" :
 	maxEpochs = 200
 	miniBatchSize = 500
 	
-	model = ConvWithChanneler(ls, cost)
+	model = Conv(ls, cost)
 	
 	epoch = 0
 	while True :
@@ -108,7 +109,7 @@ if __name__ == "__main__" :
 			targets = train_set[1][i : i +miniBatchSize]
 			res = model.train(inputs, targets )
 			trainScores.append(res[0])
-	
+
 		trainScore = numpy.mean(trainScores)
 		
 		print "---\nepoch", epoch

@@ -6,13 +6,13 @@ __all__ = ["Activation_ABC", "Pass", "Sigmoid", "Tanh", "ReLU", "Softmax"]
 class Activation_ABC(Abstraction_ABC):
 	"""All activations must inherit from this class"""
 
-	def apply(self, layer, x) :
+	def apply(self, layer, x, purpose) :
 		"""Apply to a layer and update networks's log"""
 		hyps = {}
 		for k in self.hyperParameters :
 			hyps[k] = getattr(self, k)
 
-		message = "%s uses activation %s" % (layer.name, self.__class__.__name__)
+		message = "%s uses activation %s for %s" % (layer.name, self.__class__.__name__, purpose)
 		layer.network.logLayerEvent(layer, message, hyps)
 		return self.function(x)
 

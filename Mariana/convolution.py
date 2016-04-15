@@ -144,7 +144,9 @@ class ConvLayer_ABC(object) :
 		return '[label="%s: %sx%sx%s" shape=invhouse]' % ( self.name, self.nbChannels, self.height, self.width)
 
 class InputChanneler(ConvLayer_ABC, ML.Layer_ABC) :
-	"""Takes the outputs of several regular layer and pools them into separate channels. All inputs must have the same dimentions"""
+	"""Takes the outputs of several regular layer and stacks them into separate channels so they can be passed to a conv layer (All inputs must have the same dimentions).
+	Channelers can also be very useful even if you have a single input that is not a 2D array. They will reshape your data
+	to make in iot fit into a conv layer much faster than numpy."""
 	def __init__(self, height, width, **kwargs) :
 		"""
 		:param int height: Image height.
@@ -196,12 +198,12 @@ class Input(ConvLayer_ABC, ML.Layer_ABC) :
 		# ML.Layer_ABC.__init__(self, nbChannels, **kwargs)
 		ML.Layer_ABC.__init__(self, nbChannels, layerType=MNET.TYPE_INPUT_LAYER, **kwargs)
 
-		self.type = ML.TYPE_INPUT_LAYER
+		# self.type = ML.TYPE_INPUT_LAYER
 		self.height = height
 		self.width = width
 		self.nbInputs = nbChannels
-		self.network = MNET.Network()
-		self.network.addInput(self)
+		# self.network = MNET.Network()
+		# self.network.addInput(self)
 		
 		self.inputs = tt.tensor4(name = self.name)
 		self.nbFlatOutputs = self.height * self.width * self.nbChannels
@@ -332,5 +334,8 @@ class Convolution2D(ConvLayer_ABC, ML.Hidden) :
 		self.pooled = self.pooler.apply(self)
 		self.nbFlatOutputs = self.nbChannels * self.height * self.width
 
-		self.outputs = self.activation.apply(self, self.pooled + self.b.dimshuffle('x', 0, 'x', 'x'))
-		self.testOutputs = self.activation.apply(self, self.pooled + self.b.dimshuffle('x', 0, 'x', 'x'))
+		# self.outputs = self.activation.apply(self, self.pooled + self.b.dimshuffle('x', 0, 'x', 'x'))
+		# self.testOutputs = self.activation.apply(self, self.pooled + self.b.dimshuffle('x', 0, 'x', 'x'))
+		
+		self.outputs = self.pooled + self.b.dimshuffle('x', 0, 'x', 'x')
+		self.testOutputs = self.pooled + self.b.dimshuffle('x', 0, 'x', 'x')

@@ -75,7 +75,7 @@ def makeDataset(nbExamples, size, patternSize, testRatio = 0.2, easy = True) :
 
 	targets = numpy.asarray(targets, dtype=theano.config.floatX)
 	
-	lenTest = len(data) * 0.2
+	lenTest = int(len(data) * 0.2)
 	trainData, trainTargets = data[lenTest:], targets[lenTest:]
 	testData, testTargets = data[:lenTest], targets[:lenTest]
 
