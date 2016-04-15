@@ -27,8 +27,8 @@ def ae1(data) :
 	cost = MC.MeanSquaredError()
 
 	i = ML.Input(8, name = 'inp')
-	h = ML.Hidden(3, activation = MA.ReLU(), name = "hid", saveOutputs = True )
-	o = ML.Regression(8, activation = MA.ReLU(), learningScenario = ls, costObject = cost, name = "out", saveOutputs = True )
+	h = ML.Hidden(3, activation = MA.ReLU(), name = "hid")
+	o = ML.Regression(8, activation = MA.ReLU(), learningScenario = ls, costObject = cost, name = "out")
 
 	ae = i > h > o
 
@@ -47,8 +47,8 @@ def ae2(data) :
 	cost = MC.MeanSquaredError()
 
 	i = ML.Input(8, name = 'inp')
-	h = ML.Hidden(3, activation = MA.ReLU(), name = "hid", saveOutputs = True )
-	o = ML.Autoencode(i, activation = MA.ReLU(), learningScenario = ls, costObject = cost, name = "out", saveOutputs = True )
+	h = ML.Hidden(3, activation = MA.ReLU(), name = "hid")
+	o = ML.Autoencode(i.name, activation = MA.ReLU(), learningScenario = ls, costObject = cost, name = "out")
 
 	ae = i > h > o
 	# ae.init()

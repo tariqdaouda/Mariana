@@ -1,5 +1,5 @@
 import Mariana.activations as MA
-import Mariana.decorators as MD
+import Mariana.initializations as MI
 import Mariana.layers as ML
 import Mariana.costs as MC
 import Mariana.regularizations as MR
@@ -32,7 +32,7 @@ if __name__ == "__main__":
 	cost = MC.NegativeLogLikelihood()
 
 	i = ML.Input(28 * 28, name='inp')
-	h = ML.Hidden(500, activation=MA.Tanh(), decorators=[MD.GlorotTanhInit()], regularizations=[MR.L1(0), MR.L2(0.0001)], name="hid")
+	h = ML.Hidden(500, activation=MA.Tanh(), initializations=[MI.GlorotTanhInit()], regularizations=[MR.L1(0), MR.L2(0.0001)], name="hid")
 	o = ML.SoftmaxClassifier(10, learningScenario=ls, costObject=cost, name="out", regularizations=[MR.L1(0), MR.L2(0.0001)])
 
 	mlp = i > h > o

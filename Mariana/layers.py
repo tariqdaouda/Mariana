@@ -555,15 +555,22 @@ class Autoencode(Output_ABC) :
 	You could achieve the same result with a Regresison layer, but this one has the advantage of not needing to be fed specific inputs"""
 
 	def __init__(self, targetLayerName, activation, learningScenario, costObject, name = None, **kwargs) :
-		Output_ABC.__init__(self, layer.nbOutputs, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
+		Output_ABC.__init__(self, None, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.targetLayerName = targetLayerName
 		self._setCreationArguments()
 
-	def _setTheanoFunctions(self) :
+	def _whateverFirstInit(self) :
+		self.nbOutputs = self.network[self.targetLayerName].nbOutputs
 		self.targets = self.network[self.targetLayerName].outputs
-		Output_ABC._setTheanoFunctions(self)
+		
+	# def _setOutputs(self) :
+		# print self.nbOutputs
+	# def _setTheanoFunctions(self) :
+	# 	self.targets = 
+	# 	Output_ABC._setTheanoFunctions(self)
 	
 	def setCustomTheanoFunctions(self) :
+		Output_ABC.setCustomTheanoFunctions(self)
 		self.train = MWRAP.TheanoFunction("train", self, [self.cost], {}, updates = self.updates, allow_input_downcast=True)
 		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], {}, allow_input_downcast=True)
 
