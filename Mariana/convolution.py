@@ -87,8 +87,9 @@ class Flatten(ML.Layer_ABC) :
 
 	def __init__(self, **kwargs) :
 		"""Flattens the output of a convolution layer so it can be fed into a regular layer"""
-		ML.Layer_ABC.__init__(self, None, **kwargs)
-		self.type = ML.TYPE_HIDDEN_LAYER
+		# ML.Layer_ABC.__init__(self, None, **kwargs)
+		# self.type = ML.TYPE_HIDDEN_LAYER
+		ML.Layer_ABC.__init__(self, None, layerType=MNET.TYPE_HIDDEN_LAYER, **kwargs)
 		self.outdim = 2
 		
 		self.inputHeight = None
@@ -150,7 +151,8 @@ class InputChanneler(ConvLayer_ABC, ML.Layer_ABC) :
 		:param int width: Image width.
 		"""
 		ConvLayer_ABC.__init__(self, None, **kwargs)
-		ML.Layer_ABC.__init__(self, None, **kwargs)
+		# ML.Layer_ABC.__init__(self, None, **kwargs)
+		ML.Layer_ABC.__init__(self, None, layerType=MNET.TYPE_HIDDEN_LAYER, **kwargs)
 		self.height = height
 		self.width = width
 
@@ -191,7 +193,8 @@ class Input(ConvLayer_ABC, ML.Layer_ABC) :
 		:param int width: Image width.
 		"""
 		ConvLayer_ABC.__init__(self, nbChannels, **kwargs)
-		ML.Layer_ABC.__init__(self, nbChannels, **kwargs)
+		# ML.Layer_ABC.__init__(self, nbChannels, **kwargs)
+		ML.Layer_ABC.__init__(self, nbChannels, layerType=MNET.TYPE_INPUT_LAYER, **kwargs)
 
 		self.type = ML.TYPE_INPUT_LAYER
 		self.height = height
