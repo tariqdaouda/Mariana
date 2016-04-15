@@ -5,10 +5,10 @@ CHANGELOG
 ------
 
 * The begining of a new era for Mariana.
-* Most abtractions now have a common interface.
+* Most abstractions now have a common interface.
 * More consistent and sane layer implementation.
-* All layers now have: activation, regularizations, initializations, learningScenario, decorators and name
-* Layer types have been moved to Network
+* All layers now have: activation, regularizations, initializations, learningScenario, decorators and name.
+* Layer types have been moved to Network.
 * Classifier_ABC is no more.
 * New abstract class WeightBias_ABC.
 * Networks now have a log, that can be pretty printed using printLog().
@@ -16,8 +16,8 @@ CHANGELOG
 * Output layers can now also serve as hidden layers.
 * ToHidden() and toOutput() are no more.
 * AutoEncoder layer now takes a layer name as argument.
-* Functions to save parameters of a network in npy of HDF5 formats.
-* Save() is no based on clone()  and can now handle many layers and still uses pickle (Yeah I said that I am going to do something using HDF5 and JSON, but it is not worth the trouble).
+* Functions to save parameters of a network in npy or HDF5 formats.
+* Save() is now based on clone()  and can now handle many layers and still uses pickle (Yeah I said that I am going to do something using HDF5 and JSON, but it is not worth the trouble).
 * CloneBare() is no more.
 * Clone() can now clone any layer based on the constructor arguments but you need to call self._setCreationArguments() at the end of the constructor. 
 * Network.load() to load models saved by save().
