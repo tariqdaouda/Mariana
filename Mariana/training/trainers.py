@@ -3,7 +3,7 @@ import numpy
 from collections import OrderedDict
 import theano.tensor as tt
 
-import Mariana.layers as ML
+import Mariana.network as MNET
 import Mariana.training.recorders as MREC
 import Mariana.training.stopcriteria as MSTOP
 import Mariana.candies as MCAN
@@ -314,7 +314,7 @@ class DefaultTrainer(Trainer_ABC) :
 			setHPs(l, "learningScenario", hyperParameters)
 			setHPs(l, "decorators", hyperParameters)
 			setHPs(l, "activation", hyperParameters)
-			if l.type == ML.TYPE_OUTPUT_LAYER :
+			if l.type == MNET.TYPE_OUTPUT_LAYER :
 				setHPs(l, "costObject", hyperParameters)
 
 		legend.extend(hyperParameters.keys())
