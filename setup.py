@@ -11,7 +11,7 @@ with open(path.join(here, 'DESCRIPTION.rst'), encoding='utf-8') as f:
 setup(
     name='Mariana',
 
-    version='0.2b1',
+    version='1.0.0rc1',
 
     description="The Cutest Deep Learning Framework",
     long_description=long_description,

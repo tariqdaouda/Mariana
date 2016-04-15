@@ -81,6 +81,7 @@ Importations first
 
 	import Mariana.activations as MA
 	import Mariana.decorators as MD
+	import Mariana.initializations as MI
 	import Mariana.layers as ML
 	import Mariana.costs as MC
 	import Mariana.regularizations as MR
@@ -122,7 +123,7 @@ Training, Testing and Propagating:
 	cost = MC.MeanSquaredError()
 
 	inp = ML.Input(10, name = "inputLayer")
-	h = ML.Hidden(2, activation = MA.Tanh(), decorators = [ MD.GlorotTanhInit() ])
+	h = ML.Hidden(2, activation = MA.Tanh(), decorators = [ MI.GlorotTanhInit() ])
 	o = ML.Regression(10, activation = MA.Tanh(), costObject = cost, learningScenario = ls)
 
 	ae = inp > h > o
@@ -134,7 +135,7 @@ Training, Testing and Propagating:
 
 Another way is to use the Autoencode layer as output::
 
-	o = ML.Autoencode(inp, activation = MA.Tanh(), costObject = cost, learningScenario = ls)
+	o = ML.Autoencode(inp.name, activation = MA.Tanh(), costObject = cost, learningScenario = ls)
 
 Can it run on GPU?
 ==================

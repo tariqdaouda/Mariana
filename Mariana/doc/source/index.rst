@@ -77,6 +77,7 @@ Contents:
    training
    gpu
    layers
+   initializations
    convolution
    network
    costs
