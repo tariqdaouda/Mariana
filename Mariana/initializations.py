@@ -56,7 +56,7 @@ class HardSet(Initialization_ABC) :
 		setattr( layer, self.parameter,  theano.shared(value = self.value, name = "%s_%s" % (layer.name, self.parameter) ) )
 
 class GlorotTanhInit(Initialization_ABC) :
-	"""Set up the layer weights according to the tanh initialisation introduced by Glorot et al. 2010"""
+	"""Set up the layer weights according to the tanh initialization introduced by Glorot et al. 2010"""
 	def __init__(self, *args, **kwargs) :
 		Initialization_ABC.__init__(self, *args, **kwargs)
 

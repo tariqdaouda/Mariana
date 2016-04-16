@@ -22,7 +22,7 @@ class GGPlot2(Recorder_ABC):
 
  	:param int printRate: The rate at which the status is printed on the console. If set to <= to 0, will never print.
  	:param int write: The rate at which the status is written on disk
- 	:param list saveBestsFor: Name of the sets for wich the best models should be saved
+ 	:param list saveBestsFor: Name of the sets for wich the best models parameters should be saved
  	"""
 
  	def __init__(self, filename, saveBestsFor = ["test", "validation"], printRate=1, writeRate=1):
