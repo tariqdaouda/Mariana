@@ -12,6 +12,7 @@ CHANGELOG
 * Classifier_ABC is no more.
 * New abstract class WeightBias_ABC.
 * Networks now have a log, that can be pretty printed using printLog().
+* saveOutputs argument is no more
 * All layers now have propagate() model function that returns their outputs.
 * Output layers can now also serve as hidden layers.
 * ToHidden() and toOutput() are no more.
