@@ -33,7 +33,6 @@ class MLPTests(unittest.TestCase):
 		h = ML.Hidden(10, activation = MA.Tanh(), regularizations = [MR.L1(0), MR.L2(0)], name = "Hidden_0.500705866892")
 		o = ML.SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
 
-		# mlp = i > h #> o
 		mlp = i > h > o
 		
 		self.xor_ins = numpy.array(self.xor_ins)
