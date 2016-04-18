@@ -61,7 +61,6 @@ class Network(object) :
 		self.layers = OrderedDict()
 		self.outputs = OrderedDict()
 		self.layerAppelidos = {}
-		# self.layerConnectionCount = {}
 	
 		self.edges = set()
 		self.edgesNames = set()
@@ -163,7 +162,6 @@ class Network(object) :
 				self.inConnections[h] = set()
 				self.outConnections[h] = set()
 
-		# print "------>>>", h, self.inputs
 		if h.type == TYPE_INPUT_LAYER :
 			self.inputs[h.name] = h
 			self.logNetworkEvent("New Input layer %s" % (h.name))
@@ -178,7 +176,6 @@ class Network(object) :
 	def merge(self, fromLayer, toLayer) :
 		"""Merges the networks of two layers together."""
 		
-		# print "11---", fromLayer.name, toLayer.name#, self.edgesNames
 		self.logNetworkEvent("Merging nets: %s and %s" % (fromLayer.name, toLayer.name))
 
 		if fromLayer.name not in self.layers :
@@ -191,9 +188,6 @@ class Network(object) :
 			self._addEdge(e[0], e[1])
 
 		self._addEdge(fromLayer.name, toLayer.name)
-		
-		# fromLayer.network = self
-		# toLayer.network = self
 
 	def init(self) :
 		"Initialiases the network by initialising every layer."
@@ -203,7 +197,6 @@ class Network(object) :
 			print "\n" + MSET.OMICRON_SIGNATURE
 
 			if len(self.inputs) < 1 :
-				# print "asdfasdf"
 				raise ValueError("Network has no inputs")
 
 			for inp in self.inputs.itervalues() :
@@ -214,7 +207,6 @@ class Network(object) :
 				self.parameters.extend(l.getParameters())
 	
 			for o in self.layers.itervalues() :
-				# o._setTheanoFunctions()
 				for k, v in o.__dict__.iteritems() :
 					if ( v.__class__ is TheanoFunction ) or issubclass(v.__class__, TheanoFunction) :
 						if k not in self.outputMaps :
@@ -222,7 +214,6 @@ class Network(object) :
 						self.outputMaps[k].addOutput(o, v)
 			
 			self._mustInit = False
-			# print "----", self.outputMaps
 
 	def help(self) :
 		"""prints the list of available model functions, such as train, test,..."""
@@ -265,9 +256,6 @@ class Network(object) :
 
 		for l1, l2 in model["edges"] :
 			network = model["layers"][l1] > model["layers"][l2]
-
-		# network = model["layers"][l1].network
-		# network.log = model["log"]
 		
 		return network
 
@@ -396,7 +384,7 @@ class Network(object) :
 		try :
 			return object.__getattribute__(self, k)
 		except AttributeError as e :
-			# a bit too hacky, bu solves the following: Pickle asks for attribute not found in networks which triggers initialisations
+			# a bit too hacky, but solves the following: Pickle asks for attribute not found in networks which triggers initializations
 			# of free outputs, and then theano complains that the layer.outputs are None, and everything crashes miserably. 
 			if k == "__getstate__" or k == "__slots__" :
 				raise e

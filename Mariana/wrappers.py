@@ -51,8 +51,6 @@ class TheanoFunction(object) :
 		self.outputs = output_expressions
 		self.updates = updates
 		
-		# print "wrappers -->>", self.inputs
-		# print outputLayer, self.outputs
 		self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs, updates = self.updates, **kwargs)
 
 		warningMsg = False

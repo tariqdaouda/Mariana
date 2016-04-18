@@ -339,7 +339,7 @@ class DefaultTrainer(Trainer_ABC) :
 				self.store["scores"][mapName][o.name] = "NA"
 
 		while True :
-			for mapName in ["train", "test", "validation"] :#self.maps.iteritems() :
+			for mapName in ["train", "test", "validation"] :
 				try :
 					aMap = self.maps[mapName]
 					if len(aMap) > 0 :

@@ -18,8 +18,7 @@ class LearningScenario_ABC(Abstraction_ABC):
 
 		message = "%s follows learning scenario %s" % (layer.name, self.__class__.__name__)
 		layer.network.logLayerEvent(layer, message, hyps)
-		# print self
-		# print "lkjahsdf", layer
+
 		return self.getUpdates(layer, cost)
 
 	def getUpdates(self, layer, cost) :
@@ -51,9 +50,6 @@ class GradientDescent(LearningScenario_ABC):
 
  	def getUpdates(self, layer, cost) :
  		updates = []
- 		# print "==SGD params=="
- 		# print layer
- 		# print layer.getParameters()
  		for param in layer.getParameters() :
 			gparam = tt.grad(cost, param)
  			updates.append((param, param - self.lr * gparam))

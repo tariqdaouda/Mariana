@@ -5,6 +5,9 @@ CHANGELOG
 ------
 
 * The begining of a new era for Mariana.
+* There is as new abstraction type: initalialization (initializations.py).
+* Added batch normalization layer.
+* GlorotTanhInit is now an initialization.
 * Most abstractions now have a common interface.
 * More consistent and sane layer implementation.
 * All layers now have: activation, regularizations, initializations, learningScenario, decorators and name.
@@ -23,4 +26,5 @@ CHANGELOG
 * Clone() can now clone any layer based on the constructor arguments but you need to call self._setCreationArguments() at the end of the constructor. 
 * Network.load() to load models saved by save().
 * Embedding for Conv nets.
+* Added example for hierarchical softmax.
 * Many other things and little adjustements that make the code more beautiful.

@@ -10,7 +10,7 @@ import Mariana.settings as MSET
 MSET.VERBOSE = False
 
 ##
-## This example implements a two level softmax an learns to the following conditional tree
+## This example implements a two level softmax and learns the following conditional tree
 ##		 root
 ##		/    \
 ##		C     R => first softmax
@@ -48,8 +48,8 @@ if __name__ == "__main__" :
 	cost = MC.NegativeLogLikelihood()
 
 	i = ML.Input(100, 'inp')
-	h1 = ML.Hidden(50, activation = MA.ReLU())
-	h2 = ML.Hidden(2, activation = MA.Softmax())
+	h1 = ML.Hidden(50, activations = MA.ReLU())
+	h2 = ML.Hidden(2, activations = MA.Softmax())
 	o = ML.SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
 
 	mlp = i > h1 > h2 > o

@@ -145,6 +145,7 @@ class Layer_ABC(object) :
 			d.apply(self)
 	
 	def _activate(self) :
+		"""applies activation"""
 		self.outputs = self.activation.apply(self, self.outputs, 'training')
 		self.testOutputs = self.activation.apply(self, self.testOutputs, 'testing')
 	
@@ -167,9 +168,7 @@ class Layer_ABC(object) :
 		pass
 
 	def _init(self) :
-		"Initialize the layer making it ready for training. This function is automatically called before train/test etc..."
-		# print self, self._mustInit,  len(self._inputRegistrations) == len(self.network.inConnections[self]), self.network.outConnections[self] 
-		# print self, self.network.outConnections[self] 
+		"Initialize the layer making it ready for training. This function is automatically called before train/test etc..." 
 		if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.network.inConnections[self]) ) :
 			if self._mustReset :
 				self._whateverFirstInit()
@@ -188,7 +187,6 @@ class Layer_ABC(object) :
 				raise ValueError("Invalid layer '%s' has no defined outputs" % self.name)
 
 			for l in self.network.outConnections[self] :
-				# print "		fasdfasdf", l
 				l._registerInput(self)
 				l._init()
 			self._mustInit = False
@@ -204,11 +202,6 @@ class Layer_ABC(object) :
 	def connect(self, layer) :
 		"""Connect the layer to another one. Using the '>' operator to connect two layers actually calls this function.
 		This function returns the resulting network"""
-		# if layer.network is None :
-		# 	layer.network = self.network
-		# else :
-		# 	self.network.merge(self, layer)
-		# self.network.addEdge(self, layer)
 		self.network.merge(self, layer)
 
 		layer._femaleConnect(self)
@@ -260,10 +253,7 @@ class Embedding(Layer_ABC) :
 		"""
 
 		Layer_ABC.__init__(self, size, layerType=MNET.TYPE_INPUT_LAYER,  initializations=initializations, **kwargs)
-		# self.network = MNET.Network()
-		# self.network.addInput(self)
-		
-		# self.learningScenario = learningScenario
+
 		self.dictSize = dictSize
 		self.nbDimentions = nbDimentions
 		
@@ -307,8 +297,6 @@ class Input(Layer_ABC) :
 		Layer_ABC.__init__(self, size, layerType=MNET.TYPE_INPUT_LAYER, name = name, **kwargs)
 		self.kwargs = kwargs
 		self.nbInputs = size
-		# self.network = MNET.Network()
-		# self.network.addInput(self)
 
 		self.inputs = tt.matrix(name = self.name)
 
@@ -364,13 +352,9 @@ class WeightBias_ABC(Layer_ABC) :
 			**kwargs
 		)
 
-		# self.activation=activation
 		self.W = None
 		self.b = None
 		
-		# self.regularizationObjects = regularizations
-		# self.regularizations = []
-	
 	def _femaleConnect(self, layer) :
 		if self.nbInputs is None :
 			self.nbInputs = layer.nbOutputs
@@ -378,9 +362,8 @@ class WeightBias_ABC(Layer_ABC) :
 			raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
 
 	def _setOutputs(self) :
-		"""initialises weights and bias. By default weights are setup to random low values, use Mariana decorators
+		"""initializes weights and bias. By default weights are setup to random low values, use Mariana decorators
 		to change this behaviour."""
-		# for layer in self.feededBy.itervalues() :
 		for layer in self.network.inConnections[self] :
 			if self.inputs is None :
 				self.inputs = layer.outputs	
@@ -390,15 +373,18 @@ class WeightBias_ABC(Layer_ABC) :
 		if self.W  is None:
 			raise ValueError("No initialization was defined for weights (self.W)")
 		
+		self.outputs = tt.dot(self.inputs, self.W)
+		self.testOutputs = tt.dot(self.inputs, self.W)
+
+	def _activate(self) :
+		"""applies activation and adds the bias"""
+		Layer_ABC._activate(self)
+		
 		if self.b is None:
 			MI.ZerosBias().apply(self)
-			# raise ValueError("No initialization was defined for bias (self.b)")
-
-		# self.outputs = self.activation.apply(self, tt.dot(self.inputs, self.W) + self.b)
-		# self.testOutputs = self.activation.apply(self, tt.dot(self.inputs, self.W) + self.b)
-
-		self.outputs = tt.dot(self.inputs, self.W) + self.b
-		self.testOutputs = tt.dot(self.inputs, self.W) + self.b
+		
+		self.outputs += b
+		self.testOutputs += b
 
 	def getParameterShape(self, param) :
 		if param == "W" :
@@ -422,6 +408,46 @@ class WeightBias_ABC(Layer_ABC) :
 		except AttributeError :
 			raise ValueError("It looks like the network has not been initialized yet")
 
+class BatchNormalization(WeightBias_ABC) :
+	"""Implements Batch Normalization
+		.. math::
+
+			W * ( inputs - mean(mu) )/( std(inputs) ) + b
+
+		Where W is a learned parameter, b the bias and std stands for the standard deviation. The mean and the std are computed accross the whole minibatch
+
+		:param testMean (optional): the mean to apply on test examples (usually the mean accross all the test set)
+		:param testStd (optional): the standard deviation to apply on test examples (usually the std accross all the test set)
+
+	"""
+
+	def __init__(self, initializations = [MI.SmallUniformWeights(), MI.ZerosBias()], testMean = None, testStd = None, **kwargs) :
+		WeightBias_ABC.__init__(self, None, MNET.TYPE_HIDDEN_LAYER, **kwargs)
+		self.testMean = testMean
+		self.testStd = testStd
+
+		self._setCreationArguments()
+
+	def _femaleConnect(self):
+		WeightBias_ABC._femaleConnect(self)
+		self.nbOutputs = self.nbInputs
+
+	def _setOutputs(self) :
+		WeightBias_ABC._setOutputs(self)
+		self.outputs = self.W * ( (self.outputs - tt.mean(self.outputs)) / tt.std(self.outputs) )
+		
+		if self.testMean is not None :
+			mu = self.testMean
+		else :
+			mu = tt.mean(self.outputs)
+		
+		if self.testStd is not None :
+			sigma = self.testStd
+		else :
+			sigma = tt.std(self.outputs)
+
+		self.testOutputs = self.W * ( (self.outputs - mu) / sigma )
+	
 class Hidden(WeightBias_ABC) :
 	"A hidden layer with weigth and bias"
 	def __init__(self, size, **kwargs) :
@@ -436,26 +462,20 @@ class Output_ABC(WeightBias_ABC) :
 
 	def __init__(self, size, costObject, **kwargs) :
 		WeightBias_ABC.__init__(self, size, MNET.TYPE_OUTPUT_LAYER, **kwargs)
-		# Hidden.__init__(self, size, activation = activation, name = name, **kwargs)
 		self.type = MNET.TYPE_OUTPUT_LAYER
 		self.targets = None
 		self.dependencies = OrderedDict()
 		self.costObject = costObject
-		# self.learningScenario = learningScenario
+
 		self.cost = None
 		self.test_cost = None
 		self.updates = None
 
-	# def _maleConnect(self, *args) :
-	# 	raise ValueError("An output layer cannot be connected to something")
 
 	def _backTrckDependencies(self) :
 		"""Finds all the hidden layers the ouput layer is influenced by"""
 		def _bckTrk(deps, layer) :
-			# print "====>", layer, self.network.inConnections[layer]
-			# print self.network.inConnections
 			for l in self.network.inConnections[layer] :
-				# if len(l.getParameters()) > 0 :
 				deps[l.name] = l
 				_bckTrk(deps, l)
 			return deps
@@ -480,21 +500,13 @@ class Output_ABC(WeightBias_ABC) :
 				except AttributeError :
 					pass
 
-		# print self.dependencies
 		self.updates = self.learningScenario.apply(self, self.cost)
 		for l in self.dependencies.itervalues() :
-			# print l
-			if l.learningScenario is not None :
-				# print "\t",l.learningScenario
+			if l.learningScenario is not None :o
 				updates = l.learningScenario.apply(l, self.cost)
 			else :
 				updates = self.learningScenario.apply(l, self.cost)
 			self.updates.extend(updates)
-
-		# self.propagate = MWRAP.TheanoFunction("propagate", self, [self.outputs], allow_input_downcast=True)
-		# self.propagateTest = MWRAP.TheanoFunction("propagate", self, [self.testOutputs], allow_input_downcast=True)
-
-		# self.setCustomTheanoFunctions()
 
 		self.train = MWRAP.TheanoFunction("train", self, [self.cost], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
 		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], { "targets" : self.targets }, allow_input_downcast=True)
@@ -504,19 +516,6 @@ class Output_ABC(WeightBias_ABC) :
 
 	def _dot_representation(self) :
 		return '[label="%s: %sx%s" shape=invhouse]' % (self.name, self.nbInputs, self.nbOutputs)
-
-# class Classifier_ABC(Output_ABC):
-# 	"""The interface that every classifier should expose. Classifiers should provide a model function
-# 	classify, that returns the result of the classification, updates self.last_outputs and ignores trainOnly
-# 	decorators"""
-
-# 	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
-# 		Output_ABC.__init__(self, nbOutputs, activation=activation, learningScenario=learningScenario, costObject=costObject, name=name, **kwargs)
-# 		self._setCreationArguments()
-
-# 	def setCustomTheanoFunctions(self) :
-# 		"""Classifiers must define a 'classify' function that returns the result of the classification"""
-# 		raise NotImplemented("theano classify must be defined in child's setCustomTheanoFunctions()")
 
 class SoftmaxClassifier(Output_ABC) :
 	"""A softmax (probabilistic) Classifier"""
@@ -563,12 +562,6 @@ class Autoencode(Output_ABC) :
 		self.nbOutputs = self.network[self.targetLayerName].nbOutputs
 		self.targets = self.network[self.targetLayerName].outputs
 		
-	# def _setOutputs(self) :
-		# print self.nbOutputs
-	# def _setTheanoFunctions(self) :
-	# 	self.targets = 
-	# 	Output_ABC._setTheanoFunctions(self)
-	
 	def setCustomTheanoFunctions(self) :
 		Output_ABC.setCustomTheanoFunctions(self)
 		self.train = MWRAP.TheanoFunction("train", self, [self.cost], {}, updates = self.updates, allow_input_downcast=True)
