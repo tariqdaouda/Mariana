@@ -17,7 +17,7 @@ __all__= [
 	"Normal",
 	"NormalWeights",
 	"SingleValue",
-	"SingleValueWeights"
+	"SingleValueWeights",
 	"SingleValueBias",
 	"ZerosWeights",
 	"ZerosBias"

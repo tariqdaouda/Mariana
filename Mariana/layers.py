@@ -247,9 +247,9 @@ class Embedding(Layer_ABC) :
 
 	def __init__(self, size, nbDimentions, dictSize, initializations = [MI.SmallUniformEmbeddings()], **kwargs) :
 		"""
-		:param size int: the size of the input vector (if your input is a sentence this should be the number of words in it).
-		:param nbDimentions int: the number of dimentions in wich to encode each word.
-		:param dictSize int: the total number of words. 
+		:param int size: the size of the input vector (if your input is a sentence this should be the number of words in it).
+		:param int nbDimentions: the number of dimentions in wich to encode each word.
+		:param int dictSize: the total number of words. 
 		"""
 
 		Layer_ABC.__init__(self, size, layerType=MNET.TYPE_INPUT_LAYER,  initializations=initializations, **kwargs)
@@ -402,6 +402,7 @@ class WeightBias_ABC(Layer_ABC) :
 
 class BatchNormalization(WeightBias_ABC) :
 	"""Implements Batch Normalization according to Sergey Ioffe and Christian Szegedy (http://arxiv.org/abs/1502.03167)
+		
 		.. math::
 
 			W * ( inputs - mean(mu) )/( std(inputs) ) + b
@@ -461,7 +462,8 @@ class Hidden(WeightBias_ABC) :
 		self._setCreationArguments()
 
 class Output_ABC(WeightBias_ABC) :
-	"""The interface that every output layer should expose. This interface also provides the model functions:
+	"""The interface that every output layer should expose. This interface also provides the model functions::
+
 		* train: upadates the parameters and returns the cost
 		* test: returns the cost, ignores trainOnly decoartors
 		"""
@@ -490,6 +492,7 @@ class Output_ABC(WeightBias_ABC) :
 
 	def setCustomTheanoFunctions(self) :
 		"""Adds train, test, model functions::
+
 			* train: update parameters and return cost
 			* test: do not update parameters and return cost without adding regularizations
 		"""
@@ -535,11 +538,11 @@ class SoftmaxClassifier(Output_ABC) :
 		self._setCreationArguments()
 	
 	def setCustomTheanoFunctions(self) :
-		"""defines classify and predict::
+		"""defines::
 
-			*classify: return the argmax of the outputs
-			*predict: return the argmax of the test outputs (some decorators may not be applied)
-			*accuracy: returns the accuracy of the model, computed on test outputs.
+			* classify: return the argmax of the outputs
+			* predict: return the argmax of the test outputs (some decorators may not be applied)
+			* accuracy: returns the accuracy of the model, computed on test outputs.
 		"""
 		Output_ABC.setCustomTheanoFunctions(self)
 		self.classify = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.outputs) ], allow_input_downcast=True)

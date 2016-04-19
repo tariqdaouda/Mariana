@@ -24,3 +24,6 @@ class Abstraction_ABC(object):
 			res["hyperParameters"][h] = getattr(self, h)
 		
 		return res
+
+	def __repr__(self) :
+		return "< %s >" % self.name
