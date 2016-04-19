@@ -539,11 +539,14 @@ class SoftmaxClassifier(Output_ABC) :
 		"""defines classify and predict::
 
 			*classify: return the argmax of the outputs
-			*predict: return the argmax of the test outputs (some decorators may not be applied)"""
+			*predict: return the argmax of the test outputs (some decorators may not be applied)
+			*accuracy: returns the accuracy of the model, computed on test outputs.
+		"""
 		Output_ABC.setCustomTheanoFunctions(self)
 		self.classify = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.outputs) ])
-		self.predict = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.testOutputs) ])
-
+		self.predict = MWRAP.TheanoFunction("predict", self, [ tt.argmax(self.testOutputs) ])
+		self.accuracy = MWRAP.TheanoFunction("accuracy", self, [ tt.mean( tt.eq(self.targets, self.testOutputs ) ) ])
+		
 	def _dot_representation(self) :
 		return '[label="SoftM %s: %s" shape=doublecircle]' % (self.name, self.nbOutputs)
 

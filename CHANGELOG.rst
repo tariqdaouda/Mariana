@@ -2,7 +2,7 @@ CHANGELOG
 =========
 
 1.0.0rc:
-------
+--------
 
 * The begining of a new era for Mariana.
 * There is as new abstraction type: initalialization (initializations.py).
@@ -19,6 +19,7 @@ CHANGELOG
 * All layers now have propagate() model function that returns their outputs.
 * Output layers can now also serve as hidden layers.
 * ToHidden() and toOutput() are no more.
+* SoftmaxClassifier() now has an accuracy function.
 * AutoEncoder layer now takes a layer name as argument.
 * Functions to save parameters of a network in npy or HDF5 formats.
 * Save() is now based on clone()  and can now handle many layers and still uses pickle (Yeah I said that I am going to do something using HDF5 and JSON, but it is not worth the trouble).
