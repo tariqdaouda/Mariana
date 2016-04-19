@@ -87,8 +87,6 @@ class Flatten(ML.Layer_ABC) :
 
 	def __init__(self, **kwargs) :
 		"""Flattens the output of a convolution layer so it can be fed into a regular layer"""
-		# ML.Layer_ABC.__init__(self, None, **kwargs)
-		# self.type = ML.TYPE_HIDDEN_LAYER
 		ML.Layer_ABC.__init__(self, None, layerType=MNET.TYPE_HIDDEN_LAYER, **kwargs)
 		self.outdim = 2
 		
@@ -153,7 +151,6 @@ class InputChanneler(ConvLayer_ABC, ML.Layer_ABC) :
 		:param int width: Image width.
 		"""
 		ConvLayer_ABC.__init__(self, None, **kwargs)
-		# ML.Layer_ABC.__init__(self, None, **kwargs)
 		ML.Layer_ABC.__init__(self, None, layerType=MNET.TYPE_HIDDEN_LAYER, **kwargs)
 		self.height = height
 		self.width = width
@@ -195,15 +192,11 @@ class Input(ConvLayer_ABC, ML.Layer_ABC) :
 		:param int width: Image width.
 		"""
 		ConvLayer_ABC.__init__(self, nbChannels, **kwargs)
-		# ML.Layer_ABC.__init__(self, nbChannels, **kwargs)
 		ML.Layer_ABC.__init__(self, nbChannels, layerType=MNET.TYPE_INPUT_LAYER, **kwargs)
 
-		# self.type = ML.TYPE_INPUT_LAYER
 		self.height = height
 		self.width = width
 		self.nbInputs = nbChannels
-		# self.network = MNET.Network()
-		# self.network.addInput(self)
 		
 		self.inputs = tt.tensor4(name = self.name)
 		self.nbFlatOutputs = self.height * self.width * self.nbChannels
@@ -225,8 +218,7 @@ class Embedding(ConvLayer_ABC, ML.Embedding) :
 		"""
 		ConvLayer_ABC.__init__(self, nbDimentions, **kwargs)
 		ML.Embedding.__init__(self, size, nbDimentions, dictSize, initializations=initializations, **kwargs)
-		# print learningScenario
-
+		
 		self.nbInputs = size
 		self.nbOutputs = self.nbDimentions*self.nbInputs
 		
@@ -244,7 +236,6 @@ class Embedding(ConvLayer_ABC, ML.Embedding) :
 
 	def _setOutputs(self) :
 		self.preOutputs = self.embeddings[self.inputs]
-		# self.outputs = self.preOutputs.T.dimshuffle('x', 0, 2, 1)#.reshape((self.inputs.shape[0], self.nbChannels, self.height, self.width))
 		self.outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbChannels, self.height, self.width))
 		self.testOutputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbChannels, self.height, self.width))
 		
@@ -308,15 +299,7 @@ class Convolution2D(ConvLayer_ABC, ML.Hidden) :
 
 	def _setOutputs(self) :
 		from theano.tensor.nnet import conv
-		# self.filterShape = (self.nbOutputs, self.nbInputChannels, self.filterHeight, self.filterWidth) 
-
-		# initWeights = numpy.random.normal(0, 0.01, self.filterShape)
-		# initWeights = numpy.asarray(initWeights, dtype = theano.config.floatX)
-		# self.W = theano.shared(value = initWeights, name = self.name + "_W", borrow = True)
 		
-		# initB = numpy.zeros((self.filterShape[0],), dtype = theano.config.floatX)
-		# self.b = theano.shared(value = initB, borrow = True)
-
 		for layer in self.network.inConnections[self] :
 			
 			if self.inputs is None :
@@ -334,8 +317,10 @@ class Convolution2D(ConvLayer_ABC, ML.Hidden) :
 		self.pooled = self.pooler.apply(self)
 		self.nbFlatOutputs = self.nbChannels * self.height * self.width
 
-		# self.outputs = self.activation.apply(self, self.pooled + self.b.dimshuffle('x', 0, 'x', 'x'))
-		# self.testOutputs = self.activation.apply(self, self.pooled + self.b.dimshuffle('x', 0, 'x', 'x'))
+		if self.b is None:
+			MI.ZerosBias().apply(self)
 		
-		self.outputs = self.pooled + self.b.dimshuffle('x', 0, 'x', 'x')
-		self.testOutputs = self.pooled + self.b.dimshuffle('x', 0, 'x', 'x')
+		self.b = self.b.dimshuffle('x', 0, 'x', 'x')
+
+		self.outputs = self.pooled + self.b
+		self.testOutputs = self.pooled + self.b

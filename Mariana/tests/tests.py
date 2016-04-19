@@ -30,14 +30,14 @@ class MLPTests(unittest.TestCase):
 		cost = MC.NegativeLogLikelihood()
 
 		i = ML.Input(2, 'inp')
-		h = ML.Hidden(10, activation = MA.Tanh(), regularizations = [MR.L1(0), MR.L2(0)], name = "Hidden_0.500705866892")
+		h = ML.Hidden(10, activation = MA.ReLU(), regularizations = [MR.L1(0), MR.L2(0)], name = "Hidden_0.500705866892")
 		o = ML.SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
 
 		mlp = i > h > o
 		
 		self.xor_ins = numpy.array(self.xor_ins)
 		self.xor_outs = numpy.array(self.xor_outs)
-		for i in xrange(10000) :
+		for i in xrange(1000) :
 			mlp.train(o, inp = self.xor_ins, targets = self.xor_outs )
 
 		return mlp
@@ -60,14 +60,15 @@ class MLPTests(unittest.TestCase):
 		mlp = self.trainMLP_xor()
 		mlp.save("test_save")
 		mlp2 = MN.loadModel("test_save.mar.mdl.pkl")
-		o = mlp2.outputs.values()[0]
+		
+		o = mlp.outputs.values()[0]
+		o2 = mlp2.outputs.values()[0]
 
-		# print "====Loaded===="
-		# mlp2.init()
-		self.assertEqual(mlp2.predict( o, inp = [ self.xor_ins[0] ] )[0], 0 )
-		self.assertEqual(mlp2.predict( o, inp = [ self.xor_ins[1] ] )[0], 1 )
-		self.assertEqual(mlp2.predict( o, inp = [ self.xor_ins[2] ] )[0], 1 )
-		self.assertEqual(mlp2.predict( o, inp = [ self.xor_ins[3] ] )[0], 0 )
+		for i in xrange(len(self.xor_ins)) :
+			v1 = mlp.propagate( o, inp = [ self.xor_ins[i] ] )[0][0]
+			v2 = mlp2.propagate( o2, inp = [ self.xor_ins[i] ] )[0][0]
+			for j in xrange(len(v1)) :
+				self.assertEqual(v1[j], v2[j])
 
 		os.remove('test_save.mar.mdl.pkl')
 

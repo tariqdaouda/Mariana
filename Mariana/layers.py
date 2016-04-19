@@ -373,18 +373,11 @@ class WeightBias_ABC(Layer_ABC) :
 		if self.W  is None:
 			raise ValueError("No initialization was defined for weights (self.W)")
 		
-		self.outputs = tt.dot(self.inputs, self.W)
-		self.testOutputs = tt.dot(self.inputs, self.W)
-
-	def _activate(self) :
-		"""applies activation and adds the bias"""
-		Layer_ABC._activate(self)
-		
 		if self.b is None:
 			MI.ZerosBias().apply(self)
-		
-		self.outputs += b
-		self.testOutputs += b
+
+		self.outputs = tt.dot(self.inputs, self.W) + self.b
+		self.testOutputs = tt.dot(self.inputs, self.W) + self.b
 
 	def getParameterShape(self, param) :
 		if param == "W" :
@@ -502,7 +495,7 @@ class Output_ABC(WeightBias_ABC) :
 
 		self.updates = self.learningScenario.apply(self, self.cost)
 		for l in self.dependencies.itervalues() :
-			if l.learningScenario is not None :o
+			if l.learningScenario is not None :
 				updates = l.learningScenario.apply(l, self.cost)
 			else :
 				updates = self.learningScenario.apply(l, self.cost)
