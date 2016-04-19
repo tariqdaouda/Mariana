@@ -343,7 +343,7 @@ class Composite(Layer_ABC):
 class WeightBias_ABC(Layer_ABC) :
 	"A layer with weigth and bias"
 	
-	def __init__(self, size, layerType, activation = MA.Pass(), initializations = [MI.SmallUniformWeights(), MI.ZerosBias()], **kwargs) :
+	def __init__(self, size, layerType, initializations = [MI.SmallUniformWeights(), MI.ZerosBias()], **kwargs) :
 		Layer_ABC.__init__(self,
 			size,
 			layerType=layerType,
@@ -409,7 +409,7 @@ class BatchNormalization(WeightBias_ABC) :
 
 		Where W and b are learned and std stands for the standard deviation. The mean and the std are computed accross the whole minibatch.
 
-		:param epsilon: Actually it is not the std taht is used but the apporoximation: sqrt(Var + epsilon). Use this parameter to set the epsilon value
+		:param epsilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
 		:param testMean (optional): the mean to apply on test examples (usually the mean accross all the test set)
 		:param testStd (optional): the standard deviation to apply on test examples (usually the std accross all the test set)
 
