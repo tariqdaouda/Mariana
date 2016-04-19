@@ -18,7 +18,7 @@ targets = [0, 0, 0, 1, 1, 1]
 ls = MS.GradientDescent(lr = 0.5)
 cost = MC.NegativeLogLikelihood()
 
-emb = ML.Embedding(2, 2, len(data), learningScenario = ls, name="emb")
+emb = ML.Embedding( 2, nbDimentions = 2, dictSize = len(data), learningScenario = ls, name="emb")
 o = ML.SoftmaxClassifier(2, learningScenario = MS.Fixed(), costObject = cost, name = "out")
 net = emb > o
 

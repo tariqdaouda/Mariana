@@ -7,6 +7,7 @@ CHANGELOG
 * The begining of a new era for Mariana.
 * There is as new abstraction type: initalialization (initializations.py).
 * Added batch normalization layer.
+* New Layer_ABC functions: getParameter, getParameterDict, getParameterNames, getParameterShape. The last one must be definded for initializations to work.
 * GlorotTanhInit is now an initialization.
 * Most abstractions now have a common interface.
 * More consistent and sane layer implementation.
@@ -24,7 +25,7 @@ CHANGELOG
 * Functions to save parameters of a network in npy or HDF5 formats.
 * Save() is now based on clone()  and can now handle many layers and still uses pickle (Yeah I said that I am going to do something using HDF5 and JSON, but it is not worth the trouble).
 * CloneBare() is no more.
-* Clone() can now clone any layer based on the constructor arguments but you need to call self._setCreationArguments() at the end of the constructor. 
+* Clone() can now clone any layer based on the constructor arguments but you need to call the introspective self._setCreationArguments() at the end of the constructor. 
 * Network.load() to load models saved by save().
 * Embedding for Conv nets.
 * Added example for hierarchical softmax.

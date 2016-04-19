@@ -62,6 +62,30 @@ class BinomialDropout(OutputDecorator_ABC):
 		if not self.trainOnly :
 			layer.testOutputs = self._decorate(layer.testOutputs)
 
+class Center(Decorator_ABC) :
+	"""Centers the outputs by substracting the mean"""
+	def decorate(self, layer) :
+		layer.output = layer.output-tt.mean(layer.output)
+		layer.testOutput = layer.testOutput-tt.mean(layer.testOutput)
+
+class Normalize(Decorator_ABC) :
+	"""
+	Normalizes the outputs by substracting the mean and deviding by the standard deviation
+
+	:param float espilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
+	"""
+	
+	def __init__(self, espilon =1e-6) :
+		Decorator_ABC.decorate(self)
+		self.espilon = espilon
+
+	def decorate(self, layer) :
+		std = tt.sqrt( tt.var(layer.outputs) + self.espilon )
+		layer.output = ( layer.output-tt.mean(layer.output) / std )
+		
+		std = tt.sqrt( tt.var(layer.testOutputs) + self.espilon )
+		layer.testOutput = ( layer.testOutput-tt.mean(layer.testOutput) ) / std
+
 class WeightSparsity(Decorator_ABC):
 	"""Stochatically sets a certain ratio of the input weight to 0"""
 	def __init__(self, ratio, *args, **kwargs):

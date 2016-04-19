@@ -347,7 +347,6 @@ class WeightBias_ABC(Layer_ABC) :
 		Layer_ABC.__init__(self,
 			size,
 			layerType=layerType,
-			activation = activation,
 			initializations=initializations,
 			**kwargs
 		)
@@ -409,9 +408,9 @@ class BatchNormalization(WeightBias_ABC) :
 
 		Where W and b are learned and std stands for the standard deviation. The mean and the std are computed accross the whole minibatch.
 
-		:param epsilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
-		:param testMean (optional): the mean to apply on test examples (usually the mean accross all the test set)
-		:param testStd (optional): the standard deviation to apply on test examples (usually the std accross all the test set)
+		:param float epsilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
+		:param bool testMean (optional): the mean to apply on test examples (usually the mean accross all the test set)
+		:param bool testStd (optional): the standard deviation to apply on test examples (usually the std accross all the test set)
 
 	"""
 
@@ -543,9 +542,9 @@ class SoftmaxClassifier(Output_ABC) :
 			*accuracy: returns the accuracy of the model, computed on test outputs.
 		"""
 		Output_ABC.setCustomTheanoFunctions(self)
-		self.classify = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.outputs) ])
-		self.predict = MWRAP.TheanoFunction("predict", self, [ tt.argmax(self.testOutputs) ])
-		self.accuracy = MWRAP.TheanoFunction("accuracy", self, [ tt.mean( tt.eq(self.targets, self.testOutputs ) ) ])
+		self.classify = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.outputs) ], allow_input_downcast=True)
+		self.predict = MWRAP.TheanoFunction("predict", self, [ tt.argmax(self.testOutputs) ], allow_input_downcast=True)
+		self.accuracy = MWRAP.TheanoFunction("accuracy", self, [ tt.mean( tt.eq(self.targets, self.testOutputs ) ) ], { "targets" : self.targets }, allow_input_downcast=True)
 		
 	def _dot_representation(self) :
 		return '[label="SoftM %s: %s" shape=doublecircle]' % (self.name, self.nbOutputs)
