@@ -32,7 +32,7 @@ def makeDataset(nbExamples, size, patternSize) :
 		if i%2 == 0 :
 			data[i][start:start+patternSize] = patternC1
 			targets.append(1)
-		elif i%2 == 0 :
+		elif i%3 == 0 :
 			data[i][start:start+patternSize] = patternC2
 			targets.append(2)
 		else :
@@ -48,14 +48,16 @@ if __name__ == "__main__" :
 	cost = MC.NegativeLogLikelihood()
 
 	i = ML.Input(100, 'inp')
-	h1 = ML.Hidden(50, activations = MA.ReLU())
-	h2 = ML.Hidden(2, activations = MA.Softmax())
-	o = ML.SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
+	bn = ML.BatchNormalization()
+	h1 = ML.Hidden(50, activation = MA.ReLU())
+	h2 = ML.Hidden(2, activation = MA.Softmax())
+	o = ML.SoftmaxClassifier(3, learningScenario = ls, costObject = cost, name = "out")
 
-	mlp = i > h1 > h2 > o
+	mlp = i > bn > h1 > h2 > o
 
-	for k in xrange(1000) :
+	for k in xrange(100) :
 		for example, target in zip(examples, targets) :
+			print example.shape
 			mlp.train(o, inp=[example], targets=[target])
 
 	nbErr = 0

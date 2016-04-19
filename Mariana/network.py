@@ -390,14 +390,12 @@ class Network(object) :
 				raise e
 			
 			outs = object.__getattribute__(self, 'outputs')
-			if len(outs) > 0 :
-				init = object.__getattribute__(self, 'init')
-				init()
+			init = object.__getattribute__(self, 'init')
+			init()
 
-				maps = object.__getattribute__(self, 'outputMaps')
-				try :
-					return maps[k]
-				except KeyError :
-					raise e
-			raise e
+			maps = object.__getattribute__(self, 'outputMaps')
+			try :
+				return maps[k]
+			except KeyError :
+				raise e
 	

@@ -218,6 +218,25 @@ class MLPTests(unittest.TestCase):
 		
 		self.assertTrue(res[0] < 0.1)
 
+	# @unittest.skip("skipping")
+	def test_batch_norm(self) :
+		import theano, numpy
+		
+		def batchnorm(W, b, data) :
+			return numpy.asarray( W * ( (data-numpy.mean(data)) / numpy.std(data) ) + b, dtype= theano.config.floatX)
+
+		data = numpy.random.randn(1, 100).astype(theano.config.floatX)
+		
+		inp = ML.Input(100, 'inp')
+		bn = ML.BatchNormalization()
+		
+		model = inp > bn
+		m1 = numpy.mean( model.propagate(bn, inp=data))
+		m2 = numpy.mean( batchnorm(bn.getW(), bn.getb(), data) )
+
+		epsilon = 1e-6
+		self.assertTrue ( (m1 - m2) < epsilon )
+
 if __name__ == '__main__' :
 	import Mariana.settings as MSET
 	MSET.VERBOSE = False

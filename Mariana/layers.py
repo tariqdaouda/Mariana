@@ -13,7 +13,7 @@ import Mariana.network as MNET
 import Mariana.wrappers as MWRAP
 import Mariana.candies as MCAN
 
-__all__ = ["Layer_ABC", "Output_ABC", "Classifier_ABC", "Input", "Hidden", "Composite", "Embedding", "SoftmaxClassifier", "Regression", "Autoencode"]
+__all__ = ["Layer_ABC", "WeightBias_ABC", "Output_ABC", "Input", "Hidden", "Composite", "Embedding", "BatchNormalization", "SoftmaxClassifier", "Regression", "Autoencode"]
 
 class Layer_ABC(object) :
 	"The interface that every layer should expose"
@@ -303,7 +303,7 @@ class Input(Layer_ABC) :
 		self._setCreationArguments()
 
 	def _setOutputs(self) :
-		"initialises the output to be the same as the inputs"
+		"initializes the output to be the same as the inputs"
 		self.outputs = self.inputs
 		self.testOutputs = self.inputs
 	
@@ -343,7 +343,7 @@ class Composite(Layer_ABC):
 class WeightBias_ABC(Layer_ABC) :
 	"A layer with weigth and bias"
 	
-	def __init__(self, size, layerType, activation = MA.ReLU(), initializations = [MI.SmallUniformWeights(), MI.ZerosBias()], **kwargs) :
+	def __init__(self, size, layerType, activation = MA.Pass(), initializations = [MI.SmallUniformWeights(), MI.ZerosBias()], **kwargs) :
 		Layer_ABC.__init__(self,
 			size,
 			layerType=layerType,
@@ -402,12 +402,12 @@ class WeightBias_ABC(Layer_ABC) :
 			raise ValueError("It looks like the network has not been initialized yet")
 
 class BatchNormalization(WeightBias_ABC) :
-	"""Implements Batch Normalization
+	"""Implements Batch Normalization accordind to Sergey Ioffe and Christian Szegedy (http://arxiv.org/abs/1502.03167)
 		.. math::
 
 			W * ( inputs - mean(mu) )/( std(inputs) ) + b
 
-		Where W is a learned parameter, b the bias and std stands for the standard deviation. The mean and the std are computed accross the whole minibatch
+		Where W and b are learned and std stands for the standard deviation. The mean and the std are computed accross the whole minibatch
 
 		:param testMean (optional): the mean to apply on test examples (usually the mean accross all the test set)
 		:param testStd (optional): the standard deviation to apply on test examples (usually the std accross all the test set)
@@ -420,27 +420,40 @@ class BatchNormalization(WeightBias_ABC) :
 		self.testStd = testStd
 
 		self._setCreationArguments()
+		self.epsilon=1e-6
 
-	def _femaleConnect(self):
-		WeightBias_ABC._femaleConnect(self)
+	def _femaleConnect(self, layer):
+		WeightBias_ABC._femaleConnect(self, layer)
 		self.nbOutputs = self.nbInputs
+
+	def getParameterShape(self, param) :
+		if param == "W" :
+			return (self.nbOutputs,)
+		elif param == "b" :
+			return (self.nbOutputs,)
+		else :
+			raise ValueError("Unknow parameter: %s" % param)
 
 	def _setOutputs(self) :
 		WeightBias_ABC._setOutputs(self)
-		self.outputs = self.W * ( (self.outputs - tt.mean(self.outputs)) / tt.std(self.outputs) )
+
+		mu = tt.mean(self.inputs)
+		sigma = tt.sqrt( tt.var(self.inputs) + self.epsilon )
+		
+		self.outputs = self.W * ( (self.inputs - mu) / sigma ) + self.b
 		
 		if self.testMean is not None :
 			mu = self.testMean
 		else :
-			mu = tt.mean(self.outputs)
-		
+			mu = tt.mean(self.inputs)
+
 		if self.testStd is not None :
 			sigma = self.testStd
 		else :
-			sigma = tt.std(self.outputs)
+			sigma = tt.sqrt( tt.var(self.inputs) + self.epsilon )
 
-		self.testOutputs = self.W * ( (self.outputs - mu) / sigma )
-	
+		self.testOutputs = self.W * ( (self.inputs - mu) / sigma ) + self.b
+
 class Hidden(WeightBias_ABC) :
 	"A hidden layer with weigth and bias"
 	def __init__(self, size, **kwargs) :
