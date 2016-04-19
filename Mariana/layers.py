@@ -402,25 +402,26 @@ class WeightBias_ABC(Layer_ABC) :
 			raise ValueError("It looks like the network has not been initialized yet")
 
 class BatchNormalization(WeightBias_ABC) :
-	"""Implements Batch Normalization accordind to Sergey Ioffe and Christian Szegedy (http://arxiv.org/abs/1502.03167)
+	"""Implements Batch Normalization according to Sergey Ioffe and Christian Szegedy (http://arxiv.org/abs/1502.03167)
 		.. math::
 
 			W * ( inputs - mean(mu) )/( std(inputs) ) + b
 
-		Where W and b are learned and std stands for the standard deviation. The mean and the std are computed accross the whole minibatch
+		Where W and b are learned and std stands for the standard deviation. The mean and the std are computed accross the whole minibatch.
 
+		:param epsilon: Actually it is not the std taht is used but the apporoximation: sqrt(Var + epsilon). Use this parameter to set the epsilon value
 		:param testMean (optional): the mean to apply on test examples (usually the mean accross all the test set)
 		:param testStd (optional): the standard deviation to apply on test examples (usually the std accross all the test set)
 
 	"""
 
-	def __init__(self, initializations = [MI.SmallUniformWeights(), MI.ZerosBias()], testMean = None, testStd = None, **kwargs) :
+	def __init__(self, initializations = [MI.SmallUniformWeights(), MI.ZerosBias()], epsilon = 1e-6, testMean = None, testStd = None, **kwargs) :
 		WeightBias_ABC.__init__(self, None, MNET.TYPE_HIDDEN_LAYER, **kwargs)
 		self.testMean = testMean
 		self.testStd = testStd
 
 		self._setCreationArguments()
-		self.epsilon=1e-6
+		self.epsilon=epsilon
 
 	def _femaleConnect(self, layer):
 		WeightBias_ABC._femaleConnect(self, layer)
@@ -536,6 +537,7 @@ class SoftmaxClassifier(Output_ABC) :
 	
 	def setCustomTheanoFunctions(self) :
 		"""defines classify and predict::
+
 			*classify: return the argmax of the outputs
 			*predict: return the argmax of the test outputs (some decorators may not be applied)"""
 		Output_ABC.setCustomTheanoFunctions(self)
