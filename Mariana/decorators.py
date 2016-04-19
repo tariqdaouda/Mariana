@@ -4,7 +4,7 @@ import theano.tensor as tt
 import Mariana.settings as MSET
 from Mariana.abstraction import Abstraction_ABC
 
-__all__= ["Decorator_ABC", "OutputDecorator_ABC", "BinomialDropout", "WeightSparsity", "InputSparsity"]
+__all__= ["Decorator_ABC", "OutputDecorator_ABC", "Center", "Normalize", "BinomialDropout", "WeightSparsity", "InputSparsity"]
 
 class Decorator_ABC(Abstraction_ABC) :
 	"""A decorator is a modifier that is applied on a layer."""
