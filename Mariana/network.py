@@ -251,7 +251,13 @@ class Network(object) :
 		"""Loads a model from disk"""
 		import cPickle
 
-		f = open(filename)
+		ext = '.mar.mdl.pkl'
+		if filename.find(ext) < 0 :
+			fn = filename + ext
+		else :
+			fn = filename
+
+		f = open(fn)
 		model = cPickle.load(f)
 
 		for l1, l2 in model["edges"] :

@@ -112,12 +112,11 @@ class GGPlot2(Recorder_ABC):
 		sys.stdout.flush()
 
 	def getBestModel(self, outputName, theSet) :
-		import cPickle
-		f = open(self.getBestModelFilename(outputName, theSet)+".mariana.pkl")
-		model = cPickle.load(f)
-		f.close()
-		return model
-
+		"""returns the best model for a given output and set"""
+		import Mariana.network as MNET
+		fn = self.getBestModelFilename(outputName, theSet)
+		return MNET.loadModel(fn)
+		
 	def __len__(self) :
 		"""returns the number of commits performed"""
 		return self.length
