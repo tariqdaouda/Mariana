@@ -40,6 +40,8 @@ class MLPTests(unittest.TestCase):
 		for i in xrange(1000) :
 			mlp.train(o, inp = self.xor_ins, targets = self.xor_outs )
 
+		mlp.accuracy.printGraph(o)
+		print mlp.classify(o, inp = self.xor_ins, targets = self.xor_outs )
 		return mlp
 
 	# @unittest.skip("skipping")
