@@ -57,7 +57,7 @@ def ae2(data) :
 		for i in xrange(0, len(data), miniBatchSize) :
 			ae.train(o, inp = data[i:i+miniBatchSize] )
 
-	return ae, o, 
+	return ae, o
 
 def printResults(ae, o, data) :
 	res = ae.propagate(o, inp = data)[0]

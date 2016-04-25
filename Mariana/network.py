@@ -25,7 +25,7 @@ class OutputMap(object):
 
 	def printGraph(self, outputLayer) :
 		"""Print the theano graph of the function associated with a given output"""
-		if type(outputLayer) is StringType :
+		if type(outputLayer) is types.StringType :
 			ol = self.network[outputLayer]
 		else :
 			ol = outputLayer
