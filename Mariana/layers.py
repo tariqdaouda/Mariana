@@ -540,14 +540,23 @@ class SoftmaxClassifier(Output_ABC) :
 	def setCustomTheanoFunctions(self) :
 		"""defines::
 
-			* classify: return the argmax of the outputs
-			* predict: return the argmax of the test outputs (some decorators may not be applied)
-			* accuracy: returns the accuracy of the model, computed on test outputs.
+			* classify: return the argmax of the outputs applying all the decorators.
+			* predict: return the argmax of the test outputs (some decorators may not be applied).
+			* classificationAccuracy: returns the accuracy (between [0, 1]) of the model, computed on outputs.
+			* predictionAccuracy: returns the accuracy (between [0, 1]) of the model, computed on test outputs.
 		"""
 		Output_ABC.setCustomTheanoFunctions(self)
-		self.classify = MWRAP.TheanoFunction("classify", self, [ tt.argmax(self.outputs) ], allow_input_downcast=True)
-		self.predict = MWRAP.TheanoFunction("predict", self, [ tt.argmax(self.testOutputs) ], allow_input_downcast=True)
-		self.accuracy = MWRAP.TheanoFunction("accuracy", self, [ tt.mean( tt.eq(self.targets, self.testOutputs ) ) ], { "targets" : self.targets }, allow_input_downcast=True)
+		clas = tt.argmax(self.outputs, axis=1)
+		pred = tt.argmax(self.outputs, axis=1)
+		
+		self.classify = MWRAP.TheanoFunction("classify", self, [ clas ], allow_input_downcast=True)
+		self.predict = MWRAP.TheanoFunction("predict", self, [ pred ], allow_input_downcast=True)
+
+		clasAcc = tt.mean( tt.eq(self.targets, clas ) )
+		predAcc = tt.mean( tt.eq(self.targets, pred ) )
+
+		self.classificationAccuracy = MWRAP.TheanoFunction("classificationAccuracy", self, [clasAcc], { "targets" : self.targets }, allow_input_downcast=True)
+		self.predictionAccuracy = MWRAP.TheanoFunction("predictionAccuracy", self, [predAcc], { "targets" : self.targets }, allow_input_downcast=True)
 		
 	def _dot_representation(self) :
 		return '[label="SoftM %s: %s" shape=doublecircle]' % (self.name, self.nbOutputs)
