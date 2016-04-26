@@ -380,3 +380,24 @@ class DefaultTrainer(Trainer_ABC) :
 					pass
 
 			self.store["runInfos"]["epoch"] += 1
+	
+	def runCustom(self, model, outputName, functionName, dataMapName, miniBatchSize = -1) :
+		"""Runs a given function, of a given model, applied to a given output using one of dataset maps of the trainer.
+		In order for this function to work, 'model' must either be the model on wich the dataset maps have been defined, or have layers
+		that have the same names as those of the model on wich the dataset maps have been defined."""		
+		
+		modelFct = getattr(model, functionName)
+		aMap = self.maps[dataMapName]
+
+		layerList = [outputName]
+		for l in model.inputs.itervalues() :
+			layerList.append(l.name)
+
+		if miniBatchSize == DefaultTrainer.ALL_SET :
+			kwargs = dict( aMap.getAll(layerList = layerList) )
+			res = modelFct(outputName, **kwargs)
+		else :
+			for i in xrange(0, len(aMap), miniBatchSize) :
+				batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
+				res = modelFct(outputName, **batchData)
+		return res[0]

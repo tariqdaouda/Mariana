@@ -258,6 +258,7 @@ class DatasetMapper(object):
 	def __init__(self):
 		self.datasets = set()
 		self.maps = {}
+		self.layersByName = {}
 		self.inputLayers = []
 		self.outputLayers = []
 		self.minLength = float('inf')
@@ -293,7 +294,8 @@ class DatasetMapper(object):
 		
 		self.inputLayers.append(layer)
 		self.maps[layer] = ( (layer.name, setHandle), )
-
+		self.layersByName[layer.name] = layer
+		
 		self.datasets.add(setHandle.dataset)
 		if len(setHandle.dataset) < self.minLength : 
 			self.minLength = len(setHandle.dataset)	
@@ -318,6 +320,8 @@ class DatasetMapper(object):
 		"""
 		
 		self.outputLayers.append(layer)
+		self.layersByName[layer.name] = layer
+		
 		k = (inputName, setHandle)
 
 		try :
@@ -353,11 +357,16 @@ class DatasetMapper(object):
 		else :
 			layers = layerList
 
-		for layer in layers :
-			if layer in self.maps :
+		for l in layers :
+			try :
+				layer = self.layersByName[l]
+			except KeyError :
+				layer = l
+			try :
 				for name, handle in self.maps[layer] :
 					res[name] = handle.dataset.get(handle.subset, i, size)
-
+			except KeyError:
+				raise KeyError("There's no layer: %s" % layer)
 		return res
 
 	def getAll(self, layerList=None) :
@@ -372,11 +381,16 @@ class DatasetMapper(object):
 			layers = layerList
 
 		res = {}
-		for layer in layers :
-			if layer in self.maps :
+		for l in layers :
+			try :
+				layer = self.layersByName[l]
+			except KeyError :
+				layer = l
+			try :
 				for name, handle in self.maps[layer] :
 					res[name] = handle.dataset.getAll(handle.subset)
-
+			except KeyError:
+				raise KeyError("There's no layer: %s" % layer)
 		return res
 
 	def getMinFullLength(self) :
