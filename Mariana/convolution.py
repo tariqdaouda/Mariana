@@ -94,6 +94,8 @@ class Flatten(ML.Layer_ABC) :
 		self.inputWidth = None
 		self.nbInputChannels = None
 
+		self._setCreationArguments()
+
 	def _femaleConnect(self, layer) :
 		if self.nbOutputs is None :
 			self.nbOutputs = layer.nbFlatOutputs
@@ -155,6 +157,8 @@ class InputChanneler(ConvLayer_ABC, ML.Layer_ABC) :
 		self.height = height
 		self.width = width
 
+		self._setCreationArguments()
+
 	def _femaleConnect(self, layer) :
 		if self.nbInputs is None :
 			self.nbInputs = layer.nbOutputs
@@ -201,6 +205,8 @@ class Input(ConvLayer_ABC, ML.Layer_ABC) :
 		self.inputs = tt.tensor4(name = self.name)
 		self.nbFlatOutputs = self.height * self.width * self.nbChannels
 
+		self._setCreationArguments()
+
 	def _setOutputs(self) :
 		"initialises the output to be the same as the inputs"
 		self.outputs = self.inputs
@@ -227,6 +233,8 @@ class Embedding(ConvLayer_ABC, ML.Embedding) :
 		self.shape = (self.dictSize, 1, self.nbDimentions)
 
 		self.embeddings = None
+
+		self._setCreationArguments()
 
 	def getParameterShape(self, param) :
 		if param == "embeddings" :
@@ -263,6 +271,8 @@ class Convolution2D(ConvLayer_ABC, ML.Hidden) :
 		self.nbInputChannels = None
 		self.pooler = pooler
 		self.nbFlatOutputs = None
+
+		self._setCreationArguments()
 
 	def _femaleConnect(self, layer) :
 		try :
