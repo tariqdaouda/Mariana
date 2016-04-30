@@ -13,7 +13,7 @@ import Mariana.network as MNET
 import Mariana.wrappers as MWRAP
 import Mariana.candies as MCAN
 
-__all__ = ["Layer_ABC", "WeightBias_ABC", "Output_ABC", "Input", "Hidden", "Composite", "Embedding", "BatchNormalization", "SoftmaxClassifier", "Regression", "Autoencode"]
+__all__ = ["Layer_ABC", "WeightBias_ABC", "Output_ABC", "Input", "Hidden", "Composite", "Embedding", "SoftmaxClassifier", "Regression", "Autoencode"]
 
 class Layer_ABC(object) :
 	"The interface that every layer should expose"
@@ -46,6 +46,9 @@ class Layer_ABC(object) :
 		self.outputs = None # this is a symbolic var
 		self.testOutputs = None # this is a symbolic var
 		
+		self.preactivation_outputs = None
+		self.preactivation_testOutputs = None
+
 		self.activation = activation
 		self.regularizationObjects = regularizations
 		self.regularizations = []
@@ -65,7 +68,7 @@ class Layer_ABC(object) :
 		self.creationArguments = None
 
 	def _setCreationArguments(self) :
-		"""Remembers the arguments used to create the layer. This function must be called at the end of the constructor to allow for layer cloning."""
+		"""Remembers the arguments used to create the layer. This function must be called at the end of the constructor to allow for layer cloning, and model saving"""
 		import inspect
 		frame = inspect.currentframe()
 		frame = inspect.getouterframes(frame)[1][0]
@@ -83,7 +86,7 @@ class Layer_ABC(object) :
 		from theano.compile import SharedVariable
 		res = {}
 		for k, v in self.__dict__.iteritems() :
-			if k != 'last_outputs' and isinstance(v, SharedVariable) :
+			if isinstance(v, SharedVariable) :
 				res[k] = v
 		return res
 
@@ -146,6 +149,9 @@ class Layer_ABC(object) :
 	
 	def _activate(self) :
 		"""applies activation"""
+		self.preactivation_outputs = self.outputs
+		self.preactivation_testOutputs = self.testOutputs
+		
 		self.outputs = self.activation.apply(self, self.outputs, 'training')
 		self.testOutputs = self.activation.apply(self, self.testOutputs, 'testing')
 	
@@ -400,60 +406,60 @@ class WeightBias_ABC(Layer_ABC) :
 		except AttributeError :
 			raise ValueError("It looks like the network has not been initialized yet")
 
-class BatchNormalization(WeightBias_ABC) :
-	"""Implements Batch Normalization according to Sergey Ioffe and Christian Szegedy (http://arxiv.org/abs/1502.03167)
+# class BatchNormalization(WeightBias_ABC) :
+# 	"""Implements Batch Normalization according to Sergey Ioffe and Christian Szegedy (http://arxiv.org/abs/1502.03167)
 		
-		.. math::
+# 		.. math::
 
-			W * ( inputs - mean(mu) )/( std(inputs) ) + b
+# 			W * ( inputs - mean(mu) )/( std(inputs) ) + b
 
-		Where W and b are learned and std stands for the standard deviation. The mean and the std are computed accross the whole minibatch.
+# 		Where W and b are learned and std stands for the standard deviation. The mean and the std are computed accross the whole minibatch.
 
-		:param float epsilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
-		:param bool testMean (optional): the mean to apply on test examples (usually the mean accross all the test set)
-		:param bool testStd (optional): the standard deviation to apply on test examples (usually the std accross all the test set)
+# 		:param float epsilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
+# 		:param bool testMean (optional): the mean to apply on test examples (usually the mean accross all the test set)
+# 		:param bool testStd (optional): the standard deviation to apply on test examples (usually the std accross all the test set)
 
-	"""
+# 	"""
 
-	def __init__(self, initializations = [MI.SmallUniformWeights(), MI.ZerosBias()], epsilon = 1e-6, testMean = None, testStd = None, **kwargs) :
-		WeightBias_ABC.__init__(self, None, MNET.TYPE_HIDDEN_LAYER, **kwargs)
-		self.testMean = testMean
-		self.testStd = testStd
+# 	def __init__(self, initializations = [MI.SmallUniformWeights(), MI.ZerosBias()], epsilon = 1e-6, testMean = None, testStd = None, **kwargs) :
+# 		WeightBias_ABC.__init__(self, None, MNET.TYPE_HIDDEN_LAYER, **kwargs)
+# 		self.testMean = testMean
+# 		self.testStd = testStd
 
-		self._setCreationArguments()
-		self.epsilon=epsilon
+# 		self._setCreationArguments()
+# 		self.epsilon=epsilon
 
-	def _femaleConnect(self, layer):
-		WeightBias_ABC._femaleConnect(self, layer)
-		self.nbOutputs = self.nbInputs
+# 	def _femaleConnect(self, layer):
+# 		WeightBias_ABC._femaleConnect(self, layer)
+# 		self.nbOutputs = self.nbInputs
 
-	def getParameterShape(self, param) :
-		if param == "W" :
-			return (self.nbOutputs,)
-		elif param == "b" :
-			return (self.nbOutputs,)
-		else :
-			raise ValueError("Unknow parameter: %s" % param)
+# 	def getParameterShape(self, param) :
+# 		if param == "W" :
+# 			return (self.nbOutputs,)
+# 		elif param == "b" :
+# 			return (self.nbOutputs,)
+# 		else :
+# 			raise ValueError("Unknow parameter: %s" % param)
 
-	def _setOutputs(self) :
-		WeightBias_ABC._setOutputs(self)
+# 	def _setOutputs(self) :
+# 		WeightBias_ABC._setOutputs(self)
 
-		mu = tt.mean(self.inputs)
-		sigma = tt.sqrt( tt.var(self.inputs) + self.epsilon )
+# 		mu = tt.mean(self.inputs)
+# 		sigma = tt.sqrt( tt.var(self.inputs) + self.epsilon )
 		
-		self.outputs = self.W * ( (self.inputs - mu) / sigma ) + self.b
+# 		self.outputs = self.W * ( (self.inputs - mu) / sigma ) + self.b
 		
-		if self.testMean is not None :
-			mu = self.testMean
-		else :
-			mu = tt.mean(self.inputs)
+# 		if self.testMean is not None :
+# 			mu = self.testMean
+# 		else :
+# 			mu = tt.mean(self.inputs)
 
-		if self.testStd is not None :
-			sigma = self.testStd
-		else :
-			sigma = tt.sqrt( tt.var(self.inputs) + self.epsilon )
+# 		if self.testStd is not None :
+# 			sigma = self.testStd
+# 		else :
+# 			sigma = tt.sqrt( tt.var(self.inputs) + self.epsilon )
 
-		self.testOutputs = self.W * ( (self.inputs - mu) / sigma ) + self.b
+# 		self.testOutputs = self.W * ( (self.inputs - mu) / sigma ) + self.b
 
 class Hidden(WeightBias_ABC) :
 	"A hidden layer with weigth and bias"

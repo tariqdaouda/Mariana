@@ -1,5 +1,6 @@
 import Mariana.layers as ML
 import Mariana.initializations as MI
+import Mariana.decorators as MD
 import Mariana.costs as MC
 import Mariana.regularizations as MR
 import Mariana.scenari as MS
@@ -48,18 +49,16 @@ if __name__ == "__main__" :
 	cost = MC.NegativeLogLikelihood()
 
 	i = ML.Input(100, 'inp')
-	bn = ML.BatchNormalization()
-	h1 = ML.Hidden(50, activation = MA.ReLU())
+	h1 = ML.Hidden(50, activation = MA.ReLU(), decorators = [MD.BatchNormalization()])
 	h2 = ML.Hidden(2, activation = MA.Softmax())
 	o = ML.SoftmaxClassifier(3, learningScenario = ls, costObject = cost, name = "out")
 
-	mlp = i > bn > h1 > h2 > o
+	mlp = i > h1 > h2 > o
 
 	for k in xrange(100) :
 		for example, target in zip(examples, targets) :
-			print example.shape
 			mlp.train(o, inp=[example], targets=[target])
-
+	
 	nbErr = 0
 	for example, target in zip(examples, targets) :
 		if target != mlp.classify(o, inp=[example])[0] :

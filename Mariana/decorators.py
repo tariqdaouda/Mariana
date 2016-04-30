@@ -3,8 +3,9 @@ import theano
 import theano.tensor as tt
 import Mariana.settings as MSET
 from Mariana.abstraction import Abstraction_ABC
+import Mariana.initializations as MI
 
-__all__= ["Decorator_ABC", "OutputDecorator_ABC", "Center", "Normalize", "BinomialDropout", "WeightSparsity", "InputSparsity"]
+__all__= ["Decorator_ABC", "OutputDecorator_ABC", "BatchNormalization", "Center", "Normalize", "BinomialDropout", "WeightSparsity", "InputSparsity"]
 
 class Decorator_ABC(Abstraction_ABC) :
 	"""A decorator is a modifier that is applied on a layer."""
@@ -75,8 +76,8 @@ class Normalize(Decorator_ABC) :
 	:param float espilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
 	"""
 	
-	def __init__(self, espilon =1e-6) :
-		Decorator_ABC.decorate(self)
+	def __init__(self, espilon=1e-6) :
+		Decorator_ABC.__init__(self)
 		self.espilon = espilon
 
 	def decorate(self, layer) :
@@ -86,6 +87,50 @@ class Normalize(Decorator_ABC) :
 		std = tt.sqrt( tt.var(layer.testOutputs) + self.espilon )
 		layer.testOutput = ( layer.testOutput-tt.mean(layer.testOutput) ) / std
 
+class BatchNormalization(Decorator_ABC):
+	"""Applies Batch Normalization to the outputs of the layer.
+	Implementation according to Sergey Ioffe and Christian Szegedy (http://arxiv.org/abs/1502.03167)
+		
+		.. math::
+
+			W * ( inputs - mean(mu) )/( std(inputs) ) + b
+
+		Where W and b are learned and std stands for the standard deviation. The mean and the std are computed accross the whole minibatch.
+
+		:param float epsilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
+		:param initialization WInitialization: How to initizalise the weights. This decorator is smart enough to use layer initializations.
+		:param initialization bInitialization: Same for bias
+
+	"""
+
+	def __init__(self, WInitialization=MI.SmallUniformWeights(), bInitialization=MI.ZerosBias(), epsilon=1e-6) :
+		Decorator_ABC.__init__(self)
+		self.epsilon = epsilon
+		self.WInitialization = WInitialization
+		self.bInitialization = bInitialization
+		self.W = None
+		self.b = None
+		self.paramShape = None
+
+	def getParameterShape(self, *args, **kwargs) :
+		return self.paramShape
+
+	def decorate(self, layer) :
+		self.paramShape = (layer.nbOutputs, )
+		self.WInitialization.initialize(self)
+		self.bInitialization.initialize(self)
+
+		layer.batchnorm_W = self.W
+		layer.batchnorm_b = self.b
+
+		mu = tt.mean(layer.outputs)
+		sigma = tt.sqrt( tt.var(layer.outputs) + self.epsilon )
+		layer.outputs = layer.batchnorm_W * ( (layer.outputs - mu) / sigma ) + layer.batchnorm_b
+
+		mu = tt.mean(layer.testOutputs)
+		sigma = tt.sqrt( tt.var(layer.testOutputs) + self.epsilon )
+		layer.testOutputs = layer.batchnorm_W * ( (layer.testOutputs - mu) / sigma ) + layer.batchnorm_b
+		
 class WeightSparsity(Decorator_ABC):
 	"""Stochatically sets a certain ratio of the input weight to 0"""
 	def __init__(self, ratio, *args, **kwargs):

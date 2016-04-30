@@ -250,6 +250,21 @@ class Embedding(ConvLayer_ABC, ML.Embedding) :
 	def _dot_representation(self) :
 		return '[label="%s: %s" shape=invhouse]' % (self.name, self.shape)
 
+# class BatchNormalization(ConvLayer_ABC, ML.BatchNormalization) :
+	
+# 	def __init__(self, **kwargs) :
+# 		ConvLayer_ABC.__init__(self, None, **kwargs)
+# 		ML.BatchNormalization.__init__(self, **kwargs)
+
+# 		self._setCreationArguments()
+
+# 	def _femaleConnect(self, layer):
+# 		WeightBias_ABC._femaleConnect(self, layer)
+# 		self.nbOutputs = self.nbInputs
+
+# 	def _dot_representation(self) :
+# 		return '[label="%s: %s" shape=invhouse]' % (self.name, self.shape)
+
 class Convolution2D(ConvLayer_ABC, ML.Hidden) :
 	"""The layer that performs the convolutions"""
 
