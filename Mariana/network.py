@@ -62,8 +62,9 @@ class Network(object) :
 		self.outputs = OrderedDict()
 		self.layerAppelidos = {}
 	
-		self.edges = set()
-		self.edgesNames = set()
+		self.edges = OrderedDict()
+		# self.edges = set()
+		# self.edgesNames = set()
 
 		self.outConnections = {}
 		self.inConnections = {}
@@ -125,8 +126,9 @@ class Network(object) :
 		layer1 = self.layers[layer1Name]
 		layer2 = self.layers[layer2Name]
 
-		self.edges.add( (layer1, layer2) )
-		self.edgesNames.add( (layer1.name, layer2.name) )
+		# self.edges.add( (layer1, layer2) )
+		# self.edgesNames.add( (layer1.name, layer2.name) )
+		self.edges[ (layer1.name, layer2.name) ] = (layer1, layer2)
 
 		try :
 			self.outConnections[layer1].add(layer2)
@@ -184,7 +186,7 @@ class Network(object) :
 		for l in toLayer.network.layers.itervalues() :
 			self._addLayer(l)
 
-		for e in toLayer.network.edgesNames :
+		for e in toLayer.network.edges.iterkeys() :
 			self._addEdge(e[0], e[1])
 
 		self._addEdge(fromLayer.name, toLayer.name)
@@ -236,7 +238,7 @@ class Network(object) :
 			fn = filename
 
 		res = {
-			"edges": self.edgesNames,
+			"edges": self.edges.keys(),
 			"log": self.log,
 			"layers": {}
 		}
