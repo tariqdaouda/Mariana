@@ -29,7 +29,8 @@ class GGPlot2(Recorder_ABC):
 		
 		self.filename = filename.replace(".csv", "") + ".ggplot2.csv"
 	
- 		self.bestScores = {}
+ 		self.minScores = {}
+ 		self.maxScores = {}
 		self.currentScores = {}
 
 		self.csvLegend = None
@@ -46,13 +47,17 @@ class GGPlot2(Recorder_ABC):
 
 	def commit(self, store, model) :
 		"""Appends the current state of the store to the CSV. This one is meant to be called by the trainer"""
-		def _fillLine(csvFile, score, bestScore, setName, setLen, outputName, **csvValues) :
+		def _fillLine(csvFile, score, minScore, maxScore, setName, setLen, outputName, **csvValues) :
 			line = csvFile.newLine()
 			for k, v in csvValues.iteritems() :
 				line[k] = v
 			line["score"] = score
-			line["best_score"] = bestScore[0]
-			line["best_score_commit"] = bestScore[1]
+			line["min_score"] = minScore[0]
+			line["min_score_commit"] = minScore[1]
+			
+			line["max_score"] = maxScore[0]
+			line["max_score_commit"] = maxScore[1]
+			
 			line["set"] = "%s(%s)" %(setName, setLen)
 			line["output"] = outputName
 			line.commit()
@@ -61,7 +66,7 @@ class GGPlot2(Recorder_ABC):
 		if self.csvLegend is None :
 			self.csvLegend = store["hyperParameters"].keys()
 			self.csvLegend.extend(store["runInfos"].keys())
-			self.csvLegend.extend( ["score", "best_score", "best_score_commit", "set", "output"] )
+			self.csvLegend.extend( ["score", "min_score", "min_score_commit", "max_score", "max_score_commit", "set", "output"] )
 
 			self.csvFile = CSVFile(legend = self.csvLegend)
 			self.csvFile.streamToFile( self.filename, writeRate = self.writeRate )
@@ -70,7 +75,10 @@ class GGPlot2(Recorder_ABC):
 			self.currentScores[theSet] = {}
 			if theSet not in self.bestScores :
 				self.bestScores[theSet] = {}
-			for outputName, score in scores.iteritems() :
+			
+			for outputName in scores :
+				for outputFct, score in scores[outputName].iteritems() :
+
 				self.currentScores[theSet][outputName] = score
 				if outputName not in self.bestScores[theSet] or score < self.bestScores[theSet][outputName][0] :
 					self.bestScores[theSet][outputName] = (score, self.length)

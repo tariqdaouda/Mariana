@@ -259,7 +259,7 @@ class DefaultTrainer(Trainer_ABC) :
 					layerList.append(output)
 					kwargs = dict( aMap.getAll(layerList = layerList) )
 					res = modelFct(output, **kwargs)
-					scores[output.name] = res[0]
+					scores[output.name] = res
 					layerList.pop(-1)
 			else :
 				if trainingOrder == DefaultTrainer.SEQUENTIAL_TRAINING :
@@ -268,10 +268,16 @@ class DefaultTrainer(Trainer_ABC) :
 							layerList.append(output)
 							batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
 							res = modelFct(output, **batchData)
-							try :
-								scores[output.name].append(res[0])
-							except KeyError:
-								scores[output.name] = [res[0]]
+
+							if output.name not in scores :
+								scores[output.name] = {}
+							
+							for k, v in res.iteritems() :
+								try :
+									scores[output.name][k].append(v)
+								except KeyError:
+									scores[output.name][k] = [v]
+							
 							layerList.pop(-1)
 
 				elif trainingOrder == DefaultTrainer.SIMULTANEOUS_TRAINING :
@@ -280,10 +286,16 @@ class DefaultTrainer(Trainer_ABC) :
 						for output in outputLayers :
 							layerList.append(output)
 							res = modelFct(output, **batchData)
-							try :
-								scores[output.name].append(res[0])
-							except KeyError:
-								scores[output.name] = [res[0]]
+							
+							if output.name not in scores :
+								scores[output.name] = {}
+							
+							for k, v in res.iteritems() :
+								try :
+									scores[output.name][k].append(v)
+								except KeyError:
+									scores[output.name][k] = [v]
+							
 							layerList.pop(-1)
 				
 				elif trainingOrder == DefaultTrainer.RANDOM_PICK_TRAINING :
@@ -293,19 +305,36 @@ class DefaultTrainer(Trainer_ABC) :
 						layerList.append(output)
 						batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
 						res = modelFct(output, **batchData)
+					
+						if output.name not in scores :
+							scores[output.name] = {}
 						
-						try :
-							scores[output.name].append(res[0])
-						except KeyError:
-							scores[output.name] = [res[0]]
+						for k, v in res.iteritems() :
+							try :
+								scores[output.name][k].append(v)
+							except KeyError:
+								scores[output.name][k] = [v]
+						
 						layerList.pop(-1)
 				else :
 					raise ValueError("Unknown training order: %s" % trainingOrder)
 
+			if len(outputLayers) > 1 :
+				keys = {}
+	
 			for outputName in scores :
-				scores[outputName] = numpy.mean(scores[outputName])
-			if len(scores) > 1 :
-				scores["average"] = numpy.mean(scores.values())
+				for k, v in scores[outputName] :
+					avg = numpy.mean(v)
+					scores[outputName][k] = avg
+					if len(outputLayers) > 1 :
+						try :
+							keys[k].append(avg)
+						except KeyError :
+							keys[k] = [avg]
+
+			if len(outputLayers) > 1 :
+				for k, v in keys.itervalues() :
+					scores["average"] = numpy.mean(v)
 			
 			return scores
 

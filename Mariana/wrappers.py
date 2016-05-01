@@ -19,7 +19,7 @@ class TheanoFunction(object) :
 		"""
 		:param str name: name of the function
 		:param Output outputLayer: the output layer the function should be applied to
-		:param list output_expressions: list of the symbolic expressions you want as output
+		:param list output_expressions: list of tuples of symbolic expressions you want as output and the names you want to give to them: (name, expressions)
 		:param dict additional_input_expressions: additional inputs needed to compute the expressions
 		:param list updates: list of tuples (shared variable, symbolic expression of the update to be applied to it)
 		:param dict \*\*kwargs: additional arguments to passed to the real theano function underneath
@@ -48,10 +48,14 @@ class TheanoFunction(object) :
 			self.fctInputs[i] = None
 
 		self.additional_input_expressions = additional_input_expressions
-		self.outputs = output_expressions
+		
+		self.output_expressions = OrderedDict()
+		for name, output_expr in output_expressions :
+			self.output_expressions[name] = output_expr
+		
 		self.updates = updates
 		
-		self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs, updates = self.updates, **kwargs)
+		self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.output_expressions.values(), updates = self.updates, **kwargs)
 
 		warningMsg = False
 		if DEVICE_IS_GPU :
@@ -66,7 +70,7 @@ class TheanoFunction(object) :
 			device = "CPU"
 			msg = "I will use the [-%s-] to run function '%s' of layer '%s'!" % (device, name, outputLayer.name)
 
-
+		self.results = OrderedDict()
 		MCAN.friendly("Run device", msg, warning = warningMsg)
 
 	def getToposort(self) :
@@ -87,14 +91,19 @@ class TheanoFunction(object) :
 		d3v.d3viz(self.theano_fct, filename)
 
 	def run(self, **kwargs) :
-
+		"""Run the thano function with the kwargs. Will return an OrderedDict of the outputs"""
 		def _die(fctName, outputLayer, kwargs, exc) :
 			sys.stderr.write("!!=> Error in function '%s' for layer '%s':\n" % (fctName, outputLayer.name))
 			sys.stderr.write("\t!!=> the arguments were:\n %s\n" % (kwargs))
 			raise exc
 
 		self.fctInputs.update(kwargs)
-		return self.theano_fct(*self.fctInputs.values())
+		fres = iter(self.theano_fct(*self.fctInputs.values()))
+		
+		for k in self.output_expressions.iterkeys() :
+			self.results[k] = fres.next()
+
+		return self.results
 
 	def __call__(self, **kwargs) :
 		return self.run(**kwargs)
