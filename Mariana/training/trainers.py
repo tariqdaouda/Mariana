@@ -259,7 +259,7 @@ class DefaultTrainer(Trainer_ABC) :
 					layerList.append(output)
 					kwargs = dict( aMap.getAll(layerList = layerList) )
 					res = modelFct(output, **kwargs)
-					scores[output.name] = res
+					scores[output.name] = dict(res)
 					layerList.pop(-1)
 			else :
 				if trainingOrder == DefaultTrainer.SEQUENTIAL_TRAINING :
@@ -323,14 +323,15 @@ class DefaultTrainer(Trainer_ABC) :
 				keys = {}
 	
 			for outputName in scores :
-				for k, v in scores[outputName] :
+				for fname, v in scores[outputName].iteritems() :
+					print v.shape
 					avg = numpy.mean(v)
-					scores[outputName][k] = avg
+					scores[outputName][fname] = avg
 					if len(outputLayers) > 1 :
 						try :
-							keys[k].append(avg)
+							keys[fname].append(avg)
 						except KeyError :
-							keys[k] = [avg]
+							keys[fname] = [avg]
 
 			if len(outputLayers) > 1 :
 				for k, v in keys.itervalues() :
@@ -403,8 +404,9 @@ class DefaultTrainer(Trainer_ABC) :
 							inputLayers,
 							outputLayers
 						)
-						for k, v in scores.iteritems() :
-							self.store["scores"][mapName][k] = v
+						self.store["scores"][mapName] = scores
+						# for k, v in scores.iteritems() :
+							# self.store["scores"][mapName][k] = v
 				except KeyError :
 					pass
 			

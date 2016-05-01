@@ -57,7 +57,7 @@ class BinomialDropout(OutputDecorator_ABC):
 		# cast to stay in GPU float limit
 		mask = tt.cast(mask, theano.config.floatX)
 		return (outputs * mask) #/ self.ratio
-		
+
 	def decorate(self, layer) :
 		if self.ratio > 0 :
 			layer.outputs = self._decorate(layer.outputs)

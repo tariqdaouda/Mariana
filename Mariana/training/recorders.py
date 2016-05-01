@@ -1,7 +1,90 @@
-import sys, os
+import sys, os, types
 from pyGeno.tools.parsers.CSVTools import CSVFile
 
-__all__ = ["Recorder_ABC", "GGPlot2"]
+__all__ = ["Recorder_ABC", "GGPlot2", "AutoSaver", "SaveMin", "SaveMax", "Scores"]
+
+class Scores(object) :
+
+	def __init__(self) :
+		self.currentScores = {}
+		self.minScores = {}
+		self.maxScores = {}
+		self.epoch = 0
+
+	def update(self, trainerScores, epoch) :
+		def _rec(minScores, maxScores, dct, epoch, keys = []) :
+			for k, v in dct.iteritems() :
+				if type(v) is types.DictType :
+					keys.append(k)
+					if k not in minScores :
+						minScores[k] = {}
+						maxScores[k] = {}
+
+					_rec(minScores[k], maxScores[k], v, epoch, keys = keys)
+				else :
+					try :
+						if v < minScores[k][0] :
+	 						minScores[k] = (v, epoch)
+	 					elif v > maxScores[k][0] :
+	 						maxScores[k] = (v, epoch)
+	 				except KeyError :
+						minScores[k] = (v, epoch)
+ 						maxScores[k] = (v, epoch)
+	 	
+	 	self.epoch = epoch
+		self.currentScores = trainerScores
+		_rec(self.minScores, self.maxScores, self.currentScores, epoch)
+
+	def getScore(self, mapName, outputName, functionName) :
+		return (self.currentScores[mapName][outputName][functionName], self.epoch)
+
+	def getMinScore(self, mapName, outputName, functionName) :
+		return self.minScores[mapName][outputName][functionName]
+
+	def getMaxScore(self, mapName, outputName, functionName) :
+		return self.maxScores[mapName][outputName][functionName]
+
+class AutoSaver(object):
+	def __init__(self, mapName, outputName, functionName) :
+		self.mapName = mapName
+		if type(outputName) is types.StringType :
+			self.outputName = outputName
+		else :
+			self.outputName = outputName.name
+
+		self.functionName = functionName
+	
+	def shouldISave(self, recorder) :
+		raise NotImplemented("Should be implemented in child")
+
+	def getFilename(self, recorder) :
+		raise NotImplemented("Should be implemented in child")
+
+	def __repr__(self) :
+		return "%s on %s" %(self.__class__.__name__, (self.mapName, self.outputName, self.functionName) )
+
+class SaveMin(AutoSaver) :
+	def shouldISave(self, recorder) :
+		s = recorder.scores.getMinScore(self.mapName, self.outputName, self.functionName)
+		m = recorder.scores.getMinScore(self.mapName, self.outputName, self.functionName)
+		if s[0] == m[0] :
+			return True
+		return False
+
+	def getFilename(self, recorder) :
+		return "bestMin-%s-%s-%s-%s" % (self.mapName, self.outputName, self.functionName, recorder.filename)
+
+class SaveMax(AutoSaver) :
+	def shouldISave(self, recorder) :
+		s = recorder.scores.getMinScore(self.mapName, self.outputName, self.functionName)
+		m = recorder.scores.getMaxScore(self.mapName, self.outputName, self.functionName)
+		if s[0] == m[0] :
+			return True
+		return False
+
+	def getFilename(self, recorder) :
+		return "bestMax-%s-%s-%s-%s" % (self.mapName, self.outputName, self.functionName, recorder.filename)
+
 
 class Recorder_ABC(object) :
 	"""A recorder is meant to be plugged into a trainer to record the
@@ -22,16 +105,13 @@ class GGPlot2(Recorder_ABC):
 
  	:param int printRate: The rate at which the status is printed on the console. If set to <= to 0, will never print.
  	:param int write: The rate at which the status is written on disk
- 	:param list saveBestsFor: Name of the sets for wich the best models parameters should be saved
+ 	:param list whenToSave: Name of the sets for wich the best models parameters should be saved
  	"""
 
- 	def __init__(self, filename, saveBestsFor = ["test", "validation"], printRate=1, writeRate=1):
+ 	def __init__(self, filename, whenToSave = [], printRate=1, writeRate=1):
 		
 		self.filename = filename.replace(".csv", "") + ".ggplot2.csv"
-	
- 		self.minScores = {}
- 		self.maxScores = {}
-		self.currentScores = {}
+		self.scores = Scores()
 
 		self.csvLegend = None
 		self.csvFile = None
@@ -40,90 +120,96 @@ class GGPlot2(Recorder_ABC):
 
 		self.printRate = printRate
 		self.writeRate = writeRate
-		self.saveBestsFor = saveBestsFor
-
-	def getBestModelFilename(self, outputName, theSet) :
-		return "best-%s-%s-%s" % (outputName, theSet, self.filename)
+		self.whenToSave = whenToSave
 
 	def commit(self, store, model) :
 		"""Appends the current state of the store to the CSV. This one is meant to be called by the trainer"""
-		def _fillLine(csvFile, score, minScore, maxScore, setName, setLen, outputName, **csvValues) :
+		def _fillLine(csvFile, score, minScore, maxScore, mapName, setLen, outputName, outputFunction, **csvValues) :
 			line = csvFile.newLine()
 			for k, v in csvValues.iteritems() :
 				line[k] = v
-			line["score"] = score
+			line["score"] = score[0]
 			line["min_score"] = minScore[0]
 			line["min_score_commit"] = minScore[1]
 			
 			line["max_score"] = maxScore[0]
 			line["max_score_commit"] = maxScore[1]
 			
-			line["set"] = "%s(%s)" %(setName, setLen)
-			line["output"] = outputName
+			line["set"] = "%s(%s)" %(mapName, setLen)
+			line["output_layer"] = outputName
+			line["output_function"] = outputFunction
 			line.commit()
 		
 		self.length += 1
 		if self.csvLegend is None :
 			self.csvLegend = store["hyperParameters"].keys()
 			self.csvLegend.extend(store["runInfos"].keys())
-			self.csvLegend.extend( ["score", "min_score", "min_score_commit", "max_score", "max_score_commit", "set", "output"] )
+			self.csvLegend.extend( ["score", "min_score", "min_score_commit", "max_score", "max_score_commit", "set", "output_layer", "output_function"] )
 
 			self.csvFile = CSVFile(legend = self.csvLegend)
 			self.csvFile.streamToFile( self.filename, writeRate = self.writeRate )
 
-		for theSet, scores in store["scores"].iteritems() :
-			self.currentScores[theSet] = {}
-			if theSet not in self.bestScores :
-				self.bestScores[theSet] = {}
-			
-			for outputName in scores :
-				for outputFct, score in scores[outputName].iteritems() :
+		muchData = store["hyperParameters"]
+		muchData.update(store["runInfos"]) 
 
-				self.currentScores[theSet][outputName] = score
-				if outputName not in self.bestScores[theSet] or score < self.bestScores[theSet][outputName][0] :
-					self.bestScores[theSet][outputName] = (score, self.length)
-					if theSet in self.saveBestsFor :
-						model.save(self.getBestModelFilename(outputName, theSet))
+		self.scores.update(store["scores"], store["runInfos"]["epoch"])
+		for mapName, os in store["scores"].iteritems() :
+			for outputName, fs in os.iteritems() :
+				for functionName in fs :
+					_fillLine(
+						self.csvFile,
+						self.scores.getScore(mapName, outputName, functionName),
+						self.scores.getMinScore(mapName, outputName, functionName),
+						self.scores.getMaxScore(mapName, outputName, functionName),
+						mapName,
+						store["setSizes"][mapName],
+						outputName,
+						functionName,
+						**muchData
+					)
 
-				muchData = store["hyperParameters"]
-				muchData.update(store["runInfos"]) 
-				_fillLine(
-					self.csvFile,
-					self.currentScores[theSet][outputName],
-					self.bestScores[theSet][outputName],
-					theSet,
-					store["setSizes"][theSet],
-					outputName,
-					**muchData
-				)
-	
 		if self.printRate > 0 and (self.length%self.printRate) == 0:
 			self.printCurrentState()
+
+		for w in self.whenToSave :
+			if w.shouldISave(self) :
+				model.save(w.getFilename(self))
 
 	def printCurrentState(self) :
 		"""prints the current state stored in the recorder"""
 		if self.length > 0 :
 			print "\n==>rec: ggplot2, commit %s, pid: %s:" % (self.length, os.getpid())
-			for setName, scores in self.bestScores.iteritems() :
-				print "  |-%s set" % setName
-				for outputName in scores :
-					if self.currentScores[setName][outputName] == self.bestScores[setName][outputName][0] :
-						highlight = "+best+"
-					else :
-						score, epoch = self.bestScores[setName][outputName]
-						highlight = "(best: %s @ commit: %s)" % (score, epoch)
-					
-					print "    |->%s: %s %s" % (outputName, self.currentScores[setName][outputName], highlight)
+			for mapName, outs in self.scores.currentScores.iteritems() :
+				print "  |-%s set" % mapName
+				for outputName, fs in outs.iteritems() :
+					print "    |-%s" % outputName
+					for functionName in fs :
+						s = self.scores.getScore(mapName, outputName, functionName)
+						mi = self.scores.getMinScore(mapName, outputName, functionName)
+						ma = self.scores.getMaxScore(mapName, outputName, functionName)
+
+						highlight = []
+						if s[0] == mi[0] :
+							highlight.append("+min+")
+						else :
+							highlight.append("(min: %s @epoch %s)" % (mi[0], mi[1]))
+
+						if s[0] == ma[0] :
+							highlight.append("+max+")
+						else :
+							highlight.append("(max: %s @epoch %s)" % (ma[0], ma[1]))
+
+						print "      |-%s: %s @epoch %s <%s>" % (functionName, s[0], s[1], ', '.join(highlight))
 		else :
 			print "==>rec: ggplot2, nothing to show yet"
 		
 		sys.stdout.flush()
 
-	def getBestModel(self, outputName, theSet) :
-		"""returns the best model for a given output and set"""
-		import Mariana.network as MNET
-		fn = self.getBestModelFilename(outputName, theSet)
-		return MNET.loadModel(fn)
+	# def getBestModel(self, outputName, theSet, outputFunction) :
+	# 	"""returns the best model for a given output and set"""
+	# 	import Mariana.network as MNET
+	# 	fn = self.getBestModelFilename(outputName, theSet, outputFunction)
+	# 	return MNET.loadModel(fn)
 		
 	def __len__(self) :
 		"""returns the number of commits performed"""

@@ -37,13 +37,14 @@ class EpochWall(StopCriterion_ABC) :
 
 class ScoreWall(StopCriterion_ABC) :
 	"""Stops training when a given score is reached"""
-	def __init__(self, wallValue, datasetMap, outputLayer = None) :
+	def __init__(self, wallValue, datasetMap, outputFunction, outputLayer = None) :
 		"""if outputLayer is None, will consider the average of all outputs"""
 		StopCriterion_ABC.__init__(self)
 
 		self.datasetMap = datasetMap
 		self.datasetName = None
 		self.outputLayer = outputLayer
+		self.outputFunction = outputFunction
 		self.wallValue = wallValue
 
 	def stop(self, trainer) :
@@ -59,9 +60,9 @@ class ScoreWall(StopCriterion_ABC) :
 				raise ValueError("the trainer does not know the supplied dataset map")
 
 		if self.outputLayer is None :
-			curr = trainer.store["scores"][self.datasetName]["average"]
+			curr = trainer.store["scores"][self.datasetName]["average"][self.outputFunction]
 		else :
-			curr = trainer.store["scores"][self.datasetName][self.outputLayer.name]
+			curr = trainer.store["scores"][self.datasetName][self.outputLayer.name][self.outputFunction]
 	
 		if curr <= self.wallValue :
 			return True
@@ -73,11 +74,12 @@ class ScoreWall(StopCriterion_ABC) :
 
 class GeometricEarlyStopping(StopCriterion_ABC) :
 	"""Geometrically increases the patiences with the epochs and stops the training when the patience is over."""
-	def __init__(self, datasetMap, patience, patienceIncreaseFactor, significantImprovement, outputLayer = None) :
+	def __init__(self, datasetMap, patience, patienceIncreaseFactor, significantImprovement, outputFunction, outputLayer = None) :
 		"""if outputLayer is None, will consider the average of all outputs"""
 		StopCriterion_ABC.__init__(self)
 		
 		self.outputLayer = outputLayer
+		self.outputFunction = outputFunction
 		self.datasetMap = datasetMap
 		self.mapName = None
 		self.patience = patience
@@ -102,9 +104,9 @@ class GeometricEarlyStopping(StopCriterion_ABC) :
 				raise ValueError("the trainer does not know the supplied dataset map")
 
 		if self.outputLayer is None :
-			curr = trainer.store["scores"][self.mapName]["average"]
+			curr = trainer.store["scores"][self.mapName]["average"][self.outputFunction]
 		else :
-			curr = trainer.store["scores"][self.mapName][self.outputLayer.name]
+			curr = trainer.store["scores"][self.mapName][self.outputLayer.name][self.outputFunction]
 			
 		if self.bestScore is None :
 			self.bestScore = curr
