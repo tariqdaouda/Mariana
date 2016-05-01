@@ -127,23 +127,23 @@ class Flatten(ML.Layer_ABC) :
 		self.nbInputs = self.nbInputChannels
 		self.outputs = self.inputs.flatten(self.outdim)
 		self.testOutputs = self.inputs.flatten(self.outdim)
-	
-	def _dot_representation(self) :
-		return '[label="%s: %s->%s" shape=invhouse]' % (self.name, self.nbInputChannels, self.nbOutputs)
 
-class ConvLayer_ABC(object) :
+class ConvLayer_ABC(ML.Layer_ABC) :
 	"""The abstract class that all convolution layers must implement"""
 
 	def __init__(self, nbChannels, **kwargs) :
+		ML.Layer_ABC.__init__(self, None, layerType=MNET.TYPE_HIDDEN_LAYER, **kwargs)
+		
 		self.nbChannels = nbChannels
 		self.height = None
 		self.width = None
 		self.nbFlatOutputs = None #the number of outputs flattened in 2d.
 
-	def _dot_representation(self) :
-		return '[label="%s: %sx%sx%s" shape=invhouse]' % ( self.name, self.nbChannels, self.height, self.width)
+	def getOutputShape(self):
+		"""returns the shape of the outputs"""
+		return (self.nbChannels, self.height, self.width)
 
-class InputChanneler(ConvLayer_ABC, ML.Layer_ABC) :
+class InputChanneler(ConvLayer_ABC) :
 	"""Takes the outputs of several regular layer and stacks them into separate channels so they can be passed to a conv layer (All inputs must have the same dimentions).
 	Channelers can also be very useful even if you have a single input that is not a 2D array. They will reshape your data
 	to make in iot fit into a conv layer much faster than numpy."""
@@ -153,7 +153,6 @@ class InputChanneler(ConvLayer_ABC, ML.Layer_ABC) :
 		:param int width: Image width.
 		"""
 		ConvLayer_ABC.__init__(self, None, **kwargs)
-		ML.Layer_ABC.__init__(self, None, layerType=MNET.TYPE_HIDDEN_LAYER, **kwargs)
 		self.height = height
 		self.width = width
 
@@ -185,7 +184,7 @@ class InputChanneler(ConvLayer_ABC, ML.Layer_ABC) :
 		self.outputs = tt.stack(inps).reshape((-1, self.nbChannels, self.height, self.width))
 		self.testOutputs = tt.stack(inps).reshape((-1, self.nbChannels, self.height, self.width))
 
-class Input(ConvLayer_ABC, ML.Layer_ABC) :
+class Input(ConvLayer_ABC) :
 	"""The input to a convolution network. This is different from a regular Input layer in the sense that it also holds channels information.
 	To feed regular layers into a convolution network, have a look at InputChanneler."""
 
@@ -196,8 +195,7 @@ class Input(ConvLayer_ABC, ML.Layer_ABC) :
 		:param int width: Image width.
 		"""
 		ConvLayer_ABC.__init__(self, nbChannels, **kwargs)
-		ML.Layer_ABC.__init__(self, nbChannels, layerType=MNET.TYPE_INPUT_LAYER, **kwargs)
-
+	
 		self.height = height
 		self.width = width
 		self.nbInputs = nbChannels
@@ -240,30 +238,12 @@ class Embedding(ConvLayer_ABC, ML.Embedding) :
 		if param == "embeddings" :
 			return (self.dictSize, self.nbDimentions, 1)
 		else :
-			raise ValueError("Unknow parameter: %s" % param)
+			raise ValueError("Unknown parameter: %s" % param)
 
 	def _setOutputs(self) :
 		self.preOutputs = self.embeddings[self.inputs]
 		self.outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbChannels, self.height, self.width))
 		self.testOutputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbChannels, self.height, self.width))
-		
-	def _dot_representation(self) :
-		return '[label="%s: %s" shape=invhouse]' % (self.name, self.shape)
-
-# class BatchNormalization(ConvLayer_ABC, ML.BatchNormalization) :
-	
-# 	def __init__(self, **kwargs) :
-# 		ConvLayer_ABC.__init__(self, None, **kwargs)
-# 		ML.BatchNormalization.__init__(self, **kwargs)
-
-# 		self._setCreationArguments()
-
-# 	def _femaleConnect(self, layer):
-# 		WeightBias_ABC._femaleConnect(self, layer)
-# 		self.nbOutputs = self.nbInputs
-
-# 	def _dot_representation(self) :
-# 		return '[label="%s: %s" shape=invhouse]' % (self.name, self.shape)
 
 class Convolution2D(ConvLayer_ABC, ML.Hidden) :
 	"""The layer that performs the convolutions"""

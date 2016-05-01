@@ -354,7 +354,7 @@ class Network(object) :
 
 		g = []
 		for e in self.edges :
-			g.append("\t%s -> %s" % (aidis[e[0].name], aidis[e[1].name]))
+			g.append("\t%s -> %s" % (aidis[e[0]], aidis[e[1]]))
 
 		s = s.replace("#COM#", com)
 		s = s.replace("#HEAD#", ';\n'.join(headers))

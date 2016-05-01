@@ -166,7 +166,10 @@ class DefaultTrainer(Trainer_ABC) :
 		stopCriteria = [],
 		testMiniBatchSize = -1,
 		validationMiniBatchSize = -1,
-		saveIfMurdered = True) :
+		saveIfMurdered = True,
+		trainFunctionName = "train",
+		testFunctionName="test",
+		validationFunctionName = "test") :
 		"""
 			:param DatasetMaps trainMaps: Layer mappings for the training set
 			:param DatasetMaps testtrainMaps: Layer mappings for the testing set
@@ -176,6 +179,9 @@ class DefaultTrainer(Trainer_ABC) :
 			:param int testMiniBatchSize: The size of a testing minibatch, use DefaultTrainer.ALL_SET for the whole set
 			:param int validationMiniBatchSize: The size of a validationMiniBatchSize minibatch
 			:param bool saveIfMurdered: Die gracefully in case of Exception or SIGTERM and save the current state of the model and logs
+			:param string trainFunctionName: The name of the function to use for training
+			:param string testFunctionName: The name of the function to use for testing
+			:param string validationFunctionName: The name of the function to use for testing in validation
 		"""
 		
 		Trainer_ABC.__init__(self)
@@ -202,6 +208,10 @@ class DefaultTrainer(Trainer_ABC) :
 			self.SEQUENTIAL_TRAINING : "SEQUENTIAL",
 			self.RANDOM_PICK_TRAINING : "RANDOM_PICK"
 		}
+
+		self.trainFunctionName = trainFunctionName
+		self.testFunctionName = testFunctionName
+		self.validationFunctionName = validationFunctionName
 
 	def start(self, runName, model, recorder = "default", trainingOrder = 0, moreHyperParameters={}) :
 		"""starts the training, cf. run() for the a description of the arguments"""
@@ -346,9 +356,15 @@ class DefaultTrainer(Trainer_ABC) :
 						scores = {}
 						aMap.commit()
 						if mapName == "train" :
-							modelFct = model.train
+							# modelFct = model.train
+							modelFct = getattr(model, self.trainFunctionName)
+						elif mapName == "test" :
+							modelFct = getattr(model, self.testFunctionName)
+							# modelFct = model.test
+						elif mapName == "validation" :
+							modelFct = getattr(model, self.validationFunctionName)
 						else :
-							modelFct = model.test
+							raise ValueError("Unknown map name: '%s'" % mapName)
 						
 						scores = _trainTest(
 							aMap,

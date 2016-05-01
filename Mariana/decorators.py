@@ -59,9 +59,10 @@ class BinomialDropout(OutputDecorator_ABC):
 		return (outputs * mask) #/ self.ratio
 		
 	def decorate(self, layer) :
-		layer.outputs = self._decorate(layer.outputs)
-		if not self.trainOnly :
-			layer.testOutputs = self._decorate(layer.testOutputs)
+		if self.ratio > 0 :
+			layer.outputs = self._decorate(layer.outputs)
+			if not self.trainOnly :
+				layer.testOutputs = self._decorate(layer.testOutputs)
 
 class Center(Decorator_ABC) :
 	"""Centers the outputs by substracting the mean"""
@@ -116,7 +117,7 @@ class BatchNormalization(Decorator_ABC):
 		return self.paramShape
 
 	def decorate(self, layer) :
-		self.paramShape = (layer.nbOutputs, )
+		self.paramShape = layer.getOutputShape()#(layer.nbOutputs, )
 		self.WInitialization.initialize(self)
 		self.bInitialization.initialize(self)
 

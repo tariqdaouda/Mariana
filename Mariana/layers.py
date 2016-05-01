@@ -101,7 +101,11 @@ class Layer_ABC(object) :
 	def getParameterShape(self, param) :
 		"""Should return the shape of the parameter. This has to be implemented in order for the initializations to work (and maybe some other stuff as well)"""
 		raise NotImplemented("Should be implemented in child")
-		
+	
+	def getOutputShape(self):
+		"""returns the shape of the outputs"""
+		return (self.nbOutputs, )
+
 	def clone(self, reset = False) :
 		"""Returns a free layer with the same parameters. You can use kwargs to setup any attribute of the new layer"""
 		if self.creationArguments is None :
@@ -217,7 +221,7 @@ class Layer_ABC(object) :
 
 	def _dot_representation(self) :
 		"returns the representation of the node in the graph DOT format"
-		return '[label="%s: %sx%s"]' % (self.name, self.nbInputs, self.nbOutputs)
+		return '[label="%s: %s"]' % (self.name, self.getOutputShape())
 
 	def __gt__(self, pathOrLayer) :
 		"""Alias to connect, make it possible to write things such as layer1 > layer2"""
@@ -294,9 +298,6 @@ class Embedding(Layer_ABC) :
 		self.outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
 		self.testOutputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
 
-	def _dot_representation(self) :
-		return '[label="%s: %s" shape=invhouse]' % (self.name, self.nbOutputs)
-
 class Input(Layer_ABC) :
 	"An input layer"
 	def __init__(self, size, name = None, **kwargs) :
@@ -315,9 +316,6 @@ class Input(Layer_ABC) :
 	
 	def _femaleConnect(self, *args) :
 		raise ValueError("Nothing can be connected into an input layer")
-
-	def _dot_representation(self) :
-		return '[label="%s: %s" shape=invhouse]' % (self.name, self.nbOutputs)
 
 class Composite(Layer_ABC):
 	"""A Composite layer concatenates the outputs of several other layers
@@ -406,61 +404,6 @@ class WeightBias_ABC(Layer_ABC) :
 		except AttributeError :
 			raise ValueError("It looks like the network has not been initialized yet")
 
-# class BatchNormalization(WeightBias_ABC) :
-# 	"""Implements Batch Normalization according to Sergey Ioffe and Christian Szegedy (http://arxiv.org/abs/1502.03167)
-		
-# 		.. math::
-
-# 			W * ( inputs - mean(mu) )/( std(inputs) ) + b
-
-# 		Where W and b are learned and std stands for the standard deviation. The mean and the std are computed accross the whole minibatch.
-
-# 		:param float epsilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
-# 		:param bool testMean (optional): the mean to apply on test examples (usually the mean accross all the test set)
-# 		:param bool testStd (optional): the standard deviation to apply on test examples (usually the std accross all the test set)
-
-# 	"""
-
-# 	def __init__(self, initializations = [MI.SmallUniformWeights(), MI.ZerosBias()], epsilon = 1e-6, testMean = None, testStd = None, **kwargs) :
-# 		WeightBias_ABC.__init__(self, None, MNET.TYPE_HIDDEN_LAYER, **kwargs)
-# 		self.testMean = testMean
-# 		self.testStd = testStd
-
-# 		self._setCreationArguments()
-# 		self.epsilon=epsilon
-
-# 	def _femaleConnect(self, layer):
-# 		WeightBias_ABC._femaleConnect(self, layer)
-# 		self.nbOutputs = self.nbInputs
-
-# 	def getParameterShape(self, param) :
-# 		if param == "W" :
-# 			return (self.nbOutputs,)
-# 		elif param == "b" :
-# 			return (self.nbOutputs,)
-# 		else :
-# 			raise ValueError("Unknow parameter: %s" % param)
-
-# 	def _setOutputs(self) :
-# 		WeightBias_ABC._setOutputs(self)
-
-# 		mu = tt.mean(self.inputs)
-# 		sigma = tt.sqrt( tt.var(self.inputs) + self.epsilon )
-		
-# 		self.outputs = self.W * ( (self.inputs - mu) / sigma ) + self.b
-		
-# 		if self.testMean is not None :
-# 			mu = self.testMean
-# 		else :
-# 			mu = tt.mean(self.inputs)
-
-# 		if self.testStd is not None :
-# 			sigma = self.testStd
-# 		else :
-# 			sigma = tt.sqrt( tt.var(self.inputs) + self.epsilon )
-
-# 		self.testOutputs = self.W * ( (self.inputs - mu) / sigma ) + self.b
-
 class Hidden(WeightBias_ABC) :
 	"A hidden layer with weigth and bias"
 	def __init__(self, size, **kwargs) :
@@ -529,9 +472,6 @@ class Output_ABC(WeightBias_ABC) :
 	def _whateverLastInit(self) :
 		self._setTheanoFunctions()
 
-	def _dot_representation(self) :
-		return '[label="%s: %sx%s" shape=invhouse]' % (self.name, self.nbInputs, self.nbOutputs)
-
 class SoftmaxClassifier(Output_ABC) :
 	"""A softmax (probabilistic) Classifier"""
 	def __init__(self, nbOutputs, learningScenario, costObject, temperature = 1, name = None, **kwargs) :
@@ -564,18 +504,12 @@ class SoftmaxClassifier(Output_ABC) :
 		self.classificationAccuracy = MWRAP.TheanoFunction("classificationAccuracy", self, [clasAcc], { "targets" : self.targets }, allow_input_downcast=True)
 		self.predictionAccuracy = MWRAP.TheanoFunction("predictionAccuracy", self, [predAcc], { "targets" : self.targets }, allow_input_downcast=True)
 		
-	def _dot_representation(self) :
-		return '[label="SoftM %s: %s" shape=doublecircle]' % (self.name, self.nbOutputs)
-
 class Regression(Output_ABC) :
 	"""For regressions, works great with a mean squared error cost"""
 	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
 		Output_ABC.__init__(self, nbOutputs, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.targets = tt.matrix(name = "targets")
 		self._setCreationArguments()
-	
-	def _dot_representation(self) :
-		return '[label="Reg %s: %s" shape=circle]' % (self.name, self.nbOutputs)
 
 class Autoencode(Output_ABC) :
 	"""An auto encoding layer. This one takes another layer as inputs and tries to reconstruct its activations.
@@ -594,6 +528,3 @@ class Autoencode(Output_ABC) :
 		Output_ABC.setCustomTheanoFunctions(self)
 		self.train = MWRAP.TheanoFunction("train", self, [self.cost], {}, updates = self.updates, allow_input_downcast=True)
 		self.test = MWRAP.TheanoFunction("test", self, [self.test_cost], {}, allow_input_downcast=True)
-
-	def _dot_representation(self) :
-		return '[label="%s: AE(%s)" shape=circle]' % (self.name, self.layer.name)
