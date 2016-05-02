@@ -324,7 +324,7 @@ class DefaultTrainer(Trainer_ABC) :
 	
 			for outputName in scores :
 				for fname, v in scores[outputName].iteritems() :
-					print v.shape
+					# print outputName, fname, v.shape
 					avg = numpy.mean(v)
 					scores[outputName][fname] = avg
 					if len(outputLayers) > 1 :

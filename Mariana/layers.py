@@ -422,7 +422,7 @@ class Output_ABC(WeightBias_ABC) :
 		self.costObject = costObject
 
 		self.cost = None
-		self.test_cost = None
+		self.testCost = None
 		self.updates = None
 
 
@@ -445,7 +445,7 @@ class Output_ABC(WeightBias_ABC) :
 
 		self._backTrckDependencies()
 		self.cost = self.costObject.apply(self, self.targets, self.outputs, "training")
-		self.test_cost = self.costObject.apply(self, self.targets, self.outputs, "testing")
+		self.testCost = self.costObject.apply(self, self.targets, self.outputs, "testing")
 
 		for l in self.dependencies.itervalues() :
 			if l.__class__  is not Composite :
@@ -464,7 +464,7 @@ class Output_ABC(WeightBias_ABC) :
 			self.updates.extend(updates)
 
 		self.train = MWRAP.TheanoFunction("train", self, [("trainScore", self.cost)], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
-		self.test = MWRAP.TheanoFunction("test", self, [("testScore", self.test_cost)], { "targets" : self.targets }, allow_input_downcast=True)
+		self.test = MWRAP.TheanoFunction("test", self, [("testScore", self.testCost)], { "targets" : self.targets }, allow_input_downcast=True)
 
 	def _whateverLastInit(self) :
 		self._setTheanoFunctions()
@@ -501,8 +501,8 @@ class SoftmaxClassifier(Output_ABC) :
 		self.classificationAccuracy = MWRAP.TheanoFunction("classificationAccuracy", self, [("classificationAccuracy", clasAcc)], { "targets" : self.targets }, allow_input_downcast=True)
 		self.predictionAccuracy = MWRAP.TheanoFunction("predictionAccuracy", self, [("predictionAccuracy", predAcc)], { "targets" : self.targets }, allow_input_downcast=True)
 		
-		self.trainAndAccuracy = MWRAP.TheanoFunction("classificationAccuracy", self, [("trainScore", self.outputs), ("classificationAccuracy", clasAcc)], { "targets" : self.targets }, allow_input_downcast=True)
-		self.testAndAccuracy = MWRAP.TheanoFunction("predictionAccuracy", self, [("testScore", self.testOutputs), ("predictionAccuracy", predAcc)], { "targets" : self.targets }, allow_input_downcast=True)
+		self.trainAndAccuracy = MWRAP.TheanoFunction("classificationAccuracy", self, [("trainScore", self.cost), ("classificationAccuracy", clasAcc)], { "targets" : self.targets },  updates = self.updates, allow_input_downcast=True)
+		self.testAndAccuracy = MWRAP.TheanoFunction("predictionAccuracy", self, [("testScore", self.testCost), ("predictionAccuracy", predAcc)], { "targets" : self.targets }, allow_input_downcast=True)
 		
 class Regression(Output_ABC) :
 	"""For regressions, works great with a mean squared error cost"""
@@ -527,4 +527,4 @@ class Autoencode(Output_ABC) :
 	def setCustomTheanoFunctions(self) :
 		Output_ABC.setCustomTheanoFunctions(self)
 		self.train = MWRAP.TheanoFunction("train", self, [("trainScore", self.cost)], {}, updates = self.updates, allow_input_downcast=True)
-		self.test = MWRAP.TheanoFunction("test", self, [("testScore", self.test_cost)], {}, allow_input_downcast=True)
+		self.test = MWRAP.TheanoFunction("test", self, [("testScore", self.testCost)], {}, allow_input_downcast=True)

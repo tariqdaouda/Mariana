@@ -103,18 +103,22 @@ class GeometricEarlyStopping(StopCriterion_ABC) :
 			if not found :
 				raise ValueError("the trainer does not know the supplied dataset map")
 
-		if self.outputLayer is None :
-			curr = trainer.store["scores"][self.mapName]["average"][self.outputFunction]
-		else :
-			curr = trainer.store["scores"][self.mapName][self.outputLayer.name][self.outputFunction]
-			
-		if self.bestScore is None :
-			self.bestScore = curr
-		elif curr < (self.bestScore - self.significantImprovement) :
-			self.bestScore = curr
-			self.wall = max(self.patience, trainer.store["runInfos"]["epoch"] * self.patienceIncreaseFactor)
-	
-		self.wall -= 1	
+		try :
+			if self.outputLayer is None :
+				curr = trainer.store["scores"][self.mapName]["average"][self.outputFunction]
+			else :
+				curr = trainer.store["scores"][self.mapName][self.outputLayer.name][self.outputFunction]
+				
+			if self.bestScore is None :
+				self.bestScore = curr
+			elif curr < (self.bestScore - self.significantImprovement) :
+				self.bestScore = curr
+				self.wall = max(self.patience, trainer.store["runInfos"]["epoch"] * self.patienceIncreaseFactor)
+		
+			self.wall -= 1
+		except KeyError :
+			pass
+		
 		return False
 	
 	def endMessage(self) :
