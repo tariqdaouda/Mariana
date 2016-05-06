@@ -279,7 +279,7 @@ class Embedding(Layer_ABC) :
 		if param == "embeddings" :
 			return (self.dictSize, self.nbDimentions)
 		else :
-			raise ValueError("Unknow parameter: %s" % param)
+			raise ValueError("Unknown parameter: %s" % param)
 	
 	def getEmbeddings(self, idxs = None) :
 		"""returns the embeddings.
@@ -327,8 +327,8 @@ class Composite(Layer_ABC):
 
 	The output of c will be single vector: [layer1.output, layer2.output]
 	"""
-	def __init__(self, name = None):
-		Layer_ABC.__init__(self, layerType=MNET.TYPE_HIDDEN_LAYER, size = None, name = name)
+	def __init__(self, name = None, **kwargs):
+		Layer_ABC.__init__(self, layerType=MNET.TYPE_HIDDEN_LAYER, size = None, name = name, **kwargs)
 		self._setCreationArguments()
 
 	def _femaleConnect(self, layer) :
@@ -338,9 +338,34 @@ class Composite(Layer_ABC):
 		self.nbOutputs = self.nbInputs
 		
 	def _setOutputs(self) :
-		self.outputs = tt.concatenate( [l.outputs for l in self.network.inConnections[self]], axis = 1 )
-		self.testOutputs = tt.concatenate( [l.outputs for l in self.network.inConnections[self]], axis = 1 )
+		outs = []
+		for l in self.network.inConnections[self] :
+			outs.append(l.outputs)
+	
+		self.outputs = tt.concatenate( outs, axis = 1 )
+		self.testOutputs = tt.concatenate( outs, axis = 1 )
 
+class Pass(Layer_ABC) :
+	def __init__(self, name = None, **kwargs):
+		Layer_ABC.__init__(self, layerType=MNET.TYPE_HIDDEN_LAYER, size = None, name = name, **kwargs)
+		self._setCreationArguments()
+
+	def _femaleConnect(self, layer) :
+		if self.nbInputs is None :
+			self.nbInputs = layer.nbOutputs
+		elif self.nbInputs != layer.nbOutputs :
+			raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
+
+	def _setOutputs(self) :
+		for layer in self.network.inConnections[self] :
+			if self.inputs is None :
+				self.inputs = layer.outputs	
+			else :
+				self.inputs += layer.outputs
+
+		self.outputs = self.inputs
+		self.testOutputs = self.inputs
+		
 class WeightBias_ABC(Layer_ABC) :
 	"A layer with weigth and bias"
 	
@@ -385,7 +410,7 @@ class WeightBias_ABC(Layer_ABC) :
 		elif param == "b" :
 			return (self.nbOutputs,)
 		else :
-			raise ValueError("Unknow parameter: %s" % param)
+			raise ValueError("Unknown parameter: %s" % param)
 
 	def getW(self) :
 		"""Return the weight values"""
@@ -463,8 +488,8 @@ class Output_ABC(WeightBias_ABC) :
 				updates = self.learningScenario.apply(l, self.cost)
 			self.updates.extend(updates)
 
-		self.train = MWRAP.TheanoFunction("train", self, [("trainScore", self.cost)], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
-		self.test = MWRAP.TheanoFunction("test", self, [("testScore", self.testCost)], { "targets" : self.targets }, allow_input_downcast=True)
+		self.train = MWRAP.TheanoFunction("train", self, [("score", self.cost)], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
+		self.test = MWRAP.TheanoFunction("test", self, [("score", self.testCost)], { "targets" : self.targets }, allow_input_downcast=True)
 
 	def _whateverLastInit(self) :
 		self._setTheanoFunctions()
@@ -498,11 +523,11 @@ class SoftmaxClassifier(Output_ABC) :
 		clasAcc = tt.mean( tt.eq(self.targets, clas ) )
 		predAcc = tt.mean( tt.eq(self.targets, pred ) )
 
-		self.classificationAccuracy = MWRAP.TheanoFunction("classificationAccuracy", self, [("classificationAccuracy", clasAcc)], { "targets" : self.targets }, allow_input_downcast=True)
-		self.predictionAccuracy = MWRAP.TheanoFunction("predictionAccuracy", self, [("predictionAccuracy", predAcc)], { "targets" : self.targets }, allow_input_downcast=True)
+		self.classificationAccuracy = MWRAP.TheanoFunction("accuracy", self, [("accuracy", clasAcc)], { "targets" : self.targets }, allow_input_downcast=True)
+		self.predictionAccuracy = MWRAP.TheanoFunction("accuracy", self, [("accuracy", predAcc)], { "targets" : self.targets }, allow_input_downcast=True)
 		
-		self.trainAndAccuracy = MWRAP.TheanoFunction("classificationAccuracy", self, [("trainScore", self.cost), ("classificationAccuracy", clasAcc)], { "targets" : self.targets },  updates = self.updates, allow_input_downcast=True)
-		self.testAndAccuracy = MWRAP.TheanoFunction("predictionAccuracy", self, [("testScore", self.testCost), ("predictionAccuracy", predAcc)], { "targets" : self.targets }, allow_input_downcast=True)
+		self.trainAndAccuracy = MWRAP.TheanoFunction("accuracy", self, [("score", self.cost), ("accuracy", clasAcc)], { "targets" : self.targets },  updates = self.updates, allow_input_downcast=True)
+		self.testAndAccuracy = MWRAP.TheanoFunction("accuracy", self, [("score", self.testCost), ("accuracy", predAcc)], { "targets" : self.targets }, allow_input_downcast=True)
 		
 class Regression(Output_ABC) :
 	"""For regressions, works great with a mean squared error cost"""
@@ -526,5 +551,5 @@ class Autoencode(Output_ABC) :
 		
 	def setCustomTheanoFunctions(self) :
 		Output_ABC.setCustomTheanoFunctions(self)
-		self.train = MWRAP.TheanoFunction("train", self, [("trainScore", self.cost)], {}, updates = self.updates, allow_input_downcast=True)
-		self.test = MWRAP.TheanoFunction("test", self, [("testScore", self.testCost)], {}, allow_input_downcast=True)
+		self.train = MWRAP.TheanoFunction("train", self, [("score", self.cost)], {}, updates = self.updates, allow_input_downcast=True)
+		self.test = MWRAP.TheanoFunction("test", self, [("score", self.testCost)], {}, allow_input_downcast=True)

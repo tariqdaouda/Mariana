@@ -210,6 +210,29 @@ class Input(ConvLayer_ABC) :
 		self.outputs = self.inputs
 		self.testOutputs = self.inputs
 
+class Pass(ConvLayer_ABC ) :
+	def __init__(self, **kwargs):
+		ConvLayer_ABC.__init__(self, None, **kwargs)
+		self._setCreationArguments()
+
+	def _femaleConnect(self, layer) :
+		fs = ["height", "width", "nbChannels"]
+		for f in fs :
+			if getattr(self, f) is None :
+				setattr( self, f, getattr(layer, f) )
+			elif getattr(self, f) != getattr(layer, f) :
+				raise ValueError("All inputs to layer %s must have the same %s, got: %s previous: %s" % (self.name, f,  getattr(layer, f), getattr(self, f) ) )
+
+	def _setOutputs(self) :
+		for layer in self.network.inConnections[self] :
+			if self.inputs is None :
+				self.inputs = layer.outputs	
+			else :
+				self.inputs += layer.outputs
+
+		self.outputs = self.inputs
+		self.testOutputs = self.inputs
+
 class Embedding(ConvLayer_ABC, ML.Embedding) :
 	"""This input layer will take care of creating the embeddings and training them. Embeddings are learned representations
 	of the inputs that are much loved in NLP."""
@@ -229,6 +252,7 @@ class Embedding(ConvLayer_ABC, ML.Embedding) :
 		self.height = 1
 		self.width = size
 		self.shape = (self.dictSize, 1, self.nbDimentions)
+		self.nbFlatOutputs = self.height * self.width * self.nbDimentions
 
 		self.embeddings = None
 
@@ -275,17 +299,17 @@ class Convolution2D(ConvLayer_ABC, ML.Hidden) :
 				self.nbInputChannels = layer.nbChannels
 				self.nbInputs = self.nbInputChannels
 			elif self.nbInputChannels != layer.nbChannels :
-				raise ValueError("Number of input channels to '%s' as previously been set to: %s. But '%s' has %s channels" % (self.name, self.nbInputChannels, layer.name, layer.nbChannels))
+				raise ValueError("Number of input channels to '%s' has previously been set to: %s. But '%s' has %s channels" % (self.name, self.nbInputChannels, layer.name, layer.nbChannels))
 			
 			if self.inputHeight is None :
 				self.inputHeight = layer.height
 			elif self.inputHeight != layer.height :
-				raise ValueError("Input height to '%s' as previously been set to: %s. But '%s' is %s" % (self.name, self.inputHeight, layer.name, layer.height))
+				raise ValueError("Input height to '%s' has previously been set to: %s. But '%s' is %s" % (self.name, self.inputHeight, layer.name, layer.height))
 			
 			if self.inputWidth is None :
 				self.inputWidth = layer.width
 			elif self.inputWidth != layer.width :
-				raise ValueError("Input width to '%s' as previously been set to: %s. But '%s' is %s" % (self.name, self.inputWidth, layer.name, layer.width))
+				raise ValueError("Input width to '%s' has previously been set to: %s. But '%s' is %s" % (self.name, self.inputWidth, layer.name, layer.width))
 		
 		except AttributeError :
 			raise ValueError("Input must be a convolution layer")

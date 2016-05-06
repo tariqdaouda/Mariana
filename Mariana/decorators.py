@@ -117,20 +117,21 @@ class BatchNormalization(Decorator_ABC):
 		return self.paramShape
 
 	def decorate(self, layer) :
-		self.paramShape = layer.getOutputShape()#(layer.nbOutputs, )
-		self.WInitialization.initialize(self)
-		self.bInitialization.initialize(self)
+		if not hasattr(layer, "batchnorm_W") or not hasattr(layer, "batchnorm_b") :
+			self.paramShape = layer.getOutputShape()#(layer.nbOutputs, )
+			self.WInitialization.initialize(self)
+			self.bInitialization.initialize(self)
 
-		layer.batchnorm_W = self.W
-		layer.batchnorm_b = self.b
+			layer.batchnorm_W = self.W
+			layer.batchnorm_b = self.b
 
-		mu = tt.mean(layer.outputs)
-		sigma = tt.sqrt( tt.var(layer.outputs) + self.epsilon )
-		layer.outputs = layer.batchnorm_W * ( (layer.outputs - mu) / sigma ) + layer.batchnorm_b
+			mu = tt.mean(layer.outputs)
+			sigma = tt.sqrt( tt.var(layer.outputs) + self.epsilon )
+			layer.outputs = layer.batchnorm_W * ( (layer.outputs - mu) / sigma ) + layer.batchnorm_b
 
-		mu = tt.mean(layer.testOutputs)
-		sigma = tt.sqrt( tt.var(layer.testOutputs) + self.epsilon )
-		layer.testOutputs = layer.batchnorm_W * ( (layer.testOutputs - mu) / sigma ) + layer.batchnorm_b
+			mu = tt.mean(layer.testOutputs)
+			sigma = tt.sqrt( tt.var(layer.testOutputs) + self.epsilon )
+			layer.testOutputs = layer.batchnorm_W * ( (layer.testOutputs - mu) / sigma ) + layer.batchnorm_b
 		
 class WeightSparsity(Decorator_ABC):
 	"""Stochatically sets a certain ratio of the input weight to 0"""

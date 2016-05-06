@@ -346,7 +346,7 @@ class DefaultTrainer(Trainer_ABC) :
 		legend.extend(moreHyperParameters.keys())
 		hyperParameters = OrderedDict()
 		for l in model.layers.itervalues() :
-			hyperParameters["%s_size" % l.name] = len(l)
+			hyperParameters["%s_shape" % l.name] = l.getOutputShape()
 			try :
 				hyperParameters["activation"] = l.activation.__name__
 			except AttributeError :
