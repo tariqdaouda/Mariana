@@ -133,14 +133,15 @@ class Trainer_ABC(object) :
 			cPickle.dump(self.store, f)
 			f.close()
 
-		except KeyboardInterrupt as e:
+		except KeyboardInterrupt :
 			if not self.saveIfMurdered :
-				raise e
+				raise
 			exType, ex, tb = sys.exc_info()
 			_dieGracefully(exType, tb)
-		except Exception as e:
+			raise
+		except :
 			if not self.saveIfMurdered :
-				raise e
+				raise
 			exType, ex, tb = sys.exc_info()
 			_dieGracefully(exType, tb)
 			raise
@@ -166,80 +167,80 @@ class DefaultTrainer(Trainer_ABC) :
 		stopCriteria = [],
 		testMiniBatchSize = -1,
 		validationMiniBatchSize = -1,
-		saveIfMurdered = True) :
-	"""
-		:param DatasetMaps trainMaps: Layer mappings for the training set
-		:param DatasetMaps testtrainMaps: Layer mappings for the testing set
-		:param DatasetMaps validationMaps: Layer mappings for the validation set, if you do not wich to set one, pass None as argument
-		:param int trainMiniBatchSize: The size of a training minibatch, use DefaultTrainer.ALL_SET for the whole set
-		:param list stopCriteria: List of StopCriterion objects 
-		:param int testMiniBatchSize: The size of a testing minibatch, use DefaultTrainer.ALL_SET for the whole set
-		:param int validationMiniBatchSize: The size of a validationMiniBatchSize minibatch
-		:param bool saveIfMurdered: Die gracefully in case of Exception or SIGTERM and save the current state of the model and logs
-		:param string trainFunctionName: The name of the function to use for training
-		:param string testFunctionName: The name of the function to use for testing
-		:param string validationFunctionName: The name of the function to use for testing in validation
-	"""
-	
-	Trainer_ABC.__init__(self)
-
-	self.maps = {
-		"train": trainMaps,
-		"test": testMaps,
-	}
-
-	if validationMaps is not None :
-		self.maps["validation"] = validationMaps
-
-	self.miniBatchSizes = {
-		"train" : trainMiniBatchSize,
-		"test" : testMiniBatchSize,
-		"validation" : validationMiniBatchSize
-	}
-
-		t	rainFunctionName = "train",
+		saveIfMurdered = True,
+		trainFunctionName = "train",
+		testFunctionName="test",
+		validationFunctionName = "test") :
+		"""
+			:param DatasetMaps trainMaps: Layer mappings for the training set
+			:param DatasetMaps testtrainMaps: Layer mappings for the testing set
+			:param DatasetMaps validationMaps: Layer mappings for the validation set, if you do not wich to set one, pass None as argument
+			:param int trainMiniBatchSize: The size of a training minibatch, use DefaultTrainer.ALL_SET for the whole set
+			:param list stopCriteria: List of StopCriterion objects 
+			:param int testMiniBatchSize: The size of a testing minibatch, use DefaultTrainer.ALL_SET for the whole set
+			:param int validationMiniBatchSize: The size of a validationMiniBatchSize minibatch
+			:param bool saveIfMurdered: Die gracefully in case of Exception or SIGTERM and save the current state of the model and logs
+			:param string trainFunctionName: The name of the function to use for training
+			:param string testFunctionName: The name of the function to use for testing
+			:param string validationFunctionName: The name of the function to use for testing in validation
+		"""
 		
-as e e	self.stopCriteria = stopCriteria		
-	self.saveIfMurdered = saveIfMurdered
-	self.trException as eainingOrdersHR = {
-as e e	t	rainFunctionName = "train",
+		Trainer_ABC.__init__(self)
+
+		self.maps = {
+			"train": trainMaps,
+			"test": testMaps,
+		}
+
+		if validationMaps is not None :
+			self.maps["validation"] = validationMaps
+
+		self.miniBatchSizes = {
+			"train" : trainMiniBatchSize,
+			"test" : testMiniBatchSize,
+			"validation" : validationMiniBatchSize
+		}
+
+		self.stopCriteria = stopCriteria		
+		self.saveIfMurdered = saveIfMurdered
 		
-		self.SIMULTANEOUS_TRAINING : "SIMULTANEOUS",
-		self.SEQUENTIAL_TRAINING : "SEQUENTIAL",
-		self.RANDOM_PICK_TRAINING : "RANDOM_PICK"
-	}
+		self.trainingOrdersHR = {
+			self.SIMULTANEOUS_TRAINING : "SIMULTANEOUS",
+			self.SEQUENTIAL_TRAINING : "SEQUENTIAL",
+			self.RANDOM_PICK_TRAINING : "RANDOM_PICK"
+		}
 
-	self.trainFunctionName = trainFunctionName
-	self.testFunctionName = testFunctas eionName
-	self.validationFunctionName = validationFunctionName
+		self.trainFunctionName = trainFunctionName
+		self.testFunctionName = testFunctionName
+		self.validationFunctionName = validationFunctionName
 
-def start(self, runName, model, recorder = "default", trainingOrder = 0, moreHyperParameters={}) :
-	"""starts the training, cf. run() for the a description of the arguments"""
-	Trainer_ABC.start( self, runName, model, recorder, trainingOrder, moreHyperParameters )
+	def start(self, runName, model, recorder = "default", trainingOrder = 0, moreHyperParameters={}) :
+		"""starts the training, cf. run() for the a description of the arguments"""
+		Trainer_ABC.start( self, runName, model, recorder, trainingOrder, moreHyperParameters )
 
-def run(self, name, model, recorder, trainingOrder, moreHyperParameters) :
-	"""
-		:param str runName: The name of this run
-		:param Recorder recorder: A recorder object
-		:param int trainingOrder:
-			* DefaultTrainer.SEQUENTIAL_TRAINING: Each output will be trained indipendetly on it's own epoch
-			* DefaultTrainer.SIMULTANEOUS_TRAINING: All outputs are trained within the same epoch with the same inputs
-			* Both are in O(m*n), where m is the number of mini batches and n the number of outputs
-			* DefaultTrainer.RANDOM_PICK_TRAINING: Will pick one of the outputs at random for each example
+	def run(self, name, model, recorder, trainingOrder, moreHyperParameters) :
+		"""
+			:param str runName: The name of this run
+			:param Recorder recorder: A recorder object
+			:param int trainingOrder:
+				* DefaultTrainer.SEQUENTIAL_TRAINING: Each output will be trained indipendetly on it's own epoch
+				* DefaultTrainer.SIMULTANEOUS_TRAINING: All outputs are trained within the same epoch with the same inputs
+				* Both are in O(m*n), where m is the number of mini batches and n the number of outputs
+				* DefaultTrainer.RANDOM_PICK_TRAINING: Will pick one of the outputs at random for each example
 
-		:param bool reset: Should the trainer be reset before starting the run
-		:param dict moreHyperParameters: If provided, the fields in this dictionary will be included into the log .csv file
-	"""
-	def setHPs(layer, thing, dct) :
-		try :
-			thingObj = getattr(l, thing)
-		exas ecept AttributeError :
-			return
+			:param bool reset: Should the trainer be reset before starting the run
+			:param dict moreHyperParameters: If provided, the fields in this dictionary will be included into the log .csv file
+		"""
+		def setHPs(layer, thing, dct) :
+			try :
+				thingObj = getattr(l, thing)
+			except AttributeError :
+				return
 
-		if thingObj is not None :
-			if type(thingObj) is types.ListType :
-				for obj in thingObj :
-					if len(obj.hyperParameters) == 0 :
+			if thingObj is not None :
+				if type(thingObj) is types.ListType :
+					for obj in thingObj :
+						if len(obj.hyperParameters) == 0 :
 							dct["%s_%s_%s" % (l.name, thing, obj.name)] = 1
 						else :
 							for hp in obj.hyperParameters :
@@ -345,7 +346,7 @@ def run(self, name, model, recorder, trainingOrder, moreHyperParameters) :
 		legend.extend(moreHyperParameters.keys())
 		hyperParameters = OrderedDict()
 		for l in model.layers.itervalues() :
-			hyperParameters["%s_shape" % l.name] = l.getOutputShape()
+			hyperParameters["%s_shape" % l.name] = list(l.getOutputShape())
 			try :
 				hyperParameters["activation"] = l.activation.__name__
 			except AttributeError :
@@ -402,7 +403,7 @@ def run(self, name, model, recorder, trainingOrder, moreHyperParameters) :
 							outputLayers
 						)
 						self.store["scores"][mapName] = scores
-						except KeyError :
+				except KeyError :
 					pass
 			
 			runtime = (time.time() - startTime)/60
