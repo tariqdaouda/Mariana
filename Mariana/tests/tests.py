@@ -48,19 +48,19 @@ class MLPTests(unittest.TestCase):
 		mlp = self.trainMLP_xor()
 		o = mlp.outputs.values()[0]
 
-		pa = mlp.predictionAccuracy(o, inp = self.xor_ins, targets = self.xor_outs )[0]
+		pa = mlp.predictionAccuracy(o, inp = self.xor_ins, targets = self.xor_outs )["accuracy"]
 		self.assertEqual(pa, 1)
-		pc = mlp.classificationAccuracy(o, inp = self.xor_ins, targets = self.xor_outs )[0]
+		pc = mlp.classificationAccuracy(o, inp = self.xor_ins, targets = self.xor_outs )["accuracy"]
 		self.assertEqual(pc, 1)
 		
-		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[0] ] )[0], 0 )
-		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[1] ] )[0], 1 )
-		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[2] ] )[0], 1 )
-		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[3] ] )[0], 0 )
+		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[0] ] )["class"], 0 )
+		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[1] ] )["class"], 1 )
+		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[2] ] )["class"], 1 )
+		self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[3] ] )["class"], 0 )
 
 	# @unittest.skip("skipping")
 	def test_save_load_pickle(self) :
-		import cPickle, os
+		import cPickle, os, numpy
 		import Mariana.network as MN
 
 		mlp = self.trainMLP_xor()
@@ -68,14 +68,11 @@ class MLPTests(unittest.TestCase):
 		mlp2 = MN.loadModel("test_save.mar.mdl.pkl")
 		
 		o = mlp.outputs.values()[0]
-		o2 = mlp2.outputs.values()[0]
-
-		for i in xrange(len(self.xor_ins)) :
-			v1 = mlp.propagate( o, inp = [ self.xor_ins[i] ] )[0][0]
-			v2 = mlp2.propagate( o2, inp = [ self.xor_ins[i] ] )[0][0]
-			for j in xrange(len(v1)) :
-				self.assertEqual(v1[j], v2[j])
-
+		
+		v1 = mlp.propagate( o.name, inp = self.xor_ins )["outputs"]
+		v2 = mlp2.propagate( o.name, inp = self.xor_ins )["outputs"]
+		self.assertEqual(numpy.sum(v1), numpy.sum(v2))
+		
 		os.remove('test_save.mar.mdl.pkl')
 
 	# @unittest.skip("skipping")
@@ -101,7 +98,7 @@ class MLPTests(unittest.TestCase):
 			for i in xrange(0, len(data), miniBatchSize) :
 				ae.train(o, inp = data[i:i+miniBatchSize], targets = data[i:i+miniBatchSize] )
 
-		res = ae.propagate(o, inp = data)[0]
+		res = ae.propagate(o, inp = data)["outputs"]
 		for i in xrange(len(res)) :
 			self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
 
@@ -120,16 +117,14 @@ class MLPTests(unittest.TestCase):
 		inp > h2 > c
 		mlp = c > o
 
-		self.xor_ins = numpy.array(self.xor_ins)
-		self.xor_outs = numpy.array(self.xor_outs)
 		for i in xrange(10000) :
 			ii = i%len(self.xor_ins)
 			mlp.train(o, inp = [ self.xor_ins[ ii ] ], targets = [ self.xor_outs[ ii ] ])
 
-		self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[0] ] )[0], 0 )
-		self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[1] ] )[0], 1 )
-		self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[2] ] )[0], 1 )
-		self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[3] ] )[0], 0 )
+		self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[0] ] )["class"], 0 )
+		self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[1] ] )["class"], 1 )
+		self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[2] ] )["class"], 1 )
+		self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[3] ] )["class"], 0 )
 
 	# @unittest.skip("skipping")
 	def test_embedding(self) :
@@ -222,7 +217,7 @@ class MLPTests(unittest.TestCase):
 			for i in xrange(0, len(examples), miniBatchSize) :
 				res = model.train("out", inp = examples[i : i +miniBatchSize], targets = targets[i : i +miniBatchSize] )
 		
-		self.assertTrue(res[0] < 0.1)
+		self.assertTrue(res["score"] < 0.1)
 
 	# @unittest.skip("skipping")
 	def test_batch_norm(self) :
@@ -236,7 +231,7 @@ class MLPTests(unittest.TestCase):
 		inp = ML.Input(100, 'inp', decorators=[MD.BatchNormalization()])
 		
 		model = inp.network
-		m1 = numpy.mean( model.propagate(inp, inp=data))
+		m1 = numpy.mean( model.propagate(inp, inp=data)["outputs"])
 		m2 = numpy.mean( batchnorm(inp.batchnorm_W.get_value(), inp.batchnorm_b.get_value(), data) )
 
 		epsilon = 1e-6
