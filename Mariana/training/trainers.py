@@ -166,7 +166,7 @@ class DefaultTrainer(Trainer_ABC) :
 		stopCriteria = [],
 		testMiniBatchSize = -1,
 		validationMiniBatchSize = -1,
-		saveIfMurdered = TName = "test") :
+		saveIfMurdered = True) :
 	"""
 		:param DatasetMaps trainMaps: Layer mappings for the training set
 		:param DatasetMaps testtrainMaps: Layer mappings for the testing set
