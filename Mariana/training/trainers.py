@@ -104,46 +104,46 @@ class Trainer_ABC(object) :
 				"The trainer will recruit the default 'GGPlot2' recorder with the following arguments:\n\t %s.\nResults will be saved into '%s'." % (params, recorder.filename)
 			)
 	
-		if not self.saveIfMurdered :
+		try :
 			return self.run(runName, model, recorder, *args, **kwargs)
-		else :
-			try :
-				return self.run(runName, model, recorder, *args, **kwargs)
-			except MSTOP.EndOfTraining as e :
-				print e.message
-				death_time = time.ctime().replace(' ', '_')
-				filename = "finished_" + runName +  "_" + death_time
-				f = open(filename +  ".stopreason.txt", 'w')
-				f.write("Name: %s\n" % runName)
-				f.write("pid: %s\n" % os.getpid())
-				f.write("Time of death: %s\n" % death_time)
-				f.write("Epoch of death: %s\n" % self.store["runInfos"]["epoch"])
-				f.write("Stopped by: %s\n" % e.stopCriterion.name)
-				f.write("Reason: %s\n" % e.message)
-				sstore = str(self.store).replace("'", '"').replace("True", 'true').replace("False", 'false')
-				f.write(
-					"store:\n%s" % json.dumps(
-						json.loads(sstore), sort_keys=True,
-						indent=4,
-						separators=(',', ': ')
-					)
+		except MSTOP.EndOfTraining as e :
+			print e.message
+			death_time = time.ctime().replace(' ', '_')
+			filename = "finished_" + runName +  "_" + death_time
+			f = open(filename +  ".stopreason.txt", 'w')
+			f.write("Name: %s\n" % runName)
+			f.write("pid: %s\n" % os.getpid())
+			f.write("Time of death: %s\n" % death_time)
+			f.write("Epoch of death: %s\n" % self.store["runInfos"]["epoch"])
+			f.write("Stopped by: %s\n" % e.stopCriterion.name)
+			f.write("Reason: %s\n" % e.message)
+			sstore = str(self.store).replace("'", '"').replace("True", 'true').replace("False", 'false')
+			f.write(
+				"store:\n%s" % json.dumps(
+					json.loads(sstore), sort_keys=True,
+					indent=4,
+					separators=(',', ': ')
 				)
+			)
 
-				f.flush()
-				f.close()
-				model.save(filename)
-				f = open(filename + ".store.pkl", "wb")
-				cPickle.dump(self.store, f)
-				f.close()
+			f.flush()
+			f.close()
+			model.save(filename)
+			f = open(filename + ".store.pkl", "wb")
+			cPickle.dump(self.store, f)
+			f.close()
 
-			except KeyboardInterrupt :
-				exType, ex, tb = sys.exc_info()
-				_dieGracefully(exType, tb)
-				raise
-			except :
-				exType, ex, tb = sys.exc_info()
-				_dieGracefully(exType, tb)
-				raise
+		except KeyboardInterrupt as e:
+			if not self.saveIfMurdered :
+				raise e
+			exType, ex, tb = sys.exc_info()
+			_dieGracefully(exType, tb)
+		except Exception as e:
+			if not self.saveIfMurdered :
+				raise e
+			exType, ex, tb = sys.exc_info()
+			_dieGracefully(exType, tb)
+			raise
 
 	def run(self, *args, **kwargs) :
 		"""Abtract function must be implemented in child. This function should implement the whole training process"""
@@ -166,80 +166,80 @@ class DefaultTrainer(Trainer_ABC) :
 		stopCriteria = [],
 		testMiniBatchSize = -1,
 		validationMiniBatchSize = -1,
-		saveIfMurdered = True,
-		trainFunctionName = "train",
-		testFunctionName="test",
-		validationFunctionName = "test") :
-		"""
-			:param DatasetMaps trainMaps: Layer mappings for the training set
-			:param DatasetMaps testtrainMaps: Layer mappings for the testing set
-			:param DatasetMaps validationMaps: Layer mappings for the validation set, if you do not wich to set one, pass None as argument
-			:param int trainMiniBatchSize: The size of a training minibatch, use DefaultTrainer.ALL_SET for the whole set
-			:param list stopCriteria: List of StopCriterion objects 
-			:param int testMiniBatchSize: The size of a testing minibatch, use DefaultTrainer.ALL_SET for the whole set
-			:param int validationMiniBatchSize: The size of a validationMiniBatchSize minibatch
-			:param bool saveIfMurdered: Die gracefully in case of Exception or SIGTERM and save the current state of the model and logs
-			:param string trainFunctionName: The name of the function to use for training
-			:param string testFunctionName: The name of the function to use for testing
-			:param string validationFunctionName: The name of the function to use for testing in validation
-		"""
+		saveIfMurdered = TName = "test") :
+	"""
+		:param DatasetMaps trainMaps: Layer mappings for the training set
+		:param DatasetMaps testtrainMaps: Layer mappings for the testing set
+		:param DatasetMaps validationMaps: Layer mappings for the validation set, if you do not wich to set one, pass None as argument
+		:param int trainMiniBatchSize: The size of a training minibatch, use DefaultTrainer.ALL_SET for the whole set
+		:param list stopCriteria: List of StopCriterion objects 
+		:param int testMiniBatchSize: The size of a testing minibatch, use DefaultTrainer.ALL_SET for the whole set
+		:param int validationMiniBatchSize: The size of a validationMiniBatchSize minibatch
+		:param bool saveIfMurdered: Die gracefully in case of Exception or SIGTERM and save the current state of the model and logs
+		:param string trainFunctionName: The name of the function to use for training
+		:param string testFunctionName: The name of the function to use for testing
+		:param string validationFunctionName: The name of the function to use for testing in validation
+	"""
+	
+	Trainer_ABC.__init__(self)
+
+	self.maps = {
+		"train": trainMaps,
+		"test": testMaps,
+	}
+
+	if validationMaps is not None :
+		self.maps["validation"] = validationMaps
+
+	self.miniBatchSizes = {
+		"train" : trainMiniBatchSize,
+		"test" : testMiniBatchSize,
+		"validation" : validationMiniBatchSize
+	}
+
+		t	rainFunctionName = "train",
 		
-		Trainer_ABC.__init__(self)
-
-		self.maps = {
-			"train": trainMaps,
-			"test": testMaps,
-		}
-
-		if validationMaps is not None :
-			self.maps["validation"] = validationMaps
-
-		self.miniBatchSizes = {
-			"train" : trainMiniBatchSize,
-			"test" : testMiniBatchSize,
-			"validation" : validationMiniBatchSize
-		}
-
-		self.stopCriteria = stopCriteria		
-		self.saveIfMurdered = saveIfMurdered
+as e e	self.stopCriteria = stopCriteria		
+	self.saveIfMurdered = saveIfMurdered
+	self.trException as eainingOrdersHR = {
+as e e	t	rainFunctionName = "train",
 		
-		self.trainingOrdersHR = {
-			self.SIMULTANEOUS_TRAINING : "SIMULTANEOUS",
-			self.SEQUENTIAL_TRAINING : "SEQUENTIAL",
-			self.RANDOM_PICK_TRAINING : "RANDOM_PICK"
-		}
+		self.SIMULTANEOUS_TRAINING : "SIMULTANEOUS",
+		self.SEQUENTIAL_TRAINING : "SEQUENTIAL",
+		self.RANDOM_PICK_TRAINING : "RANDOM_PICK"
+	}
 
-		self.trainFunctionName = trainFunctionName
-		self.testFunctionName = testFunctionName
-		self.validationFunctionName = validationFunctionName
+	self.trainFunctionName = trainFunctionName
+	self.testFunctionName = testFunctas eionName
+	self.validationFunctionName = validationFunctionName
 
-	def start(self, runName, model, recorder = "default", trainingOrder = 0, moreHyperParameters={}) :
-		"""starts the training, cf. run() for the a description of the arguments"""
-		Trainer_ABC.start( self, runName, model, recorder, trainingOrder, moreHyperParameters )
+def start(self, runName, model, recorder = "default", trainingOrder = 0, moreHyperParameters={}) :
+	"""starts the training, cf. run() for the a description of the arguments"""
+	Trainer_ABC.start( self, runName, model, recorder, trainingOrder, moreHyperParameters )
 
-	def run(self, name, model, recorder, trainingOrder, moreHyperParameters) :
-		"""
-			:param str runName: The name of this run
-			:param Recorder recorder: A recorder object
-			:param int trainingOrder:
-				* DefaultTrainer.SEQUENTIAL_TRAINING: Each output will be trained indipendetly on it's own epoch
-				* DefaultTrainer.SIMULTANEOUS_TRAINING: All outputs are trained within the same epoch with the same inputs
-				* Both are in O(m*n), where m is the number of mini batches and n the number of outputs
-				* DefaultTrainer.RANDOM_PICK_TRAINING: Will pick one of the outputs at random for each example
+def run(self, name, model, recorder, trainingOrder, moreHyperParameters) :
+	"""
+		:param str runName: The name of this run
+		:param Recorder recorder: A recorder object
+		:param int trainingOrder:
+			* DefaultTrainer.SEQUENTIAL_TRAINING: Each output will be trained indipendetly on it's own epoch
+			* DefaultTrainer.SIMULTANEOUS_TRAINING: All outputs are trained within the same epoch with the same inputs
+			* Both are in O(m*n), where m is the number of mini batches and n the number of outputs
+			* DefaultTrainer.RANDOM_PICK_TRAINING: Will pick one of the outputs at random for each example
 
-			:param bool reset: Should the trainer be reset before starting the run
-			:param dict moreHyperParameters: If provided, the fields in this dictionary will be included into the log .csv file
-		"""
-		def setHPs(layer, thing, dct) :
-			try :
-				thingObj = getattr(l, thing)
-			except AttributeError :
-				return
+		:param bool reset: Should the trainer be reset before starting the run
+		:param dict moreHyperParameters: If provided, the fields in this dictionary will be included into the log .csv file
+	"""
+	def setHPs(layer, thing, dct) :
+		try :
+			thingObj = getattr(l, thing)
+		exas ecept AttributeError :
+			return
 
-			if thingObj is not None :
-				if type(thingObj) is types.ListType :
-					for obj in thingObj :
-						if len(obj.hyperParameters) == 0 :
+		if thingObj is not None :
+			if type(thingObj) is types.ListType :
+				for obj in thingObj :
+					if len(obj.hyperParameters) == 0 :
 							dct["%s_%s_%s" % (l.name, thing, obj.name)] = 1
 						else :
 							for hp in obj.hyperParameters :
@@ -324,7 +324,6 @@ class DefaultTrainer(Trainer_ABC) :
 	
 			for outputName in scores :
 				for fname, v in scores[outputName].iteritems() :
-					# print outputName, fname, v.shape
 					avg = numpy.mean(v)
 					scores[outputName][fname] = avg
 					if len(outputLayers) > 1 :
@@ -386,11 +385,9 @@ class DefaultTrainer(Trainer_ABC) :
 						scores = {}
 						aMap.commit()
 						if mapName == "train" :
-							# modelFct = model.train
 							modelFct = getattr(model, self.trainFunctionName)
 						elif mapName == "test" :
 							modelFct = getattr(model, self.testFunctionName)
-							# modelFct = model.test
 						elif mapName == "validation" :
 							modelFct = getattr(model, self.validationFunctionName)
 						else :
@@ -405,9 +402,7 @@ class DefaultTrainer(Trainer_ABC) :
 							outputLayers
 						)
 						self.store["scores"][mapName] = scores
-						# for k, v in scores.iteritems() :
-							# self.store["scores"][mapName][k] = v
-				except KeyError :
+						except KeyError :
 					pass
 			
 			runtime = (time.time() - startTime)/60
