@@ -58,7 +58,7 @@ if __name__ == "__main__":
 	validationMaps.mapInput(i, validationData.images)
 	validationMaps.mapOutput(o, validationData.numbers)
 
-	earlyStop = MSTOP.GeometricEarlyStopping(testMaps, patience=100, patienceIncreaseFactor=1.1, significantImprovement=0.00001, outputFunction="testScore", outputLayer=o)
+	earlyStop = MSTOP.GeometricEarlyStopping(testMaps, patience=100, patienceIncreaseFactor=1.1, significantImprovement=0.00001, outputFunction="score", outputLayer=o)
 	epochWall = MSTOP.EpochWall(1000)
 
 	trainer = MT.DefaultTrainer(
@@ -66,9 +66,11 @@ if __name__ == "__main__":
 		testMaps=testMaps,
 		validationMaps=validationMaps,
 		stopCriteria=[earlyStop, epochWall],
+		testFunctionName="testAndAccuracy",
+		validationFunctionName="testAndAccuracy",
 		trainMiniBatchSize=20,
 		saveIfMurdered=False
 	)
 
-	recorder = MREC.GGPlot2("MLP", whenToSave = [MREC.SaveMin("test", o.name, "testScore")], printRate=1, writeRate=1)
+	recorder = MREC.GGPlot2("MLP", whenToSave = [MREC.SaveMin("test", o.name, "score")], printRate=1, writeRate=1)
 	trainer.start("MLP", mlp, recorder = recorder)

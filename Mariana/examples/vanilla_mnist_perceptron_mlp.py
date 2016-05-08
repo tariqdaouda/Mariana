@@ -60,17 +60,17 @@ if __name__ == "__main__" :
 			#you can also use the name of the output layer as defined by its attribute 'name': 
 			#res = model.train("out", ... )
 			res = model.train(o, inp = train_set[0][i : i +miniBatchSize], targets = train_set[1][i : i +miniBatchSize] )
-			trainScores.append(res[0])
+			trainScores.append(res["score"])
 	
 		trainScore = numpy.mean(trainScores)
 		res = model.test(o, inp = validation_set[0], targets = validation_set[1] )
 		
 		print "---\nepoch", epoch
 		print "\ttrain score:", trainScore
-		if bestValScore > res[0] :
-			bestValScore = res[0]
-			print "\tvalidation score:", res[0], "+best+"
+		if bestValScore > res["score"] :
+			bestValScore = res["score"]
+			print "\tvalidation score:", res["score"], "+best+"
 		else :
-			print "\tvalidation score:", res[0], "best:", bestValScore
+			print "\tvalidation score:", res["score"], "best:", bestValScore
 		
 		epoch += 1
