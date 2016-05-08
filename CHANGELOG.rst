@@ -1,6 +1,17 @@
 CHANGELOG
 =========
 
+1.0.1rc:
+--------
+* Theano functions can now have several outputs. Model function no longer return an array, but an ordered dict where each key conrrespond to a given output
+* Theano function wrapper will now need more arguments, such as the names given to each output
+* Added accuracy functions such as: testAndAccuracy, and trainAndAccuracy that return both the score and the accuracy
+* Updated trainer/recorder/stopCriteria to support function multiple outputs. They now have more parameters
+* trainer now lets you define which function to use for train, test and validation 
+* Added SavingRules (children of SavingRule_ABC) to decide when the model should be saved by the recorder. SavingRules are passed through the argument whenToSave
+* Created SaveMin and SaveMax SavingRules
+* EndOfTraining exceptions are now handeled independently from other exceptionin trainer.
+
 1.0.0rc:
 --------
 
