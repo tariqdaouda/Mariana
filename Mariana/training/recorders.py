@@ -156,7 +156,8 @@ class GGPlot2(Recorder_ABC):
 			line["max_score"] = maxScore[0]
 			line["max_score_commit"] = maxScore[1]
 			
-			line["set"] = "%s(%s)" %(mapName, setLen)
+			line["set"] = "%s" %(mapName)
+			line["set_size"] = "%s" %(setLen)
 			line["output_layer"] = outputName
 			line["output_function"] = outputFunction
 			line.commit()
@@ -165,7 +166,7 @@ class GGPlot2(Recorder_ABC):
 		if self.csvLegend is None :
 			self.csvLegend = store["hyperParameters"].keys()
 			self.csvLegend.extend(store["runInfos"].keys())
-			self.csvLegend.extend( ["score", "min_score", "min_score_commit", "max_score", "max_score_commit", "set", "output_layer", "output_function"] )
+			self.csvLegend.extend( ["score", "min_score", "min_score_commit", "max_score", "max_score_commit", "set", "set_size", "output_layer", "output_function"] )
 
 			self.csvFile = CSVFile(legend = self.csvLegend, separator = "\t")
 			self.csvFile.streamToFile( self.filename, writeRate = self.writeRate )
@@ -226,12 +227,9 @@ class GGPlot2(Recorder_ABC):
 		
 		sys.stdout.flush()
 
-	# def getBestModel(self, outputName, theSet, outputFunction) :
-	# 	"""returns the best model for a given output and set"""
-	# 	import Mariana.network as MNET
-	# 	fn = self.getBestModelFilename(outputName, theSet, outputFunction)
-	# 	return MNET.loadModel(fn)
-		
+	def __repr__(self):
+		return "<recorder: %s, filename: %s>" % (self.__class__.__name__, self.filename)
+
 	def __len__(self) :
 		"""returns the number of commits performed"""
 		return self.length

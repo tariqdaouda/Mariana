@@ -76,8 +76,10 @@ class Trainer_ABC(object) :
 						separators=(',', ': ')
 					)
 				)
-			except ValueError :
-				print "invalid json", sstore
+			except Exception as e:
+				print "Warning: Couldn't format the store to json, saving it ugly."
+				print "Reason:", e
+				f.write(sstore)
 
 			if tb is not None :
 				f.write("\nTraceback\n---------\n")
@@ -118,13 +120,18 @@ class Trainer_ABC(object) :
 			f.write("Stopped by: %s\n" % e.stopCriterion.name)
 			f.write("Reason: %s\n" % e.message)
 			sstore = str(self.store).replace("'", '"').replace("True", 'true').replace("False", 'false')
-			f.write(
-				"store:\n%s" % json.dumps(
-					json.loads(sstore), sort_keys=True,
-					indent=4,
-					separators=(',', ': ')
+			try :
+				f.write(
+					"store:\n%s" % json.dumps(
+						json.loads(sstore), sort_keys=True,
+						indent=4,
+						separators=(',', ': ')
+					)
 				)
-			)
+			except Exception as e:
+				print "Warning: Couldn't format the store to json, saving it ugly."
+				print "Reason:", e
+				f.write(sstore)
 
 			f.flush()
 			f.close()
