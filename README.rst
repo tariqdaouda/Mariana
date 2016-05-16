@@ -17,6 +17,8 @@ More Documentation:
 .. _english: https://youtu.be/dGS_Qny1E9E
 .. _french: https://youtu.be/TzRYF1lPP84?t=8m15s
 
+ph'nglui mglw'nafh Cthulhu R'lyeh wgah'nagl fhtagn
+
 Why is it cool?
 ===============
 
