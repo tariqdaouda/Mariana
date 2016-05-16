@@ -37,7 +37,7 @@ class OutputMap(object):
 
 	def callTheanoFct(self, outputLayer, **kwargs) :
 		if type(outputLayer) is types.StringType :
-			ol = self.network.outputs[outputLayer]
+			ol = self.network.layers[outputLayer]
 		else :
 			ol = outputLayer
 
