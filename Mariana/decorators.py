@@ -41,8 +41,31 @@ class OutputDecorator_ABC(Decorator_ABC) :
 		self.hyperParameters.extend(["trainOnly"])
 		self.trainOnly = trainOnly
 
+class Mask(OutputDecorator_ABC):
+	"""Applies a fixed mask to the outputs of the layer. This layers does this:
+	
+		.. math::
+
+			outputs = outputs * mask
+
+	If you want to remove some parts of the output use 0s, if you want to keep them as they are use 1s.
+	Anything else will lower or increase the values by the given factors.
+
+	:param array/list mask: It should have the same dimensions as the layer's outputs.
+
+	"""
+	def __init__(self, mask, trainOnly = False, *args, **kwargs):
+		OutputDecorator_ABC.__init__(self, trainOnly, *args, **kwargs)
+		self.mask = mask
+		self.hyperParameters.extend([])
+
+	def decorate(self, layer) :
+		layer.outputs = layer.outputs * self.mask
+		if not self.trainOnly :
+			layer.testOutputs = layer.testOutputs * self.mask
+
 class BinomialDropout(OutputDecorator_ABC):
-	"""Use it to make things such as denoising autoencoders and dropout layers"""
+	"""Stochastically mask some parts of the output of the layer. Use it to make things such as denoising autoencoders and dropout layers"""
 	def __init__(self, ratio, trainOnly = True, *args, **kwargs):
 		OutputDecorator_ABC.__init__(self, trainOnly, *args, **kwargs)
 
