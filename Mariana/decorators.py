@@ -5,7 +5,7 @@ import Mariana.settings as MSET
 from Mariana.abstraction import Abstraction_ABC
 import Mariana.initializations as MI
 
-__all__= ["Decorator_ABC", "OutputDecorator_ABC", "BatchNormalization", "Center", "Normalize", "BinomialDropout", "WeightSparsity", "InputSparsity"]
+__all__= ["Decorator_ABC", "OutputDecorator_ABC", "BatchNormalization", "Center", "Normalize", "Mask", "BinomialDropout", "WeightSparsity", "InputSparsity"]
 
 class Decorator_ABC(Abstraction_ABC) :
 	"""A decorator is a modifier that is applied on a layer."""

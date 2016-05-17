@@ -46,11 +46,9 @@ class CategoricalCrossEntropy(Cost_ABC) :
 		cost = tt.mean( tt.nnet.categorical_crossentropy(outputs, targets) )
 		return cost
 		
-class CrossEntropy(Cost_ABC) :
-	"""Returns the average number of bits separating the the target form the output."""
-	def costFct(self, targets, outputs) :
-		cost = - tt.sum(targets * tt.log(outputs) + (1 - targets) * tt.log(1 - outputs), axis=1)
-		return tt.mean(cost)
+class CrossEntropy(CategoricalCrossEntropy) :
+	"""Short hand for CategoricalCrossEntropy"""
+	pass
 
 class BinaryCrossEntropy(Cost_ABC) :
 	"""Use this one for binary data"""
