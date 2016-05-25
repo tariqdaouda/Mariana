@@ -24,19 +24,24 @@ class TheanoFunction(object) :
 		:param list updates: list of tuples (shared variable, symbolic expression of the update to be applied to it)
 		:param dict \*\*kwargs: additional arguments to passed to the real theano function underneath
 		"""
+		def _bckTrckInputs(startLayer, inputs = OrderedDict(), inpSet = set()) :
+			if len(startLayer.network.inConnections[startLayer]) == 0 :
+				inpOut = startLayer.inputs
+				if inpOut not in inpSet :
+					inputs[startLayer.name] = inpOut
+					inpSet.add(inpOut)
+			else :
+				for layer in startLayer.network.inConnections[startLayer] :
+					_bckTrckInputs(layer, inputs, inpSet)
+			return inputs, inpSet
+
+
 		self.cast_warning_told = False
 
 		self.name = name
 		self.outputLayer = outputLayer
 
-		self.inputs = OrderedDict()
-		inpSet = set()
-		for inp in self.outputLayer.network.inputs.itervalues() :
-			inpOut = inp.inputs
-
-			if inpOut not in inpSet :
-				self.inputs[inp.name] = inpOut
-				inpSet.add(inpOut)
+		self.inputs, inpSet = _bckTrckInputs(outputLayer)
 
 		for k, v in additional_input_expressions.iteritems() :
 			if v not in inpSet :

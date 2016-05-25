@@ -6,6 +6,10 @@ __all__ = ["Recorder_ABC", "GGPlot2", "SavingRule_ABC", "SaveMin", "SaveMax", "S
 class Scores(object) :
 	"""Manage and store the scores returned by the trainer. This one is meant to be used internally by trainers."""
 	def __init__(self) :
+		self.reset()
+
+	def reset(self):
+		"""resets the store as if nothing ever happened"""
 		self.currentScores = {}
 		self.minScores = {}
 		self.maxScores = {}

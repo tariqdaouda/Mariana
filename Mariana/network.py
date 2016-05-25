@@ -63,9 +63,7 @@ class Network(object) :
 		self.layerAppelidos = {}
 	
 		self.edges = OrderedDict()
-		# self.edges = set()
-		# self.edgesNames = set()
-
+		
 		self.outConnections = {}
 		self.inConnections = {}
 
@@ -102,7 +100,12 @@ class Network(object) :
 
 	def printLog(self) :
 		"Print a very pretty version of self.log. The log should contain all meaningful events in a chronological order"
-		self.init()
+		
+		errMsg = ""
+		try :
+			self.init()
+		except Exception as e :
+			errMsg = "----OUCH----\nUnable to initialize network: %s\n------------" % e
 
 		t = " The story of how it all began "
 		t = "="*len(t) + "\n" + t + "\n" + "="*len(t)
@@ -118,7 +121,7 @@ class Network(object) :
 			
 		es = '\n'.join(es)
 
-		print "\n" + t + "\n\n" + es + "\n"
+		print "\n" + t + "\n\n" + es + "\n" + errMsg + "\n"
 
 	def _addEdge(self, layer1Name, layer2Name) :
 		"""Add a connection between two layers"""
@@ -126,8 +129,6 @@ class Network(object) :
 		layer1 = self.layers[layer1Name]
 		layer2 = self.layers[layer2Name]
 
-		# self.edges.add( (layer1, layer2) )
-		# self.edgesNames.add( (layer1.name, layer2.name) )
 		self.edges[ (layer1.name, layer2.name) ] = (layer1, layer2)
 
 		try :
@@ -172,24 +173,26 @@ class Network(object) :
 			self.logNetworkEvent("New Output layer %s" % (h.name))
 		else :
 			self.logNetworkEvent("New Hidden layer %s" % (h.name))
-		
-		h.network = self
 
 	def merge(self, fromLayer, toLayer) :
-		"""Merges the networks of two layers together."""
+		"""Merges the networks of two layers together. fromLayer must be part of the self"""
 		
 		self.logNetworkEvent("Merging nets: %s and %s" % (fromLayer.name, toLayer.name))
 
 		if fromLayer.name not in self.layers :
 			raise ValueError("from layer '%s' is not part of this network" % fromLayer.name)
 
-		for l in toLayer.network.layers.itervalues() :
+		newLayers = toLayer.network.layers.values()
+		for l in newLayers :
 			self._addLayer(l)
 
 		for e in toLayer.network.edges.iterkeys() :
 			self._addEdge(e[0], e[1])
 
 		self._addEdge(fromLayer.name, toLayer.name)
+		
+		for l in newLayers :
+			l.network = self
 
 	def init(self) :
 		"Initialiases the network by initialising every layer."
@@ -203,7 +206,6 @@ class Network(object) :
 
 			for inp in self.inputs.itervalues() :
 				inp._init()
-
 	
 			for l in self.layers.itervalues() :
 				self.parameters.extend(l.getParameters())

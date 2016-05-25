@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+1.0.2rc:
+--------
+
+* Fixed multiple inputs and added test
+* Minor doc updates and cleaning
+* printLog() of network works even in the model does not compile, and shows the exception message at the end
+
 1.0.1rc:
 --------
 * Theano functions can now have several outputs. Model function no longer return an array, but an ordered dict where each key conrrespond to a given output

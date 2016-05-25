@@ -126,6 +126,31 @@ class MLPTests(unittest.TestCase):
 		self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[2] ] )["class"], 1 )
 		self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[3] ] )["class"], 0 )
 
+
+	# @unittest.skip("skipping")
+	def test_multiinputs(self) :
+		ls = MS.GradientDescent(lr = 0.1)
+
+		inpA = ML.Embedding(2, 2, 2, name="IA")
+		inpB = ML.Input(2, name="IB")
+		inpNexus = ML.Composite(name = "InputNexus")
+
+		h1 = ML.Hidden(32, activation = MA.ReLU(), decorators = [], regularizations = [], name = "Fully-connected1" )
+		
+		o = ML.Regression(2,
+			decorators = [],
+			activation=MA.ReLU(),
+			learningScenario = ls,
+			costObject = MC.CrossEntropy(),
+			name = "Out",
+			regularizations = []
+		)
+
+		inpA > inpNexus
+		inpB > inpNexus
+		m = inpNexus > h1 > o
+		m.init()
+
 	# @unittest.skip("skipping")
 	def test_embedding(self) :
 		"""the first 3 and the last 3 should be diametrically opposed"""
