@@ -96,15 +96,22 @@ class TheanoFunction(object) :
 		d3v.d3viz(self.theano_fct, filename)
 
 	def run(self, **kwargs) :
-		"""Run the thano function with the kwargs. Will return an OrderedDict of the outputs"""
+		"""Run the theano function with the kwargs. Will return an OrderedDict of the outputs"""
 		def _die(fctName, outputLayer, kwargs, exc) :
-			sys.stderr.write("!!=> Error in function '%s' for layer '%s':\n" % (fctName, outputLayer.name))
-			sys.stderr.write("\t!!=> the arguments were:\n %s\n" % (kwargs))
-			raise exc
+			localStr = "!!=> Error in function '%s' for layer '%s':\n%s\n" % (fctName, outputLayer.name, exc.message)
+			sys.stderr.write(localStr)
+			sys.stderr.write("Have a look at the log file: %s for details about the arguments" % MSET.SAVE_MESSAGE_LOG_FILE)
+			strArgs = []
+			for k, v in kwargs.iteritems() :
+				strArgs.append("%s, shape: %s \n----\n%s" % (k, numpy.asarray(v).shape, v))
+			MCAN.fatal(localStr, "!!=> the arguments were:\n %s\n" % ('\n'.join(strArgs)), toRaise = exc)
 
 		self.fctInputs.update(kwargs)
-		fres = iter(self.theano_fct(*self.fctInputs.values()))
-		
+		try :
+			fres = iter(self.theano_fct(*self.fctInputs.values()))
+		except Exception as e:
+			_die(self.name, self.outputLayer, kwargs, e)
+			
 		for k in self.output_expressions.iterkeys() :
 			self.results[k] = fres.next()
 

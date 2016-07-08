@@ -67,7 +67,13 @@ class SavingRule_ABC(object):
 			self.outputName = outputName.name
 
 		self.functionName = functionName
-	
+		self.recorder = None
+
+	def _shouldISave(self, recorder) :
+		"""This is the function that is called by the recorder. If sets self.recorder to 'recorder' and then calls self.shouldISave()"""
+		self.recorder = recorder
+		return self.shouldISave(recorder)
+
 	def shouldISave(self, recorder) :
 		"""The function that defines when a save should be performed"""
 		raise NotImplemented("Should be implemented in child")
@@ -79,7 +85,7 @@ class SavingRule_ABC(object):
 	def loadLast(self):
 		"""load the last saved model"""
 		import Mariana.network as MNET
-		return MNET.loadModel(self.getFilename())
+		return MNET.loadModel(self.getFilename(self.recorder))
 
 	def __repr__(self) :
 		return "%s on %s" %(self.__class__.__name__, (self.mapName, self.outputName, self.functionName) )
@@ -198,7 +204,7 @@ class GGPlot2(Recorder_ABC):
 			self.printCurrentState()
 
 		for w in self.whenToSave :
-			if w.shouldISave(self) :
+			if w._shouldISave(self) :
 				model.save(w.getFilename(self))
 
 	def printCurrentState(self) :

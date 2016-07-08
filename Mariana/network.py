@@ -52,10 +52,10 @@ class OutputMap(object):
 			os.append(o.name)
 		
 		os = ', '.join(os)
-		return "<theano fct '%s' for output layer: '%s'>" % (self.name, os)
+		return "<theano fct '%s' for layers: '%s'>" % (self.name, os)
 
 class Network(object) :
-	"""All **theano_x** functions of the outputs are accessible through the network interface **network.x(...)**."""
+	"""All theano functions of all layers are accessible through the network interface **network.x(...)**."""
 	def __init__(self) :
 		self.inputs = OrderedDict()
 		self.layers = OrderedDict()
@@ -227,7 +227,7 @@ class Network(object) :
 			os.append(repr(o))
 		os = '\n\t'.join(os)
 
-		print "Available model functions:\n" % os
+		print "Available model functions:\n%s\n" % os
 
 	def save(self, filename) :
 		import cPickle, pickle

@@ -13,7 +13,7 @@ class SingleLayerRegularizer_ABC(Abstraction_ABC) :
 
 		message = "%s uses %s regularization" % (layer.name, self.__class__.__name__)
 		layer.network.logLayerEvent(layer, message, hyps)
-		return self.getFormula(layer, x)
+		return self.getFormula(layer)
 
 	def getFormula(self, layer) :
 		"""Returns the expression to be added to the cost"""

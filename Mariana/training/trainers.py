@@ -276,7 +276,6 @@ class DefaultTrainer(Trainer_ABC) :
 							layerList.append(output)
 							batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
 							res = modelFct(output, **batchData)
-
 							if output.name not in scores :
 								scores[output.name] = {}
 							
@@ -287,7 +286,6 @@ class DefaultTrainer(Trainer_ABC) :
 									scores[output.name][k] = [v]
 							
 							layerList.pop(-1)
-
 				elif trainingOrder == DefaultTrainer.SIMULTANEOUS_TRAINING :
 					for i in xrange(0, len(aMap), miniBatchSize) :
 						batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
@@ -383,7 +381,7 @@ class DefaultTrainer(Trainer_ABC) :
 			self.store["setSizes"][mapName] = self.maps[mapName].getMinFullLength()
 			self.store["scores"][mapName] = {}
 			for o in outputLayers :
-				self.store["scores"][mapName][o.name] = "NA"
+				self.store["scores"][mapName][o.name] = {}
 
 		while True :
 			for mapName in ["train", "test", "validation"] :

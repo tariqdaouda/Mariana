@@ -37,7 +37,7 @@ def fatal(msgSubject, msg, toRaise = ValueError, flush = True) :
 	
 	subject = msgSubject
 
-	s = """\n%s:\n%s\n%s\n\n  Sorry,\n\n  Mariana\n""" %(subject, "-"*(len(subject) + 1), m)
+	s = """\n%s:\n%s\n%s\n\n  %s\nSorry,\n\n  Mariana\n""" %(subject, "-"*(len(subject) + 1), m, toRaise.message)
 	
 	if MSET.SAVE_MESSAGE_LOG :
 		if not MESSAGE_LOG_FILE :
@@ -46,4 +46,4 @@ def fatal(msgSubject, msg, toRaise = ValueError, flush = True) :
 		if flush :
 			MESSAGE_LOG_FILE.flush()
 
-	raise toRaise(s)
+	raise toRaise

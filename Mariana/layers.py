@@ -168,7 +168,7 @@ class Layer_ABC(object) :
 		propagateTest returns the testOutputs, some decorators might not be applied.
 		This is called after decorating"""
 		self.propagate = MWRAP.TheanoFunction("propagate", self, [("outputs", self.outputs)], allow_input_downcast=True)
-		self.propagateTest = MWRAP.TheanoFunction("propagateTest", self, [("testOutputs", self.testOutputs)], allow_input_downcast=True)
+		self.propagateTest = MWRAP.TheanoFunction("propagateTest", self, [("outputs", self.testOutputs)], allow_input_downcast=True)
 	
 	def setCustomTheanoFunctions(self) :
 		"""This is where you should put the definitions of your custom theano functions. Theano functions
@@ -523,11 +523,11 @@ class SoftmaxClassifier(Output_ABC) :
 		clasAcc = tt.mean( tt.eq(self.targets, clas ) )
 		predAcc = tt.mean( tt.eq(self.targets, pred ) )
 
-		self.classificationAccuracy = MWRAP.TheanoFunction("accuracy", self, [("accuracy", clasAcc)], { "targets" : self.targets }, allow_input_downcast=True)
-		self.predictionAccuracy = MWRAP.TheanoFunction("accuracy", self, [("accuracy", predAcc)], { "targets" : self.targets }, allow_input_downcast=True)
+		self.classificationAccuracy = MWRAP.TheanoFunction("classificationAccuracy", self, [("accuracy", clasAcc)], { "targets" : self.targets }, allow_input_downcast=True)
+		self.predictionAccuracy = MWRAP.TheanoFunction("predictionAccuracy", self, [("accuracy", predAcc)], { "targets" : self.targets }, allow_input_downcast=True)
 		
-		self.trainAndAccuracy = MWRAP.TheanoFunction("accuracy", self, [("score", self.cost), ("accuracy", clasAcc)], { "targets" : self.targets },  updates = self.updates, allow_input_downcast=True)
-		self.testAndAccuracy = MWRAP.TheanoFunction("accuracy", self, [("score", self.testCost), ("accuracy", predAcc)], { "targets" : self.targets }, allow_input_downcast=True)
+		self.trainAndAccuracy = MWRAP.TheanoFunction("trainAndAccuracy", self, [("score", self.cost), ("accuracy", clasAcc)], { "targets" : self.targets },  updates = self.updates, allow_input_downcast=True)
+		self.testAndAccuracy = MWRAP.TheanoFunction("testAndAccuracy", self, [("score", self.testCost), ("accuracy", predAcc)], { "targets" : self.targets }, allow_input_downcast=True)
 		
 class Regression(Output_ABC) :
 	"""For regressions, works great with a mean squared error cost"""

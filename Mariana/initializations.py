@@ -7,6 +7,7 @@ from Mariana.abstraction import Abstraction_ABC
 __all__= [
 	"Initialization_ABC",
 	"HardSet",
+	"Identity",
 	"GlorotTanhInit",
 	"Uniform",
 	"UniformWeights",
@@ -43,6 +44,15 @@ class Initialization_ABC(Abstraction_ABC) :
 	def initialize(self, layer) :
 		"""The function that all Initialization_ABCs must implement"""
 		raise NotImplemented("This one should be implemented in child")
+
+class Identity(Initialization_ABC) :
+	"""Identity matrix for weights"""
+	def __init__(self, *args, **kwargs) :
+		Initialization_ABC.__init__(self, *args, **kwargs)
+		
+	def initialize(self, layer) :
+		v = numpy.identity(layer.nbOutputs, dtype = theano.config.floatX)
+		setattr( layer, "W",  theano.shared(value = v, name = "%s_%s" % (layer.name, "W") ) )
 
 class HardSet(Initialization_ABC) :
 	"""Sets the parameter to value (must have a correct shape)"""

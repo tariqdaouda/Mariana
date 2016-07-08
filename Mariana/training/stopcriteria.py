@@ -27,7 +27,7 @@ class EpochWall(StopCriterion_ABC) :
 		self.maxEpochs = maxEpochs
 
 	def stop(self, trainer) :
-		if trainer.store["runInfos"]["epoch"] >= self.maxEpochs :
+		if trainer.store["runInfos"]["epoch"]+1 >= self.maxEpochs :
 			return True
 		return False
 
