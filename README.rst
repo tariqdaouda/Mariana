@@ -204,9 +204,9 @@ Loading is a simple unpickling:
 
 .. code:: python
 
-  import cPickle
+  import Mariana.network as MNET
 
-  mlp = cPickle.load(open("myMLP.mariana.pkl"))
+  mlp = MNET.loadModel("myMLP.mariana.pkl")
   mlp.train(...)
 
 Getting the outputs of intermediate layers
