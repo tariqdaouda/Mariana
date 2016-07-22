@@ -8,7 +8,7 @@ import Mariana.costs as MC
 import Mariana.regularizations as MR
 import Mariana.scenari as MS
 
-from Mariana.examples.useful import load_mnist
+from useful import load_mnist
 
 """
 This is the equivalent the theano MLP from here: http://deeplearning.net/tutorial/mlp.html
