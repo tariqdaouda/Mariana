@@ -10,7 +10,7 @@ import Mariana.training.recorders as MREC
 import Mariana.training.datasetmaps as MDM
 import Mariana.training.stopcriteria as MSTOP
 
-from Mariana.examples.useful import load_mnist
+from useful import load_mnist
 
 """
 This is the equivalent the theano MLP from here: http://deeplearning.net/tutorial/mlp.html
