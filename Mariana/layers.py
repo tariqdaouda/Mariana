@@ -491,8 +491,8 @@ class Output_ABC(WeightBias_ABC) :
 		self.train = MWRAP.TheanoFunction("train", self, [("score", self.cost)], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
 		self.test = MWRAP.TheanoFunction("test", self, [("score", self.testCost)], { "targets" : self.targets }, allow_input_downcast=True)
 
-	def _whateverLastInit(self) :
-		self._setTheanoFunctions()
+	# def _whateverLastInit(self) :
+	# 	self._setTheanoFunctions()
 
 class SoftmaxClassifier(Output_ABC) :
 	"""A softmax (probabilistic) Classifier"""

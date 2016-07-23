@@ -253,11 +253,14 @@ class DefaultTrainer(Trainer_ABC) :
 							for hp in obj.hyperParameters :
 								dct["%s_%s_%s_%s" % (l.name, thing, obj.name, hp)] = getattr(obj, hp)
 				else :
-					if len(thingObj.hyperParameters) == 0 :
-						dct["%s_%s" % (l.name, thingObj.name)] = 1
-					else :
-						for hp in thingObj.hyperParameters :
-							dct["%s_%s" % (l.name, hp)] = getattr(thingObj, hp)
+					try :
+						if len(thingObj.hyperParameters) == 0 :
+							dct["%s_%s" % (l.name, thingObj.name)] = 1
+						else :
+							for hp in thingObj.hyperParameters :
+								dct["%s_%s" % (l.name, hp)] = getattr(thingObj, hp)
+					except AttributeError :
+						pass
 
 		def _trainTest(aMap, modelFct, trainingOrder, miniBatchSize, inputLayers, outputLayers) :
 			scores = {}
