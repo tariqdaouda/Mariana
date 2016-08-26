@@ -195,9 +195,11 @@ class DefaultTrainer(Trainer_ABC) :
 		Trainer_ABC.__init__(self)
 
 		self.maps = {
-			"train": trainMaps,
-			"test": testMaps,
+			"train": trainMaps
 		}
+
+		if testMaps is not None :
+			self.maps["test"] = testMaps
 
 		if validationMaps is not None :
 			self.maps["validation"] = validationMaps

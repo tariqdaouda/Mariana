@@ -450,9 +450,9 @@ class Output_ABC(WeightBias_ABC) :
 		self.testCost = None
 		self.updates = None
 
-
 	def _backTrckDependencies(self) :
 		"""Finds all the hidden layers the ouput layer is influenced by"""
+		self.dependencies = {}
 		def _bckTrk(deps, layer) :
 			for l in self.network.inConnections[layer] :
 				deps[l.name] = l
