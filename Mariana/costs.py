@@ -26,7 +26,7 @@ class Cost_ABC(Abstraction_ABC) :
 class Null(Cost_ABC) :
 	"""No cost at all"""
 	def costFct(self, targets, outputs) :
-		return tt.sum(outputs*0)
+		return tt.sum(outputs*0 + targets*0)
 
 class NegativeLogLikelihood(Cost_ABC) :
 	"""For a probalistic output, works great with a softmax output layer"""
