@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+1.0.3rc:
+--------
+
+* New more independent initialization for layers.
+* Null cost redifined as a function of outputs and targets
+ 
 1.0.2rc:
 --------
 
