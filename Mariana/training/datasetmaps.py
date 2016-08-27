@@ -291,7 +291,11 @@ class DatasetMapper(object):
 			DatasetMapper = dm
 			dm.map(i, trainSet.images)
 		"""
-		
+		import Mariana.network as MNET
+
+		if layer.type != MNET.TYPE_INPUT_LAYER :
+			raise ValueError("%s is not an input layer (type: %s)" % (layer.name, layer.type))
+
 		self.inputLayers.append(layer)
 		self.maps[layer] = ( (layer.name, setHandle), )
 		self.layersByName[layer.name] = layer
@@ -318,7 +322,11 @@ class DatasetMapper(object):
 		a dataset. This argument is optional, the default value is 'targets' which should work for all 
 		out of the box Mariana stuff. 
 		"""
+		import Mariana.network as MNET
 		
+		if layer.type != MNET.TYPE_OUTPUT_LAYER :
+			raise ValueError("%s is not an output layer (type: %s)" % (layer.name, layer.type))
+
 		self.outputLayers.append(layer)
 		self.layersByName[layer.name] = layer
 		

@@ -5,9 +5,9 @@ import types
 
 __all__= ["Network", "OutputMap"]
 
-TYPE_INPUT_LAYER = 0
-TYPE_OUTPUT_LAYER = 1
-TYPE_HIDDEN_LAYER = 2
+TYPE_INPUT_LAYER = "input"
+TYPE_OUTPUT_LAYER = "output"
+TYPE_HIDDEN_LAYER = "hidden"
 
 def loadModel(filename) :
 	"""Shorthand for Network.load"""
