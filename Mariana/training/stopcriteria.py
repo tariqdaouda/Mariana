@@ -74,8 +74,11 @@ class ScoreWall(StopCriterion_ABC) :
 
 class GeometricEarlyStopping(StopCriterion_ABC) :
 	"""Geometrically increases the patiences with the epochs and stops the training when the patience is over."""
-	def __init__(self, datasetMap, patience, patienceIncreaseFactor, significantImprovement, outputFunction, outputLayer = None) :
-		"""if outputLayer is None, will consider the average of all outputs"""
+	def __init__(self, datasetMap, patience, patienceIncreaseFactor, significantImprovement, outputFunction, descending = True, outputLayer = None) :
+		"""if outputLayer is None, will consider the average of all outputs.
+		
+		:param boolean descending: If true, means that the score should go down during training (most cases). Use false if the opposite is true (ex: accuracy).
+		"""
 		StopCriterion_ABC.__init__(self)
 		
 		self.outputLayer = outputLayer
@@ -86,6 +89,8 @@ class GeometricEarlyStopping(StopCriterion_ABC) :
 		self.patienceIncreaseFactor = patienceIncreaseFactor
 		self.wall = patience
 		self.significantImprovement = significantImprovement
+
+		self.descending  = descending
 
 		self.bestScore = None
 
@@ -111,11 +116,11 @@ class GeometricEarlyStopping(StopCriterion_ABC) :
 				
 			if self.bestScore is None :
 				self.bestScore = curr
-			elif curr < (self.bestScore - self.significantImprovement) :
+			elif ( self.descending and curr < (self.bestScore - self.significantImprovement) ) or ( not self.descending and curr > (self.bestScore + self.significantImprovement) ) :
 				self.bestScore = curr
 				self.wall = max(self.patience, trainer.store["runInfos"]["epoch"] * self.patienceIncreaseFactor)
-		
 			self.wall -= 1
+				
 		except KeyError :
 			pass
 		
