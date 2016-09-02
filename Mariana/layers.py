@@ -385,7 +385,7 @@ class Pass(Layer_ABC) :
 		self.testOutputs = self.inputs
 		
 class WeightBias_ABC(Layer_ABC) :
-	"A layer with weigth and bias"
+	"""A layer with weigth and bias. If would like to disable either one of them simply do not initialize"""
 	
 	def __init__(self, size, layerType, initializations = [MI.SmallUniformWeights(), MI.ZerosBias()], **kwargs) :
 		Layer_ABC.__init__(self,
@@ -404,23 +404,28 @@ class WeightBias_ABC(Layer_ABC) :
 		elif self.nbInputs != layer.nbOutputs :
 			raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
 
-	def _setOutputs(self) :
-		"""initializes weights and bias. By default weights are setup to random low values, use Mariana decorators
-		to change this behaviour."""
+	def _setInputs(self) :
+		"""Adds up the outputs of all incoming layers"""
 		for layer in self.network.inConnections[self] :
 			if self.inputs is None :
 				self.inputs = layer.outputs	
 			else :
 				self.inputs += layer.outputs
-		
-		if self.W  is None:
-			raise ValueError("No initialization was defined for weights (self.W)")
-		
-		if self.b is None:
-			MI.ZerosBias().apply(self)
 
-		self.outputs = tt.dot(self.inputs, self.W) + self.b
-		self.testOutputs = tt.dot(self.inputs, self.W) + self.b
+	def _setOutputs(self) :
+		"""Defines, self.outputs and self.testOutputs"""
+		self._setInputs()
+
+		self.outputs = 0
+		self.testOutputs = 0
+
+		if self.W is not None:
+			self.outputs = tt.dot(self.inputs, self.W)
+			self.testOutputs = tt.dot(self.inputs, self.W)
+		
+		if self.b is not None:
+			self.outputs = self.outputs + self.b
+			self.testOutputs = self.testOutputs + self.b
 
 	def getParameterShape(self, param) :
 		if param == "W" :
