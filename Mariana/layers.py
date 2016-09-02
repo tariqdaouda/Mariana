@@ -310,7 +310,8 @@ class Embedding(Layer_ABC) :
 			self.fullEmbeddings = tt.concatenate( [self.null, self.embeddings], axis = 0 )
 		else :
 			self.fullEmbeddings = self.embeddings
-
+			del(self.embeddings)
+			
 		self.preOutputs = self.fullEmbeddings[self.inputs]
 
 		self.outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
@@ -386,7 +387,7 @@ class Pass(Layer_ABC) :
 		
 class WeightBias_ABC(Layer_ABC) :
 	"""A layer with weigth and bias. If would like to disable either one of them simply do not initialize"""
-	
+
 	def __init__(self, size, layerType, initializations = [MI.SmallUniformWeights(), MI.ZerosBias()], **kwargs) :
 		Layer_ABC.__init__(self,
 			size,
