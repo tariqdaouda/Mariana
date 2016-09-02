@@ -9,6 +9,7 @@ CHANGELOG
 * Better abstraction of saving criteria
 * Minor refactoring of GGPlot2 recorder
 * Added SavePeriod to periodically save the model
+* Embedding has now a paramater that allows the masking of inputs by using the label 0 
  
 1.0.2rc:
 --------

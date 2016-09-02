@@ -255,14 +255,18 @@ class Embedding(Layer_ABC) :
 	"""This input layer will take care of creating the embeddings and training them. Embeddings are learned representations
 	of the inputs that are much loved in NLP."""
 
-	def __init__(self, size, nbDimentions, dictSize, initializations = [MI.SmallUniformEmbeddings()], **kwargs) :
+	def __init__(self, size, nbDimentions, dictSize, zeroForNull = False, initializations = [MI.SmallUniformEmbeddings()], **kwargs) :
 		"""
 		:param int size: the size of the input vector (if your input is a sentence this should be the number of words in it).
 		:param int nbDimentions: the number of dimentions in wich to encode each word.
 		:param int dictSize: the total number of words. 
+		:param bool zeroForNull: if True the dictionnary will be augmented by one elements at te begining (index = 0) whose parameters will always be vector of zeros.
+		This can be used to selectively mask some words in the input, but keep in mind that the index for the first word is moved to one. 
 		"""
 
 		Layer_ABC.__init__(self, size, layerType=MNET.TYPE_INPUT_LAYER,  initializations=initializations, **kwargs)
+
+		self.zeroForNull = zeroForNull
 
 		self.dictSize = dictSize
 		self.nbDimentions = nbDimentions
@@ -271,6 +275,8 @@ class Embedding(Layer_ABC) :
 		self.nbOutputs = self.nbDimentions*self.nbInputs
 		
 		self.embeddings = None
+		self.fullEmbeddings = None
+
 		self.inputs = tt.imatrix(name = "embInp_" + self.name)
 
 		self._setCreationArguments()
@@ -286,15 +292,27 @@ class Embedding(Layer_ABC) :
 		
 		:param list idxs: if provided will return the embeddings only for those indexes 
 		"""
-		try :
-			if idxs :
-				return self.embeddings.get_value()[idxs]
-			return self.embeddings.get_value()
-		except AttributeError :
+		if not self.fullEmbeddings :
 			raise ValueError("It looks like the network has not been initialized yet. Try calling self.network.init() first.")
-	
+		
+		try :
+			fct = self.fullEmbeddings.get_value
+		except AttributeError :
+			fct = self.fullEmbeddings.eval
+		
+		if idxs :
+			return fct()[idxs]
+		return fct()
+
 	def _setOutputs(self) :
-		self.preOutputs = self.embeddings[self.inputs]
+		if self.zeroForNull :
+			self.null = numpy.zeros((1, self.nbDimentions))
+			self.fullEmbeddings = tt.concatenate( [self.null, self.embeddings], axis = 0 )
+		else :
+			self.fullEmbeddings = self.embeddings
+
+		self.preOutputs = self.fullEmbeddings[self.inputs]
+
 		self.outputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
 		self.testOutputs = self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
 
