@@ -10,6 +10,10 @@ CHANGELOG
 * Minor refactoring of GGPlot2 recorder
 * Added SavePeriod to periodically save the model
 * Embedding has now a paramater that allows the masking of inputs by using the label 0 
+* Scale in softmax
+* Mandatory setCreationArgument() is gone for good
+* New saving method allows for Layers to be passed as constructor arguments
+* clone() now uses deepcopy and is no longer used in saving
  
 1.0.2rc:
 --------
