@@ -316,10 +316,10 @@ class Network(object) :
 								if type(v) == types.StringType and v.find("MARLAYER") == 0 :
 									stuff["arguments"]["args"][i] = expandedLayers[v.split(".")[1]]
 
-							for k, v in stuff["arguments"].iteritems() :
+							for k, v in stuff["arguments"]["kwargs"].iteritems() :
 								if type(v) == types.StringType and v.find("MARLAYER") == 0 :
-										stuff["arguments"][k] = expandedLayers[v.split(".")[1]]
-								
+									stuff["arguments"]["kwargs"][k] = expandedLayers[v.split(".")[1]]
+							
 							expandedLayers[name] = stuff["class"](*stuff["arguments"]["args"], **stuff["arguments"]["kwargs"])
 
 		for l1, l2 in model["edges"] :
