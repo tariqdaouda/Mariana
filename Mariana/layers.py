@@ -14,11 +14,20 @@ import Mariana.wrappers as MWRAP
 import Mariana.candies as MCAN
 
 __all__ = ["Layer_ABC", "WeightBias_ABC", "Output_ABC", "Input", "Hidden", "Composite", "Embedding", "SoftmaxClassifier", "Regression", "Autoencode"]
-
+		
 class Layer_ABC(object) :
 	"The interface that every layer should expose"
 
 	__metaclass__ = ABCMeta
+
+	def __new__(cls, *args, **kwargs) :
+		obj = super(Layer_ABC, cls).__new__(cls, *args, **kwargs) 
+		obj.creationArguments = {
+			"args": args,
+			"kwargs": kwargs,
+		}
+
+		return obj
 
 	def __init__(self,
 		size,
@@ -31,8 +40,11 @@ class Layer_ABC(object) :
 		name=None
 	) :
 
+		self.isLayer = True
+		
 		#a unique tag associated to the layer
 		self.appelido = numpy.random.random()
+		
 		if name is not None :
 			self.name = name
 		else :
@@ -64,22 +76,6 @@ class Layer_ABC(object) :
 		self._mustInit = True
 		self._mustReset = True
 		self._decorating = False
-
-		self.creationArguments = None
-
-	def _setCreationArguments(self) :
-		"""Remembers the arguments used to create the layer. This function must be called at the end of the constructor to allow for layer cloning, and model saving"""
-		import inspect
-		frame = inspect.currentframe()
-		frame = inspect.getouterframes(frame)[1][0]
-		
-		definedArgs, argsName, kwName, values = inspect.getargvalues(frame)
-		if "frame" in definedArgs : raise ValueError("Please choose another argument name than 'frame'.")
-		if "inspect" in definedArgs : raise ValueError("Please choose another argument name than 'inspect'.")
-
-		self.creationArguments = {k : values[k] for k in definedArgs[1:]}
-		if kwName is not None :
-			self.creationArguments.update(values[kwName])
 		
 	def getParameterDict(self) :
 		"""returns the layer's parameters as dictionary"""
@@ -107,20 +103,9 @@ class Layer_ABC(object) :
 		return (self.nbOutputs, )
 
 	def clone(self, reset = False) :
-		"""Returns a free layer with the same parameters. You can use kwargs to setup any attribute of the new layer"""
-		if self.creationArguments is None :
-			MCAN.fatal("Unclonable layer '%s'" % self.name, "self.creationArguments is not defined.\nPlease add a call to Layer_ABC._setCreationArguments(self) at the end of the constructor.")
-		
-		obj = self.__class__( **self.creationArguments)
-		obj._mustInit = True
-		if reset :
-			obj._mustReset = True
-		else :
-			obj._mustReset = False
-			for k, v in self.getParameterDict().iteritems() :
-				setattr(obj, k, v)
-
-		return obj
+		"""Returns a free layer with the same parameters (uses deepcopy)"""
+		import copy
+		return copy.deepcopy(self)
 
 	def _registerInput(self, inputLayer) :
 		"Registers a layer as an input to self. This function is first called by input layers. Initialization can only start once all input layers have been registered"
@@ -279,7 +264,6 @@ class Embedding(Layer_ABC) :
 
 		self.inputs = tt.imatrix(name = "embInp_" + self.name)
 
-		self._setCreationArguments()
 
 	def getParameterShape(self, param) :
 		if param == "embeddings" :
@@ -326,7 +310,6 @@ class Input(Layer_ABC) :
 
 		self.inputs = tt.matrix(name = self.name)
 
-		self._setCreationArguments()
 
 	def _setOutputs(self) :
 		"initializes the output to be the same as the inputs"
@@ -348,7 +331,6 @@ class Composite(Layer_ABC):
 	"""
 	def __init__(self, name = None, **kwargs):
 		Layer_ABC.__init__(self, layerType=MNET.TYPE_HIDDEN_LAYER, size = None, name = name, **kwargs)
-		self._setCreationArguments()
 
 	def _femaleConnect(self, layer) :
 		if self.nbInputs is None :
@@ -367,7 +349,6 @@ class Composite(Layer_ABC):
 class Pass(Layer_ABC) :
 	def __init__(self, name = None, **kwargs):
 		Layer_ABC.__init__(self, layerType=MNET.TYPE_HIDDEN_LAYER, size = None, name = name, **kwargs)
-		self._setCreationArguments()
 
 	def _femaleConnect(self, layer) :
 		if self.nbInputs is None :
@@ -454,7 +435,6 @@ class Hidden(WeightBias_ABC) :
 	"A hidden layer with weigth and bias"
 	def __init__(self, size, **kwargs) :
 		WeightBias_ABC.__init__(self, size, MNET.TYPE_HIDDEN_LAYER, **kwargs)
-		self._setCreationArguments()
 
 class Output_ABC(WeightBias_ABC) :
 	"""The interface that every output layer should expose. This interface also provides the model functions::
@@ -520,14 +500,9 @@ class Output_ABC(WeightBias_ABC) :
 
 class SoftmaxClassifier(Output_ABC) :
 	"""A softmax (probabilistic) Classifier"""
-	def __init__(self, nbOutputs, learningScenario, costObject, temperature = 1, name = None, **kwargs) :
-		kwargs["activation"] = MA.Softmax(temperature = temperature)
-		kwargs["learningScenario"] = learningScenario
-		kwargs["costObject"] = costObject
-		kwargs["name"] = name
-		Output_ABC.__init__(self, nbOutputs, **kwargs)
+	def __init__(self, nbOutputs, costObject, learningScenario, temperature = 1, **kwargs) :
+		Output_ABC.__init__(self, nbOutputs, costObject=costObject, learningScenario=learningScenario, activation = MA.Softmax(temperature = temperature), **kwargs)
 		self.targets = tt.ivector(name = "targets_" + self.name)
-		self._setCreationArguments()
 	
 	def setCustomTheanoFunctions(self) :
 		"""defines::
@@ -558,7 +533,6 @@ class Regression(Output_ABC) :
 	def __init__(self, nbOutputs, activation, learningScenario, costObject, name = None, **kwargs) :
 		Output_ABC.__init__(self, nbOutputs, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.targets = tt.matrix(name = "targets")
-		self._setCreationArguments()
 
 class Autoencode(Output_ABC) :
 	"""An auto encoding layer. This one takes another layer as inputs and tries to reconstruct its activations.
@@ -567,7 +541,6 @@ class Autoencode(Output_ABC) :
 	def __init__(self, targetLayerName, activation, learningScenario, costObject, name = None, **kwargs) :
 		Output_ABC.__init__(self, None, activation = activation, learningScenario = learningScenario, costObject = costObject, name = name, **kwargs)
 		self.targetLayerName = targetLayerName
-		self._setCreationArguments()
 
 	def _whateverFirstInit(self) :
 		self.nbOutputs = self.network[self.targetLayerName].nbOutputs
