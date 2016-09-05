@@ -13,6 +13,10 @@ def loadModel(filename) :
 	"""Shorthand for Network.load"""
 	return Network.load(filename)
 
+def loadModel_old(filename) :
+	"""Shorthand for Network.load_old"""
+	return Network.load_old(filename)
+
 class OutputMap(object):
 	"""
 	Encapsulates outputs as well as their theano functions.
@@ -193,7 +197,7 @@ class Network(object) :
 		
 		for l in newLayers :
 			l.network = self
-
+		print self.layers
 	def init(self) :
 		"Initialiases the network by initialising every layer."
 

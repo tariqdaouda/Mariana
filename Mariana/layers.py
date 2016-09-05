@@ -103,9 +103,11 @@ class Layer_ABC(object) :
 		return (self.nbOutputs, )
 
 	def clone(self, reset = False) :
-		"""Returns a free layer with the same parameters (uses deepcopy)"""
-		import copy
-		return copy.deepcopy(self)
+		"""Returns a free layer with the same parameters"""
+		newLayer = self.__class__(*self.creationArguments["args"], **self.creationArguments["kwargs"])
+		for k, v in self.getParameterDict().iteritems() :
+			setattr(newLayer, k, v)
+		return newLayer
 
 	def _registerInput(self, inputLayer) :
 		"Registers a layer as an input to self. This function is first called by input layers. Initialization can only start once all input layers have been registered"
