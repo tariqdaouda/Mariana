@@ -13,7 +13,6 @@ CHANGELOG
 * Scale in softmax
 * Mandatory setCreationArgument() is gone for good
 * New saving method allows for Layers to be passed as constructor arguments
-* clone() now uses deepcopy and is no longer used in saving
  
 1.0.2rc:
 --------
