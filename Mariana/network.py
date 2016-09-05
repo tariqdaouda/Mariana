@@ -197,7 +197,7 @@ class Network(object) :
 		
 		for l in newLayers :
 			l.network = self
-		print self.layers
+
 	def init(self) :
 		"Initialiases the network by initialising every layer."
 
