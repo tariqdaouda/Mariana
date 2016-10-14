@@ -17,7 +17,7 @@ before_install:
     - conda update --yes conda
 
 install:
-    - conda install --yes python=$TRAVIS_PYTHON_VERSION pip numpy
+    - conda install --yes python=$TRAVIS_PYTHON_VERSION pip numpy scipy
     - pip install coverage
     - python setup.py install
 
