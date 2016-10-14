@@ -1,3 +1,5 @@
+.. image:: https://travis-ci.org/JonathanSeguin/Mariana.svg
+.. image:: https://codecov.io/gh/JonathanSeguin/Mariana/branch/master/graph/badge.svg
 
 MARIANA: The Cutest Deep Learning Framework
 =============================================
@@ -34,7 +36,7 @@ because if you know what these things are, you can turn one into the other in 2 
 In short:
 
 * Very easy to use
-* Work with high level machine learning abstractions (layers, activations, regularizations, ....) 
+* Work with high level machine learning abstractions (layers, activations, regularizations, ....)
 * Export you models into HTML or DOT for easy visualization and debugging
 * Great for Feed Forward nets: MLPs, Auto-Encoders, Embeddings, ConvNets, Momentum, ... (**check out the examples**)
 * Completely modular and extendable, plug in your own activations, regularizations etc...
@@ -43,7 +45,7 @@ In short:
 * Free your imagination and experiment
 * No requirements concerning the format of the datasets
 
-Mariana cannot do RNNs yet but it does everything else very well. It is in active developpement, I use it every day and bugs tend to be corrected very quickly. 
+Mariana cannot do RNNs yet but it does everything else very well. It is in active developpement, I use it every day and bugs tend to be corrected very quickly.
 
 Installation
 =============
@@ -124,7 +126,7 @@ Training, Testing and Propagating:
 	for i in xrange(len(test_set[0])) :
 		#the same as train but does not updated the parameters
 		print MLP.test(o, inputLayer = test_set[0][i : i +miniBatchSize], targets = test_set[1][i : i +miniBatchSize] )
-	
+
 		#the propagate will return the output for the output layer 'o'
 		print MLP.propagate(o, inputLayer = test_set[0][i : i +miniBatchSize])
 
