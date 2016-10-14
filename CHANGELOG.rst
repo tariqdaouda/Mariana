@@ -4,7 +4,7 @@ CHANGELOG
 1.0.3rc:
 --------
 
-* Null cost redifined as a function of outputs and targets
+* Null cost redefined as a function of outputs and targets
 * GeometricalEarlyStopping can now work descending (default) or ascending
 * Better abstraction of saving criteria
 * Minor refactoring of GGPlot2 recorder
