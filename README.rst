@@ -45,7 +45,7 @@ In short:
 * Free your imagination and experiment
 * No requirements concerning the format of the datasets
 
-Mariana cannot do RNNs yet but it does everything else very well. It is in active developpement, I use it every day and bugs tend to be corrected very quickly.
+Note that RNNs have not yet been implemented. Mariana is a project in active development. Bugs that find their way in the codebase are regularly `squashed <https://github.com/tariqdaouda/Mariana/issues?q=is%3Aissue+is%3Aclosed>`_.
 
 Installation
 =============
@@ -191,7 +191,7 @@ or to specify custom weight initializations.
 Costs and regularizations
 =========================
 
-Each output layers can have its own cost. Regularizations are also specified on a per layer basis, so you can for example enforce a L1 regularisation on a single layer of the model.
+Each output layers can have its own cost. Regularizations are also specified on a per-layer basis, so you can for example enforce a L1 regularization on a single layer of the model.
 
 Saving and resuming training
 ============================
