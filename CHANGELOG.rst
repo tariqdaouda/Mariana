@@ -4,7 +4,15 @@ CHANGELOG
 1.0.3rc:
 --------
 
-* Null cost redifined as a function of outputs and targets
+* Null cost redefined as a function of outputs and targets
+* GeometricalEarlyStopping can now work descending (default) or ascending
+* Better abstraction of saving criteria
+* Minor refactoring of GGPlot2 recorder
+* Added SavePeriod to periodically save the model
+* Embedding has now a paramater that allows the masking of inputs by using the label 0 
+* Scale in softmax
+* Mandatory setCreationArgument() is gone for good
+* New saving method allows for Layers to be passed as constructor arguments
  
 1.0.2rc:
 --------

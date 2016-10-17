@@ -13,6 +13,10 @@ def loadModel(filename) :
 	"""Shorthand for Network.load"""
 	return Network.load(filename)
 
+def loadModel_old(filename) :
+	"""Shorthand for Network.load_old"""
+	return Network.load_old(filename)
+
 class OutputMap(object):
 	"""
 	Encapsulates outputs as well as their theano functions.
@@ -229,6 +233,13 @@ class Network(object) :
 
 		print "Available model functions:\n%s\n" % os
 
+	@classmethod
+	def isLayer(cls, obj) :
+		try :
+			return obj.isLayer
+		except AttributeError :
+			return False
+
 	def save(self, filename) :
 		import cPickle, pickle
 		self.init()
@@ -244,8 +255,41 @@ class Network(object) :
 			"log": self.log,
 			"layers": {}
 		}
+		
+		for l in self.layers.itervalues() :
+			sumary = {
+				"class": l.__class__,
+				"arguments": {
+					"args": [],
+					"kwargs": {}
+				},
+				"parameters": {},
+				"needs": set()
+			}
 
-		res["layers"]= {l.name: l.clone() for l in self.layers.itervalues() }
+			for v in l.creationArguments["args"] :
+				if self.isLayer(v) :
+					if v.name not in self.layers :
+						raise ValueError("Unable to save, layer '%s' is an argument to layer '%s' but is not part of the network" % (v.name, l.name))
+					sumary["arguments"]["args"].append("MARLAYER.%s" % v.name)
+					sumary["needs"].add(v.name)
+				else :
+					sumary["arguments"]["args"].append(v)
+
+			for k, v in l.creationArguments["kwargs"].iteritems() :
+				if self.isLayer(v) :
+					if v.name not in self.layers :
+						raise ValueError("Unable to save, layer '%s' is an argument to layer '%s' but is not part of the network" % (v.name, l.name))
+					sumary["arguments"]["kwargs"][k] = "MARLAYER.%s" % v.name
+					sumary["needs"].add(v.name)
+				else :
+					sumary["arguments"]["kwargs"][k] = v
+
+			for k, v in l.getParameterDict().iteritems() :
+				sumary["parameters"][k] = v
+
+			res["layers"][l.name] = sumary
+
 		f = open(fn, 'wb', pickle.HIGHEST_PROTOCOL)
 		cPickle.dump(res, f)
 		f.close()
@@ -253,6 +297,43 @@ class Network(object) :
 	@classmethod
 	def load(cls, filename) :
 		"""Loads a model from disk"""
+		import cPickle
+
+		ext = '.mar.mdl.pkl'
+		if filename.find(ext) < 0 :
+			fn = filename + ext
+		else :
+			fn = filename
+
+		f = open(fn)
+		model = cPickle.load(f)
+
+		expandedLayers = {}
+		while len(expandedLayers) < len(model["layers"]) :
+			for name, stuff in model["layers"].iteritems() :
+				if name not in expandedLayers :
+					if len(stuff["needs"]) == 0 :
+						expandedLayers[name] = stuff["class"](*stuff["arguments"]["args"], **stuff["arguments"]["kwargs"])
+					else :
+						if len(stuff["needs"] - set(expandedLayers.keys())) == 0 :
+							for i, v in enumerate(stuff["arguments"]["args"]) :
+								if type(v) == types.StringType and v.find("MARLAYER") == 0 :
+									stuff["arguments"]["args"][i] = expandedLayers[v.split(".")[1]]
+
+							for k, v in stuff["arguments"]["kwargs"].iteritems() :
+								if type(v) == types.StringType and v.find("MARLAYER") == 0 :
+									stuff["arguments"]["kwargs"][k] = expandedLayers[v.split(".")[1]]
+							
+							expandedLayers[name] = stuff["class"](*stuff["arguments"]["args"], **stuff["arguments"]["kwargs"])
+
+		for l1, l2 in model["edges"] :
+			network = expandedLayers[l1] > expandedLayers[l2]
+		
+		return network
+
+	@classmethod
+	def load_old(cls, filename) :
+		"""Loads a model from disk, saved using the ol' protocole"""
 		import cPickle
 
 		ext = '.mar.mdl.pkl'

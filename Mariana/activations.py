@@ -69,12 +69,13 @@ class Softmax(Activation_ABC):
 	
 	.. math::
 
-		exp(x_i/T)/ sum_k( exp(x_k/T) )
+		scale * exp(x_i/T)/ sum_k( exp(x_k/T) )
 	"""
-	def __init__(self, temperature = 1):
+	def __init__(self, scale = 1, temperature = 1):
 		Activation_ABC.__init__(self)
 		self.hyperParameters = ["temperature"]
 		self.temperature = temperature
+		self.scale = scale
 
 	def function(self, x):
-		return tt.nnet.softmax(x/self.temperature)
+		return self.scale * tt.nnet.softmax(x/self.temperature)

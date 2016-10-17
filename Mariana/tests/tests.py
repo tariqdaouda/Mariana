@@ -11,6 +11,12 @@ import Mariana.activations as MA
 import theano.tensor as tt
 import numpy
 
+class Hidden_layerRef(ML.Hidden) :
+
+	def __init__(self, otherLayer, *args, **kwargs) :
+		ML.Hidden.__init__(self, *args, **kwargs)
+		self.otherLayer = otherLayer
+
 class MLPTests(unittest.TestCase):
 
 	def setUp(self) :
@@ -60,10 +66,23 @@ class MLPTests(unittest.TestCase):
 
 	# @unittest.skip("skipping")
 	def test_save_load_pickle(self) :
-		import cPickle, os, numpy
+		import os
 		import Mariana.network as MN
 
-		mlp = self.trainMLP_xor()
+		ls = MS.GradientDescent(lr = 0.1)
+		cost = MC.NegativeLogLikelihood()
+
+		i = ML.Input(2, 'inp')
+		h = Hidden_layerRef(i, 10, activation = MA.ReLU(), regularizations = [MR.L1(0), MR.L2(0)], name = "Hidden_0.500705866892")
+		o = ML.SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
+
+		mlp = i > h > o
+		
+		self.xor_ins = numpy.array(self.xor_ins)
+		self.xor_outs = numpy.array(self.xor_outs)
+		for i in xrange(1000) :
+			mlp.train(o, inp = self.xor_ins, targets = self.xor_outs )
+
 		mlp.save("test_save")
 		mlp2 = MN.loadModel("test_save.mar.mdl.pkl")
 		
@@ -72,6 +91,7 @@ class MLPTests(unittest.TestCase):
 		v1 = mlp.propagate( o.name, inp = self.xor_ins )["outputs"]
 		v2 = mlp2.propagate( o.name, inp = self.xor_ins )["outputs"]
 		self.assertEqual(numpy.sum(v1), numpy.sum(v2))
+		self.assertEqual(mlp["Hidden_0.500705866892"].otherLayer.name, mlp2["Hidden_0.500705866892"].otherLayer.name)
 		
 		os.remove('test_save.mar.mdl.pkl')
 

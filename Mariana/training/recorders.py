@@ -53,21 +53,10 @@ class Scores(object) :
 		return self.maxScores[mapName][outputName][functionName]
 
 class SavingRule_ABC(object):
-	"""Abstraction for saving rules
+	"""Abstraction for saving rules"""
 
-	:param string mapName: The set name of a map defined in the trainer usually something like "test" or "validation"
-	:param string outputName: The name of the output layer to consider (you can also give the layer object)
-	:param string functionName: The function of the output layer to consider usually "test".
-	"""
-	def __init__(self, mapName, outputName, functionName) :
-		self.mapName = mapName
-		if type(outputName) is types.StringType :
-			self.outputName = outputName
-		else :
-			self.outputName = outputName.name
-
-		self.functionName = functionName
-		self.recorder = None
+	def __init__(self, *args, **kwargs) :
+		pass
 
 	def _shouldISave(self, recorder) :
 		"""This is the function that is called by the recorder. If sets self.recorder to 'recorder' and then calls self.shouldISave()"""
@@ -91,7 +80,22 @@ class SavingRule_ABC(object):
 		return "%s on %s" %(self.__class__.__name__, (self.mapName, self.outputName, self.functionName) )
 
 class SaveMin(SavingRule_ABC) :
-	"""Save the model when a new min value is reached"""
+	"""Save the model when a new min value is reached
+
+	:param string mapName: The set name of a map defined in the trainer usually something like "test" or "validation"
+	:param string outputName: The name of the output layer to consider (you can also give the layer object)
+	:param string functionName: The function of the output layer to consider usually "test".
+	"""
+	def __init__(self, mapName, outputName, functionName) :
+		self.mapName = mapName
+		if type(outputName) is types.StringType :
+			self.outputName = outputName
+		else :
+			self.outputName = outputName.name
+
+		self.functionName = functionName
+		self.recorder = None
+
 	def shouldISave(self, recorder) :
 		s = recorder.scores.getScore(self.mapName, self.outputName, self.functionName)
 		m = recorder.scores.getMinScore(self.mapName, self.outputName, self.functionName)
@@ -103,7 +107,22 @@ class SaveMin(SavingRule_ABC) :
 		return "bestMin-%s-%s-%s-%s" % (self.mapName, self.outputName, self.functionName, recorder.filename)
 
 class SaveMax(SavingRule_ABC) :
-	"""Save the model when a new max value is reached"""
+	"""Save the model when a new max value is reached
+
+	:param string mapName: The set name of a map defined in the trainer usually something like "test" or "validation"
+	:param string outputName: The name of the output layer to consider (you can also give the layer object)
+	:param string functionName: The function of the output layer to consider usually "test".
+	"""
+
+	def __init__(self, mapName, outputName, functionName) :
+		self.mapName = mapName
+		if type(outputName) is types.StringType :
+			self.outputName = outputName
+		else :
+			self.outputName = outputName.name
+
+		self.functionName = functionName
+		self.recorder = None
 	def shouldISave(self, recorder) :
 		s = recorder.scores.getScore(self.mapName, self.outputName, self.functionName)
 		m = recorder.scores.getMaxScore(self.mapName, self.outputName, self.functionName)
@@ -114,6 +133,24 @@ class SaveMax(SavingRule_ABC) :
 	def getFilename(self, recorder) :
 		return "bestMax-%s-%s-%s-%s" % (self.mapName, self.outputName, self.functionName, recorder.filename)
 
+class SavePeriod(SavingRule_ABC) :
+	"""Periodically saves the current model
+	
+	:param boolean distinct: If False, each new save will overwrite the previous one.
+	"""
+	def __init__(self, period, distinct) :
+		SavingRule_ABC(self)
+		self.distinct = distinct
+		self.period = period
+
+	def shouldISave(self, recorder) :
+		return (recorder.epoch % self.period) == 0
+
+	def getFilename(self, recorder) :
+		if self.distinct :
+			return "periodicallySaved-epoch_%s-%s" % (recorder.epoch, recorder.filename)
+		else :
+			return "periodicallySaved-%s" % (recorder.filename)
 
 class Recorder_ABC(object) :
 	"""A recorder is meant to be plugged into a trainer to record the
@@ -147,6 +184,9 @@ class GGPlot2(Recorder_ABC):
 		self.csvFile = None
 
 		self.length = 0
+		self.epoch = 0
+
+		self.trainerStore = None
 
 		self.printRate = printRate
 		self.writeRate = writeRate
@@ -200,6 +240,9 @@ class GGPlot2(Recorder_ABC):
 						**muchData
 					)
 
+		self.trainerStore = store
+		self.epoch = store["runInfos"]["epoch"]
+
 		if self.printRate > 0 and (self.length%self.printRate) == 0:
 			self.printCurrentState()
 
@@ -210,7 +253,7 @@ class GGPlot2(Recorder_ABC):
 	def printCurrentState(self) :
 		"""prints the current state stored in the recorder"""
 		if self.length > 0 :
-			print "\n==>rec: ggplot2, commit %s, pid: %s:" % (self.length, os.getpid())
+			print "\n==>rec: ggplot2, epoch %s, commit %s, pid: %s:" % (self.epoch, self.length, os.getpid())
 			for mapName, outs in self.scores.currentScores.iteritems() :
 				print "  |-%s set" % mapName
 				for outputName, fs in outs.iteritems() :
