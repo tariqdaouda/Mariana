@@ -20,6 +20,8 @@ class Hidden_layerRef(ML.Hidden) :
 class MLPTests(unittest.TestCase):
 
 	def setUp(self) :
+		numpy.random.seed(42)
+		
 		self.xor_ins = [
 			[-1, -1],
 			[-1, 1],
