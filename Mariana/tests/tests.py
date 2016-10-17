@@ -21,9 +21,9 @@ class MLPTests(unittest.TestCase):
 
 	def setUp(self) :
 		self.xor_ins = [
-			[0, 0],
-			[0, 1],
-			[1, 0],
+			[-1, -1],
+			[-1, 1],
+			[1, -1],
 			[1, 1]
 		]
 
