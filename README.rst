@@ -1,3 +1,5 @@
+.. image:: https://travis-ci.org/tariqdaouda/Mariana.svg
+.. image:: https://codecov.io/gh/tariqdaouda/Mariana/branch/master/graph/badge.svg
 
 MARIANA: The Cutest Deep Learning Framework
 =============================================
@@ -34,7 +36,7 @@ because if you know what these things are, you can turn one into the other in 2 
 In short:
 
 * Very easy to use
-* Work with high level machine learning abstractions (layers, activations, regularizations, ....) 
+* Work with high level machine learning abstractions (layers, activations, regularizations, ....)
 * Export you models into HTML or DOT for easy visualization and debugging
 * Great for Feed Forward nets: MLPs, Auto-Encoders, Embeddings, ConvNets, Momentum, ... (**check out the examples**)
 * Completely modular and extendable, plug in your own activations, regularizations etc...
@@ -43,7 +45,7 @@ In short:
 * Free your imagination and experiment
 * No requirements concerning the format of the datasets
 
-Mariana cannot do RNNs yet but it does everything else very well. It is in active developpement, I use it every day and bugs tend to be corrected very quickly. 
+Note that RNNs have not yet been implemented. Mariana is a project in active development. Bugs that find their way in the codebase are regularly `squashed <https://github.com/tariqdaouda/Mariana/issues?q=is%3Aissue+is%3Aclosed>`_.
 
 Installation
 =============
@@ -124,7 +126,7 @@ Training, Testing and Propagating:
 	for i in xrange(len(test_set[0])) :
 		#the same as train but does not updated the parameters
 		print MLP.test(o, inputLayer = test_set[0][i : i +miniBatchSize], targets = test_set[1][i : i +miniBatchSize] )
-	
+
 		#the propagate will return the output for the output layer 'o'
 		print MLP.propagate(o, inputLayer = test_set[0][i : i +miniBatchSize])
 
@@ -189,7 +191,7 @@ or to specify custom weight initializations.
 Costs and regularizations
 =========================
 
-Each output layers can have its own cost. Regularizations are also specified on a per layer basis, so you can for example enforce a L1 regularisation on a single layer of the model.
+Each output layers can have its own cost. Regularizations are also specified on a per-layer basis, so you can for example enforce a L1 regularization on a single layer of the model.
 
 Saving and resuming training
 ============================
