@@ -1,5 +1,5 @@
-.. image:: https://travis-ci.org/JonathanSeguin/Mariana.svg
-.. image:: https://codecov.io/gh/JonathanSeguin/Mariana/branch/master/graph/badge.svg
+.. image:: https://travis-ci.org/tariqdaouda/Mariana.svg
+.. image:: https://codecov.io/gh/tariqdaouda/Mariana/branch/master/graph/badge.svg
 
 MARIANA: The Cutest Deep Learning Framework
 =============================================
