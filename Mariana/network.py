@@ -13,10 +13,6 @@ def loadModel(filename) :
 	"""Shorthand for Network.load"""
 	return Network.load(filename)
 
-def loadModel_old(filename) :
-	"""Shorthand for Network.load_old"""
-	return Network.load_old(filename)
-
 class OutputMap(object):
 	"""
 	Encapsulates outputs as well as their theano functions.
@@ -311,9 +307,12 @@ class Network(object) :
 		expandedLayers = {}
 		while len(expandedLayers) < len(model["layers"]) :
 			for name, stuff in model["layers"].iteritems() :
+				# print name, stuff
 				if name not in expandedLayers :
 					if len(stuff["needs"]) == 0 :
 						expandedLayers[name] = stuff["class"](*stuff["arguments"]["args"], **stuff["arguments"]["kwargs"])
+						for k, v in stuff["parameters"].iteritems() :
+							setattr(expandedLayers[name], k, v)
 					else :
 						if len(stuff["needs"] - set(expandedLayers.keys())) == 0 :
 							for i, v in enumerate(stuff["arguments"]["args"]) :

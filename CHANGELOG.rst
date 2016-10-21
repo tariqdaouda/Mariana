@@ -13,6 +13,8 @@ CHANGELOG
 * Scale in softmax
 * Mandatory setCreationArgument() is gone for good
 * New saving method allows for Layers to be passed as constructor arguments
+* Parameter initializations/updates now go through layer functions initParameter and updateParameter
+* bug fix: Loading a saved model will no longer trigger parameter reinitialisations
  
 1.0.2rc:
 --------
