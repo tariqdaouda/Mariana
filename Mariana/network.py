@@ -311,8 +311,6 @@ class Network(object) :
 				if name not in expandedLayers :
 					if len(stuff["needs"]) == 0 :
 						expandedLayers[name] = stuff["class"](*stuff["arguments"]["args"], **stuff["arguments"]["kwargs"])
-						for k, v in stuff["parameters"].iteritems() :
-							setattr(expandedLayers[name], k, v)
 					else :
 						if len(stuff["needs"] - set(expandedLayers.keys())) == 0 :
 							for i, v in enumerate(stuff["arguments"]["args"]) :
@@ -326,6 +324,12 @@ class Network(object) :
 							expandedLayers[name] = stuff["class"](*stuff["arguments"]["args"], **stuff["arguments"]["kwargs"])
 
 		for l1, l2 in model["edges"] :
+			for k, v in model["layers"][l1]["parameters"].iteritems() :
+				setattr(expandedLayers[l1], k, v)
+			
+			for k, v in model["layers"][l2]["parameters"].iteritems() :
+				setattr(expandedLayers[l2], k, v)
+
 			network = expandedLayers[l1] > expandedLayers[l2]
 		
 		return network
