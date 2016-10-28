@@ -196,7 +196,6 @@ class Network(object) :
 
 	def init(self) :
 		"Initialiases the network by initialising every layer."
-
 		if self._mustInit :
 			self.logNetworkEvent("Initialization begins!")
 			print "\n" + MSET.OMICRON_SIGNATURE
@@ -218,7 +217,7 @@ class Network(object) :
 						self.outputMaps[k].addOutput(o, v)
 			
 			self._mustInit = False
-
+		
 	def help(self) :
 		"""prints the list of available model functions, such as train, test,..."""
 		self.init()
@@ -307,7 +306,6 @@ class Network(object) :
 		expandedLayers = {}
 		while len(expandedLayers) < len(model["layers"]) :
 			for name, stuff in model["layers"].iteritems() :
-				# print name, stuff
 				if name not in expandedLayers :
 					if len(stuff["needs"]) == 0 :
 						expandedLayers[name] = stuff["class"](*stuff["arguments"]["args"], **stuff["arguments"]["kwargs"])

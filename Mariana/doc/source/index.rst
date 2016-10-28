@@ -26,7 +26,7 @@ More Documentation:
 * YouTube presentation (english_).
 * YouTube presentation (french_).
 
-.. _here: http://bioinfo.iric.ca/~daoudat/Mariana_talks/
+.. _here: https://github.com/tariqdaouda/Mariana_talks
 .. _english: https://youtu.be/dGS_Qny1E9E
 .. _french: https://youtu.be/TzRYF1lPP84?t=8m15s
 

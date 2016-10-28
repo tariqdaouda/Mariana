@@ -114,7 +114,11 @@ class SmallUniform(Uniform) :
 	"""Random values from a unifrom distribution (divided by the overall sum)."""
 	def initialize(self, layer) :
 		shape = layer.getParameterShape(self.parameter)
-		v = numpy.random.random(shape)
+		try :
+			v = numpy.random.random(shape)
+		except :
+			raise KeyError("Layer '%s' has weird shape: '%s'" % (layer.name, shape))
+
 		v /= sum(v)
 		v = numpy.asarray(v, dtype=theano.config.floatX)
 		layer.initParameter( self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter)) )

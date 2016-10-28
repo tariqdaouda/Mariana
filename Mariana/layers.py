@@ -530,7 +530,7 @@ class SoftmaxClassifier(Output_ABC) :
 		"""
 		Output_ABC.setCustomTheanoFunctions(self)
 		clas = tt.argmax(self.outputs, axis=1)
-		pred = tt.argmax(self.outputs, axis=1)
+		pred = tt.argmax(self.testOutputs, axis=1)
 		
 		self.classify = MWRAP.TheanoFunction("classify", self, [ ("class", clas) ], allow_input_downcast=True)
 		self.predict = MWRAP.TheanoFunction("predict", self, [ ("class", pred) ], allow_input_downcast=True)

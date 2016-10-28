@@ -15,6 +15,7 @@ CHANGELOG
 * New saving method allows for Layers to be passed as constructor arguments
 * Parameter initializations/updates now go through layer functions initParameter and updateParameter
 * bug fix: Loading a saved model will no longer trigger parameter reinitialisations
+* bug fix: Precition accuracy used to be the same as the classification accuracy
  
 1.0.2rc:
 --------
