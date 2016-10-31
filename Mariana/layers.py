@@ -128,6 +128,20 @@ class Layer_ABC(object) :
 		for init in self.initializations :
 			init.apply(self)
 	
+	def initParameter(self, parameter, value) :
+		"""Initialize a parameter, raise value error if already initialized"""
+		if not hasattr(self, parameter) or getattr(self, parameter) is None :
+			setattr(self, parameter, value)
+		else :
+			raise ValueError("Parameter '%s' or layer '%s' has already been initialized" % (parameter, self.name) )
+
+	def updateParameter(self, parameter, value) :
+		"""Update the value of an already initialized parameter. Raise value error if the parameter has not been initialized"""
+		if k not in self.getParameterDict().keys() :
+			raise ValueError("Parameter '%s' has not been initialized as parameter of layer '%s'" % (parameter, self.name) )
+		else :
+			setattr(self, parameter, value)
+
 	#theano hates abstract methods defined with a decorator
 	def _setOutputs(self) :
 		"""Defines the outputs and testOutputs of the layer before the application of the activation function. This function is called by _init() ans should be written in child."""
@@ -516,7 +530,7 @@ class SoftmaxClassifier(Output_ABC) :
 		"""
 		Output_ABC.setCustomTheanoFunctions(self)
 		clas = tt.argmax(self.outputs, axis=1)
-		pred = tt.argmax(self.outputs, axis=1)
+		pred = tt.argmax(self.testOutputs, axis=1)
 		
 		self.classify = MWRAP.TheanoFunction("classify", self, [ ("class", clas) ], allow_input_downcast=True)
 		self.predict = MWRAP.TheanoFunction("predict", self, [ ("class", pred) ], allow_input_downcast=True)

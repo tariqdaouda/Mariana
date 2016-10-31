@@ -38,8 +38,12 @@ class Initialization_ABC(Abstraction_ABC) :
 			hyps[k] = getattr(self, k)
 
 		message = "%s was initialized using %s" % (layer.name, self.__class__.__name__)
+		try :
+			self.initialize(layer)
+		except ValueError  as e:
+			message = "%s was *NOT* initialized using %s. Because: %s" % (layer.name, self.__class__.__name__, e.message)
+		
 		layer.network.logLayerEvent(layer, message, hyps)
-		self.initialize(layer)
 
 	def initialize(self, layer) :
 		"""The function that all Initialization_ABCs must implement"""
@@ -52,7 +56,7 @@ class Identity(Initialization_ABC) :
 		
 	def initialize(self, layer) :
 		v = numpy.identity(layer.nbOutputs, dtype = theano.config.floatX)
-		setattr( layer, "W",  theano.shared(value = v, name = "%s_%s" % (layer.name, "W") ) )
+		layer.initParameter( "W",  theano.shared(value = v, name = "%s_%s" % (layer.name, "W") ) )
 
 class HardSet(Initialization_ABC) :
 	"""Sets the parameter to value (must have a correct shape)"""
@@ -60,10 +64,10 @@ class HardSet(Initialization_ABC) :
 		Initialization_ABC.__init__(self, *args, **kwargs)
 		self.parameter = parameter
 		self.value = value
-		self.hyperParameters = ['parameter']
+		self.hyperParameters = [parameter]
 
 	def initialize(self, layer) :
-		setattr( layer, self.parameter,  theano.shared(value = self.value, name = "%s_%s" % (layer.name, self.parameter) ) )
+		layer.initParameter( self.parameter,  theano.shared(value = self.value, name = "%s_%s" % (layer.name, self.parameter) ) )
 
 class GlorotTanhInit(Initialization_ABC) :
 	"""Set up the layer weights according to the tanh initialization introduced by Glorot et al. 2010"""
@@ -79,20 +83,20 @@ class GlorotTanhInit(Initialization_ABC) :
 					high = numpy.sqrt(6. / (layer.nbInputs + layer.nbOutputs)),
 					size = shape
 				)
-		layer.W = theano.shared(W)
+		layer.updateParameter( "W", theano.shared(W) )
 
 class Uniform(Initialization_ABC) :
 	"""Random values from a unifrom distribution (divided by the overall sum)."""
 	def __init__(self, parameter, *args, **kwargs) :
 		Initialization_ABC.__init__(self, *args, **kwargs)
 		self.parameter = parameter
-		self.hyperParameters = ['parameter']
+		self.hyperParameters = [parameter]
 
 	def initialize(self, layer) :
 		shape = layer.getParameterShape(self.parameter)
 		v = numpy.random.random(shape)
 		v = numpy.asarray(v, dtype=theano.config.floatX)
-		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
+		layer.initParameter( self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
 
 class UniformWeights(Uniform) :
 	"""Small random weights from a unifrom distribution"""
@@ -110,10 +114,14 @@ class SmallUniform(Uniform) :
 	"""Random values from a unifrom distribution (divided by the overall sum)."""
 	def initialize(self, layer) :
 		shape = layer.getParameterShape(self.parameter)
-		v = numpy.random.random(shape)
+		try :
+			v = numpy.random.random(shape)
+		except :
+			raise KeyError("Layer '%s' has weird shape: '%s'" % (layer.name, shape))
+
 		v /= sum(v)
 		v = numpy.asarray(v, dtype=theano.config.floatX)
-		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter)) )
+		layer.initParameter( self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter)) )
 
 class SmallUniformWeights(SmallUniform) :
 	"""Small random weights from a unifrom distribution (divided by the overall sum)"""
@@ -138,7 +146,7 @@ class Normal(Initialization_ABC) :
 	def initialize(self, layer) :
 		shape = layer.getParameterShape(self.parameter)
 		v = numpy.random.normal(0, self.standardDev, shape)
-		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
+		layer.initParameter( self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
 
 class NormalWeights(Normal) :
 	"""Random weights from a normal distribution"""
@@ -158,7 +166,7 @@ class SingleValue(Initialization_ABC) :
 	def initialize(self, layer) :
 		shape = layer.getParameterShape(self.parameter)
 		v = numpy.zeros( shape, dtype = theano.config.floatX) + self.value
-		setattr( layer, self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
+		layer.initParameter( self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
 
 class SingleValueWeights(SingleValue) :
 	"""Initialize the weights to a given value"""

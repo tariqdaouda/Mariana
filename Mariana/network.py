@@ -13,10 +13,6 @@ def loadModel(filename) :
 	"""Shorthand for Network.load"""
 	return Network.load(filename)
 
-def loadModel_old(filename) :
-	"""Shorthand for Network.load_old"""
-	return Network.load_old(filename)
-
 class OutputMap(object):
 	"""
 	Encapsulates outputs as well as their theano functions.
@@ -200,7 +196,6 @@ class Network(object) :
 
 	def init(self) :
 		"Initialiases the network by initialising every layer."
-
 		if self._mustInit :
 			self.logNetworkEvent("Initialization begins!")
 			print "\n" + MSET.OMICRON_SIGNATURE
@@ -222,7 +217,7 @@ class Network(object) :
 						self.outputMaps[k].addOutput(o, v)
 			
 			self._mustInit = False
-
+		
 	def help(self) :
 		"""prints the list of available model functions, such as train, test,..."""
 		self.init()
@@ -327,6 +322,12 @@ class Network(object) :
 							expandedLayers[name] = stuff["class"](*stuff["arguments"]["args"], **stuff["arguments"]["kwargs"])
 
 		for l1, l2 in model["edges"] :
+			for k, v in model["layers"][l1]["parameters"].iteritems() :
+				setattr(expandedLayers[l1], k, v)
+			
+			for k, v in model["layers"][l2]["parameters"].iteritems() :
+				setattr(expandedLayers[l2], k, v)
+
 			network = expandedLayers[l1] > expandedLayers[l2]
 		
 		return network
