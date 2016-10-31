@@ -146,7 +146,6 @@ Training, Testing and Propagating:
 	o = ML.Regression(10, activation = MA.Tanh(), costObject = cost, learningScenario = ls)
 
 	ae = inp > h > o
-	ae.init()
 
 	#tied weights, we need to force the initialisation of the weight first
 	ae.init()
