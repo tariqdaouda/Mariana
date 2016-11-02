@@ -286,7 +286,6 @@ class Convolution2D(ConvLayer_ABC, ML.Hidden) :
 		self.pooler = pooler
 		self.nbFlatOutputs = None
 
-
 	def _femaleConnect(self, layer) :
 		try :
 			if self.nbInputChannels is None :

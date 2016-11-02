@@ -79,7 +79,7 @@ class BinomialDropout(OutputDecorator_ABC):
 		mask = rnd.binomial(n = 1, p = (1-self.ratio), size = outputs.shape)
 		# cast to stay in GPU float limit
 		mask = tt.cast(mask, theano.config.floatX)
-		return (outputs * mask) #/ self.ratio
+		return (outputs * mask) / self.ratio
 
 	def decorate(self, layer) :
 		if self.ratio > 0 :
@@ -124,7 +124,6 @@ class BatchNormalization(Decorator_ABC):
 		:param float epsilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
 		:param initialization WInitialization: How to initizalise the weights. This decorator is smart enough to use layer initializations.
 		:param initialization bInitialization: Same for bias
-
 	"""
 
 	def __init__(self, WInitialization=MI.SmallUniformWeights(), bInitialization=MI.ZerosBias(), epsilon=1e-6) :

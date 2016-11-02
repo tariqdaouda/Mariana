@@ -135,6 +135,17 @@ class SmallUniformEmbeddings(SmallUniform) :
 		SmallUniform.__init__(self, 'embeddings', *args, **kwargs)
 		self.hyperParameters = []
 
+class ScaledVarianceWeights(Initialization_ABC):
+	"""Scales the weights so that the variance is the same for every neurone."""
+	def __init__(self, *args, **kwargs):
+		self.parameter = "W"
+		super(UnitVariance, self).__init__(*args, **kwargs)
+	
+	def initialize(self, layer) :
+		shape = layer.getParameterShape(self.parameter)
+		w = numpy.random.randn(shape[0]) / numpy.sqrt(shape[0])
+		layer.initParameter( "W",  theano.shared(value = w, name = "%s_%s" % (layer.name, "W") ) )
+
 class Normal(Initialization_ABC) :
 	"""Random values from a normal distribution"""
 	def __init__(self, parameter, standardDev, shape, *args, **kwargs) :
@@ -154,6 +165,18 @@ class NormalWeights(Normal) :
 		Normal.__init__(self, 'W', *args, **kwargs)
 		self.standardDev = standardDev
 		self.hyperParameters = ["standardDev"]
+
+class HeWeights(Initialization_ABC) :
+	"""Initialization proposed by He et al. for ReLU in *Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification* """
+	def __init__(self, *args, **kwargs) :
+		super(HeWeights, self).__init__(*args, **kwargs)
+		self.parameter = "W"
+		self.hyperParameters = []
+
+	def initialize(self, layer) :
+		shape = layer.getParameterShape(self.parameter)
+		v = numpy.random.normal(0, numpy.sqrt(2./shape[0]), shape)
+		layer.initParameter( self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
 
 class SingleValue(Initialization_ABC) :
 	"""Initialize to a given value"""

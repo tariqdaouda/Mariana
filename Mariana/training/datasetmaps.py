@@ -115,11 +115,11 @@ class RandomSeries(Series) :
 		self.reroll()
 
 	def reroll(self) :
-		"""shuffles subsets but keep them synched"""
+		"""shuffles subsets but keeps them synched"""
 		indexes = numpy.random.randint(0, self.length, self.length)
 		for k in self.lists :
 			self.lists[k] = self.lists[k][indexes]
-
+			
 class ClassSets(Dataset_ABC) :
 	"""Pass it one set for each class and it will take care of randomly sampling them with replacement.
 	All class sets must have at least two elements. If classes do not have the same number of elements
