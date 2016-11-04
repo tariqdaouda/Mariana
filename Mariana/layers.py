@@ -549,7 +549,7 @@ class Regression(WeightBiasOutput_ABC) :
 
 class Autoencode(WeightBiasOutput_ABC) :
 	"""An auto encoding layer. This one takes another layer as inputs and tries to reconstruct its activations.
-	You could achieve the same result with a Regresison layer, but this one has the advantage of not needing to be fed specific inputs"""
+	You could achieve the same result with a Regression layer, but this one has the advantage of not needing to be fed specific inputs"""
 
 	def __init__(self, targetLayerName, activation, learningScenario, costObject, name=None, **kwargs) :
 		super(Autoencode, self).__init__(None, activation=activation, learningScenario=learningScenario, costObject=costObject, name=name, **kwargs)
