@@ -16,7 +16,8 @@ CHANGELOG
 * Parameter initializations/updates now go through layer functions initParameter and updateParameter
 * bug fix: Loading a saved model will no longer trigger parameter reinitialisations
 * bug fix: Precition accuracy used to be the same as the classification accuracy
- 
+* refact: Output layers no longer need to have weights/bias
+
 1.0.2rc:
 --------
 
