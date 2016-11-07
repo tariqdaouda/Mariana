@@ -514,6 +514,7 @@ class SoftmaxClassifier(WeightBiasOutput_ABC) :
 	"""A softmax (probabilistic) Classifier"""
 	def __init__(self, nbOutputs, costObject, learningScenario, temperature = 1, **kwargs) :
 		super(SoftmaxClassifier, self).__init__(nbOutputs, costObject=costObject, learningScenario=learningScenario, activation=MA.Softmax(temperature=temperature), **kwargs)
+		self.targets = tt.ivector(name = "targets_" + self.name)
 
 	def setCustomTheanoFunctions(self) :
 		"""defines::
