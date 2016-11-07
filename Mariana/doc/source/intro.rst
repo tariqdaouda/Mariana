@@ -10,11 +10,11 @@ Please have a look at the examples_ folder on github_. You will find the followi
 	* ae_: a very basic auto encoder that learns to encode 8 bits into 3.
 
 
-.. _examples: https://github.com/tariqdaouda/Mariana/tree/master/Mariana/examples
+.. _examples: https://github.com/tariqdaouda/Mariana/tree/master/examples
 .. _github: https://github.com/tariqdaouda/Mariana
-.. _mnist_mlp: https://github.com/tariqdaouda/Mariana/tree/master/Mariana/examples/mnist_mlp.py
-.. _vanilla_mnist_perceptron_mlp: https://github.com/tariqdaouda/Mariana/tree/master/Mariana/examples/vanilla_mnist_perceptron_mlp.py
-.. _ae: https://github.com/tariqdaouda/Mariana/tree/master/Mariana/examples/ae.py
+.. _mnist_mlp: https://github.com/tariqdaouda/Mariana/tree/master/examples/mnist_mlp.py
+.. _vanilla_mnist_perceptron_mlp: https://github.com/tariqdaouda/Mariana/tree/master/examples/vanilla_mnist_perceptron_mlp.py
+.. _ae: https://github.com/tariqdaouda/Mariana/tree/master/examples/autoencoder.py
 
 Snippets
 -------------
