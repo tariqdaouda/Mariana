@@ -506,7 +506,7 @@ class Output_ABC(Layer_ABC) :
 		self.test = MWRAP.TheanoFunction("test", self, [("score", self.testCost)], { "targets" : self.targets }, allow_input_downcast=True)
 
 class WeightBiasOutput_ABC(Output_ABC, WeightBias_ABC):
-    """Generic output layer with weight and bias"""
+	"""Generic output layer with weight and bias"""
 	def __init__(self, nbOutputs, costObject, learningScenario, activation, **kwargs):
 		super(WeightBiasOutput_ABC, self).__init__(size=nbOutputs, costObject=costObject, learningScenario=learningScenario, activation=activation, **kwargs)
 
@@ -514,7 +514,6 @@ class SoftmaxClassifier(WeightBiasOutput_ABC) :
 	"""A softmax (probabilistic) Classifier"""
 	def __init__(self, nbOutputs, costObject, learningScenario, temperature = 1, **kwargs) :
 		super(SoftmaxClassifier, self).__init__(nbOutputs, costObject=costObject, learningScenario=learningScenario, activation=MA.Softmax(temperature=temperature), **kwargs)
-		self.targets = tt.ivector(name = "targets_" + self.name)
 
 	def setCustomTheanoFunctions(self) :
 		"""defines::
