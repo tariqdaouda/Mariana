@@ -83,7 +83,7 @@ class GlorotTanhInit(Initialization_ABC) :
 					high = numpy.sqrt(6. / (layer.nbInputs + layer.nbOutputs)),
 					size = shape
 				)
-		layer.updateParameter( "W", theano.shared(W) )
+		layer.initParameter( "W", theano.shared(W) )
 
 class Uniform(Initialization_ABC) :
 	"""Random values from a unifrom distribution (divided by the overall sum)."""

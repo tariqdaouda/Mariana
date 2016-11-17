@@ -137,7 +137,7 @@ class Layer_ABC(object) :
 
 	def updateParameter(self, parameter, value) :
 		"""Update the value of an already initialized parameter. Raise value error if the parameter has not been initialized"""
-		if k not in self.getParameterDict().keys() :
+		if value not in self.getParameterDict().keys() :
 			raise ValueError("Parameter '%s' has not been initialized as parameter of layer '%s'" % (parameter, self.name) )
 		else :
 			setattr(self, parameter, value)
@@ -170,7 +170,7 @@ class Layer_ABC(object) :
 		This is called after decorating"""
 		self.propagate = MWRAP.TheanoFunction("propagate", self, [("outputs", self.outputs)], allow_input_downcast=True)
 		self.propagateTest = MWRAP.TheanoFunction("propagateTest", self, [("outputs", self.testOutputs)], allow_input_downcast=True)
-	
+			
 	def setCustomTheanoFunctions(self) :
 		"""This is where you should put the definitions of your custom theano functions. Theano functions
 		must be declared as self attributes using a wrappers.TheanoFunction object, cf. wrappers documentation.
@@ -371,6 +371,7 @@ class Pass(Layer_ABC) :
 			self.nbInputs = layer.nbOutputs
 		elif self.nbInputs != layer.nbOutputs :
 			raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
+		self.nbOutputs = layer.nbOutputs
 
 	def _setOutputs(self) :
 		for layer in self.network.inConnections[self] :
@@ -385,7 +386,7 @@ class Pass(Layer_ABC) :
 class WeightBias_ABC(Layer_ABC) :
 	"""A layer with weigth and bias. If would like to disable either one of them simply do not initialize"""
 
-	def __init__(self, size, layerType, initializations = [MI.SmallUniformWeights(), MI.ZerosBias()], **kwargs) :
+	def __init__(self, size, layerType, initializations = [MI.HeWeights(), MI.ZerosBias()], **kwargs) :
 		Layer_ABC.__init__(self,
 			size,
 			layerType=layerType,
@@ -511,8 +512,41 @@ class Output_ABC(WeightBias_ABC) :
 		self.train = MWRAP.TheanoFunction("train", self, [("score", self.cost)], { "targets" : self.targets }, updates = self.updates, allow_input_downcast=True)
 		self.test = MWRAP.TheanoFunction("test", self, [("score", self.testCost)], { "targets" : self.targets }, allow_input_downcast=True)
 
-	# def _whateverLastInit(self) :
-	# 	self._setTheanoFunctions()
+		layers = [self]
+		layers.extend(self.dependencies.values())
+		
+		try :
+			for l in layers :
+				gradOuts = []
+				upsOuts = []
+				for k, v in l.getParameterDict().iteritems() :
+					if l.learningScenario is not None :
+						gradOuts.append( (k, l.learningScenario.gradients[v]) )
+						upsOuts.append( (k, l.learningScenario.updates[v]) )
+					else :
+						gradOuts.append( (k, self.learningScenario.gradients[v]) )
+						upsOuts.append( (k, self.learningScenario.updates[v]) )
+
+				setattr(self, "getGradients_%s" % l.name, MWRAP.TheanoFunction("getGradients", self, gradOuts, { "targets" : self.targets }, allow_input_downcast=True,  on_unused_input='ignore') )
+				setattr(self, "getUpdates_%s" % l.name, MWRAP.TheanoFunction("getUpdates", self, gradOuts, { "targets" : self.targets }, allow_input_downcast=True,  on_unused_input='ignore') )
+		except :
+			print("Warning! Unable to setup theano function for retreiving updates and gradients. Perhaps the current learning scenario is not keeping them stored.")
+
+	def getGradients(self, layerName=None, *args, **kwargs) :
+		if layerName is None :
+			lname = self.name
+		else :
+			lname = layerName
+
+		return getattr(self, "getGradients_%s" % lname)(*args, **kwargs)
+
+	def getUpdates(self, layerName=None, *args, **kwargs) :
+		if layerName is None :
+			lname = self.name
+		else :
+			lname = layerName
+
+		return getattr(self, "getUpdates_%s" % lname)(*args, **kwargs)
 
 class SoftmaxClassifier(Output_ABC) :
 	"""A softmax (probabilistic) Classifier"""

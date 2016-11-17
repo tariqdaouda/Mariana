@@ -116,6 +116,7 @@ class GeometricEarlyStopping(StopCriterion_ABC) :
 				
 			if self.bestScore is None :
 				self.bestScore = curr
+				self.wall = self.patience
 			elif ( self.descending and curr <= (self.bestScore - self.significantImprovement) ) or ( not self.descending and curr >= (self.bestScore + self.significantImprovement) ) :
 				self.bestScore = curr
 				self.wall = max(self.patience, trainer.store["runInfos"]["epoch"] * self.patienceIncreaseFactor)
