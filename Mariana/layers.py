@@ -137,7 +137,7 @@ class Layer_ABC(object) :
 
 	def updateParameter(self, parameter, value) :
 		"""Update the value of an already initialized parameter. Raise value error if the parameter has not been initialized"""
-		if k not in self.getParameterDict().keys() :
+		if parameter not in self.getParameterDict().keys() :
 			raise ValueError("Parameter '%s' has not been initialized as parameter of layer '%s'" % (parameter, self.name) )
 		else :
 			setattr(self, parameter, value)
