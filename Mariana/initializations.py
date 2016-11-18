@@ -137,7 +137,7 @@ class SmallUniformEmbeddings(SmallUniform) :
 
 class Normal(Initialization_ABC) :
 	"""Random values from a normal distribution"""
-	def __init__(self, parameter, standardDev, shape, *args, **kwargs) :
+	def __init__(self, parameter, standardDev, *args, **kwargs) :
 		Initialization_ABC.__init__(self, *args, **kwargs)
 		self.parameter = parameter
 		self.standardDev = standardDev
@@ -152,7 +152,7 @@ class Normal(Initialization_ABC) :
 class NormalWeights(Normal) :
 	"""Random weights from a normal distribution"""
 	def __init__(self, standardDev, *args, **kwargs) :
-		Normal.__init__(self, 'W', *args, **kwargs)
+		Normal.__init__(self, 'W', standardDev, *args, **kwargs)
 		self.standardDev = standardDev
 		self.hyperParameters = ["standardDev"]
 
