@@ -453,12 +453,13 @@ class Output_ABC(Layer_ABC) :
 		* test: returns the cost, ignores trainOnly decoartors
 		"""
 
-	def __init__(self, size, costObject, **kwargs) :
+	def __init__(self, size, costObject, backTrckAll=False, **kwargs) :
 		super(Output_ABC, self).__init__(size, layerType=MNET.TYPE_OUTPUT_LAYER, **kwargs)
 		self.type = MNET.TYPE_OUTPUT_LAYER
 		self.targets = None
 		self.dependencies = OrderedDict()
 		self.costObject = costObject
+		self.backTrckAll = backTrckAll
 
 		self.cost = None
 		self.testCost = None
@@ -466,14 +467,18 @@ class Output_ABC(Layer_ABC) :
 
 	def _backTrckDependencies(self) :
 		"""Finds all the hidden layers the ouput layer is influenced by"""
-		self.dependencies = {}
 		def _bckTrk(deps, layer) :
 			for l in self.network.inConnections[layer] :
 				deps[l.name] = l
 				_bckTrk(deps, l)
 			return deps
 
-		self.dependencies = _bckTrk(self.dependencies, self)
+		self.dependencies = {}
+		if self.backTrckAll == True:
+			self.dependencies = dict(self.network.layers)
+			del self.dependencies[self.name]
+		else:
+			self.dependencies = _bckTrk(self.dependencies, self)
 
 	def setCustomTheanoFunctions(self) :
 		"""Adds train, test, model functions::
@@ -509,6 +514,7 @@ class WeightBiasOutput_ABC(Output_ABC, WeightBias_ABC):
 	"""Generic output layer with weight and bias"""
 	def __init__(self, nbOutputs, costObject, learningScenario, activation, **kwargs):
 		super(WeightBiasOutput_ABC, self).__init__(size=nbOutputs, costObject=costObject, learningScenario=learningScenario, activation=activation, **kwargs)
+
 
 class SoftmaxClassifier(WeightBiasOutput_ABC) :
 	"""A softmax (probabilistic) Classifier"""

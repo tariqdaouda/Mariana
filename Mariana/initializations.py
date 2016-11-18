@@ -42,7 +42,7 @@ class Initialization_ABC(Abstraction_ABC) :
 			self.initialize(layer)
 		except ValueError  as e:
 			message = "%s was *NOT* initialized using %s. Because: %s" % (layer.name, self.__class__.__name__, e.message)
-	
+
 		layer.network.logLayerEvent(layer, message, hyps)
 
 	def initialize(self, layer) :
@@ -53,7 +53,7 @@ class Identity(Initialization_ABC) :
 	"""Identity matrix for weights"""
 	def __init__(self, *args, **kwargs) :
 		Initialization_ABC.__init__(self, *args, **kwargs)
-	
+
 	def initialize(self, layer) :
 		v = numpy.identity(layer.nbOutputs, dtype = theano.config.floatX)
 		layer.initParameter( "W",  theano.shared(value = v, name = "%s_%s" % (layer.name, "W") ) )
@@ -77,7 +77,7 @@ class GlorotTanhInit(Initialization_ABC) :
 	def initialize(self, layer) :
 		shape = layer.getParameterShape("W")
 		rng = numpy.random.RandomState(MSET.RANDOM_SEED)
-	
+
 		W = rng.uniform(
 					low = -numpy.sqrt(6. / (layer.nbInputs + layer.nbOutputs)),
 					high = numpy.sqrt(6. / (layer.nbInputs + layer.nbOutputs)),
@@ -146,6 +146,7 @@ class Normal(Initialization_ABC) :
 	def initialize(self, layer) :
 		shape = layer.getParameterShape(self.parameter)
 		v = numpy.random.normal(0, self.standardDev, shape)
+		v = numpy.asarray(v, dtype=theano.config.floatX)
 		layer.initParameter( self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
 
 class NormalWeights(Normal) :
