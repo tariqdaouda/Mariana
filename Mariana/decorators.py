@@ -43,7 +43,7 @@ class OutputDecorator_ABC(Decorator_ABC) :
 
 class Mask(OutputDecorator_ABC):
 	"""Applies a fixed mask to the outputs of the layer. This layers does this:
-	
+
 		.. math::
 
 			outputs = outputs * mask
@@ -69,7 +69,7 @@ class BinomialDropout(OutputDecorator_ABC):
 	def __init__(self, ratio, trainOnly = True, *args, **kwargs):
 		OutputDecorator_ABC.__init__(self, trainOnly, *args, **kwargs)
 
-		assert (ratio >= 0 and ratio <= 1) 
+		assert (ratio >= 0 and ratio <= 1)
 		self.ratio = ratio
 		self.seed = MSET.RANDOM_SEED
 		self.hyperParameters.extend(["ratio"])
@@ -99,7 +99,7 @@ class Normalize(Decorator_ABC) :
 
 	:param float espilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
 	"""
-	
+
 	def __init__(self, espilon=1e-6) :
 		Decorator_ABC.__init__(self)
 		self.espilon = espilon
@@ -107,14 +107,14 @@ class Normalize(Decorator_ABC) :
 	def decorate(self, layer) :
 		std = tt.sqrt( tt.var(layer.outputs) + self.espilon )
 		layer.output = ( layer.output-tt.mean(layer.output) / std )
-		
+	
 		std = tt.sqrt( tt.var(layer.testOutputs) + self.espilon )
 		layer.testOutput = ( layer.testOutput-tt.mean(layer.testOutput) ) / std
 
 class BatchNormalization(Decorator_ABC):
 	"""Applies Batch Normalization to the outputs of the layer.
 	Implementation according to Sergey Ioffe and Christian Szegedy (http://arxiv.org/abs/1502.03167)
-		
+	
 		.. math::
 
 			W * ( inputs - mean(mu) )/( std(inputs) ) + b
@@ -127,7 +127,7 @@ class BatchNormalization(Decorator_ABC):
 
 	"""
 
-	def __init__(self, WInitialization=MI.SmallUniformWeights(), bInitialization=MI.ZerosBias(), epsilon=1e-6) :
+	def __init__(self, WInitialization=MI.SmallUniformWeights(), bInitialization=MI.ZeroBias(), epsilon=1e-6) :
 		Decorator_ABC.__init__(self)
 		self.epsilon = epsilon
 		self.WInitialization = WInitialization
@@ -155,13 +155,13 @@ class BatchNormalization(Decorator_ABC):
 			mu = tt.mean(layer.testOutputs)
 			sigma = tt.sqrt( tt.var(layer.testOutputs) + self.epsilon )
 			layer.testOutputs = layer.batchnorm_W * ( (layer.testOutputs - mu) / sigma ) + layer.batchnorm_b
-		
+	
 class WeightSparsity(Decorator_ABC):
 	"""Stochatically sets a certain ratio of the input weight to 0"""
 	def __init__(self, ratio, *args, **kwargs):
 		Decorator_ABC.__init__(self, *args, **kwargs)
 
-		assert (ratio >= 0 and ratio <= 1) 
+		assert (ratio >= 0 and ratio <= 1)
 		self.ratio = ratio
 		self.seed = MSET.RANDOM_SEED
 		self.hyperParameters.extend(["ratio"])
@@ -172,7 +172,7 @@ class WeightSparsity(Decorator_ABC):
 			for j in xrange(initWeights.shape[1]) :
 				if numpy.random.rand() < self.ratio :
 					initWeights[i, j] = 0
-		
+	
 		layer.W = theano.shared(value = initWeights, name = layer.W.name)
 
 class InputSparsity(Decorator_ABC):
@@ -180,7 +180,7 @@ class InputSparsity(Decorator_ABC):
 	def __init__(self, ratio, *args, **kwargs):
 		Decorator_ABC.__init__(self, *args, **kwargs)
 
-		assert (ratio >= 0 and ratio <= 1) 
+		assert (ratio >= 0 and ratio <= 1)
 		self.ratio = ratio
 		self.seed = MSET.RANDOM_SEED
 		self.hyperParameters.extend(["ratio"])
@@ -190,7 +190,7 @@ class InputSparsity(Decorator_ABC):
 		for i in xrange(initWeights.shape[0]) :
 			if numpy.random.rand() < self.ratio :
 				initWeights[i, : ] = numpy.zeros(initWeights.shape[1])
-		
+	
 		layer.W = theano.shared(value = initWeights, name = layer.W.name)
 
-		
+	

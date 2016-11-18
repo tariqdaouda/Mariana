@@ -384,7 +384,7 @@ class Pass(Layer_ABC) :
 class WeightBias_ABC(Layer_ABC) :
 	"""A layer with weigth and bias. If would like to disable either one of them simply do not initialize"""
 
-	def __init__(self, size, layerType, initializations = [MI.SmallUniformWeights(), MI.ZerosBias()], **kwargs) :
+	def __init__(self, size, layerType, initializations = [MI.SmallUniformWeights(), MI.ZeroBias()], **kwargs) :
 		super(WeightBias_ABC, self).__init__(size, layerType=layerType, initializations=initializations, **kwargs)
 
 		self.W = None
