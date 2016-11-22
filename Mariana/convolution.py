@@ -130,8 +130,8 @@ class Flatten(ML.Layer_ABC) :
 class ConvLayer_ABC(ML.Layer_ABC) :
     """The abstract class that all convolution layers must implement"""
 
-    def __init__(self, nbChannels, **kwargs) :
-        ML.Layer_ABC.__init__(self, None, layerType=MNET.TYPE_HIDDEN_LAYER, **kwargs)
+    def __init__(self, nbChannels, layerType=MNET.TYPE_HIDDEN_LAYER, **kwargs) :
+        ML.Layer_ABC.__init__(self, None, layerType=layerType, **kwargs)
     
         self.nbChannels = nbChannels
         self.height = None
@@ -192,7 +192,7 @@ class Input(ConvLayer_ABC) :
         :param int height: Image height.
         :param int width: Image width.
         """
-        ConvLayer_ABC.__init__(self, nbChannels, **kwargs)
+        ConvLayer_ABC.__init__(self, nbChannels, layerType=MNET.TYPE_INPUT_LAYER, **kwargs)
 
         self.height = height
         self.width = width

@@ -45,6 +45,7 @@ class Conv :
 		o = ML.SoftmaxClassifier(10, decorators = [], learningScenario = ls, costObject = cost, name = "out", regularizations = [ ] )
 		
 		self.model = i > c1 > c2 > f > h > o
+		print self.model
 		
 	def train(self, inputs, targets) :
 		#The inputs have to be reshaped into a 4d matrix before passing them to the conv layers
@@ -84,7 +85,7 @@ class ConvWithChanneler :
 		o = ML.SoftmaxClassifier(10, decorators = [], learningScenario = ls, costObject = cost, name = "out", regularizations = [ ] )
 		
 		self.model = i > ichan > c1 > c2 > f > h > o
-		
+
 	def train(self, inputs, targets) :
 		#because of the channeler there is no need to reshape the data besfore passing them to the conv layer
 		return self.model.train("out", inp = inputs, targets = targets )
@@ -108,7 +109,7 @@ if __name__ == "__main__" :
 			inputs = train_set[0][i : i +miniBatchSize]
 			targets = train_set[1][i : i +miniBatchSize]
 			res = model.train(inputs, targets )
-			trainScores.append(res[0])
+			trainScores.append(res["score"])
 
 		trainScore = numpy.mean(trainScores)
 		
