@@ -447,8 +447,10 @@ class Hidden(WeightBias_ABC) :
 		super(Hidden, self).__init__(size, layerType=MNET.TYPE_HIDDEN_LAYER, **kwargs)
 
 class Output_ABC(Layer_ABC) :
-	"""The interface that every output layer should expose. This interface also provides the model functions::
-
+	"""The interface that every output layer should expose.
+	If backTrckAll is set to True, the output layer will consider all layers of the network as its dependencies.
+	The default behaviour is to only consider the layers that are parts of branches that lead to the output layer.
+	This interface also provides the model functions::
 		* train: upadates the parameters and returns the cost
 		* test: returns the cost, ignores trainOnly decoartors
 		"""
