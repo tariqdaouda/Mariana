@@ -20,13 +20,13 @@ __all__= [
 	"SingleValue",
 	"SingleValueWeights",
 	"SingleValueBias",
-	"ZerosWeights",
-	"ZerosBias"
+	"ZeroWeights",
+	"ZeroBias"
 ]
 
 class Initialization_ABC(Abstraction_ABC) :
 	"""This class defines the interface that an Initialization must offer. As a general good practice every init should only take care of a single
-	parameter, but you are free to do whatever you want. 
+	parameter, but you are free to do whatever you want.
 	"""
 
 	def __call__(self, *args, **kwargs) :
@@ -42,7 +42,7 @@ class Initialization_ABC(Abstraction_ABC) :
 			self.initialize(layer)
 		except ValueError  as e:
 			message = "%s was *NOT* initialized using %s. Because: %s" % (layer.name, self.__class__.__name__, e.message)
-		
+
 		layer.network.logLayerEvent(layer, message, hyps)
 
 	def initialize(self, layer) :
@@ -53,7 +53,7 @@ class Identity(Initialization_ABC) :
 	"""Identity matrix for weights"""
 	def __init__(self, *args, **kwargs) :
 		Initialization_ABC.__init__(self, *args, **kwargs)
-		
+
 	def initialize(self, layer) :
 		v = numpy.identity(layer.nbOutputs, dtype = theano.config.floatX)
 		layer.initParameter( "W",  theano.shared(value = v, name = "%s_%s" % (layer.name, "W") ) )
@@ -77,7 +77,7 @@ class GlorotTanhInit(Initialization_ABC) :
 	def initialize(self, layer) :
 		shape = layer.getParameterShape("W")
 		rng = numpy.random.RandomState(MSET.RANDOM_SEED)
-		
+
 		W = rng.uniform(
 					low = -numpy.sqrt(6. / (layer.nbInputs + layer.nbOutputs)),
 					high = numpy.sqrt(6. / (layer.nbInputs + layer.nbOutputs)),
@@ -137,7 +137,7 @@ class SmallUniformEmbeddings(SmallUniform) :
 
 class Normal(Initialization_ABC) :
 	"""Random values from a normal distribution"""
-	def __init__(self, parameter, standardDev, shape, *args, **kwargs) :
+	def __init__(self, parameter, standardDev, *args, **kwargs) :
 		Initialization_ABC.__init__(self, *args, **kwargs)
 		self.parameter = parameter
 		self.standardDev = standardDev
@@ -146,12 +146,13 @@ class Normal(Initialization_ABC) :
 	def initialize(self, layer) :
 		shape = layer.getParameterShape(self.parameter)
 		v = numpy.random.normal(0, self.standardDev, shape)
+		v = numpy.asarray(v, dtype=theano.config.floatX)
 		layer.initParameter( self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
 
 class NormalWeights(Normal) :
 	"""Random weights from a normal distribution"""
 	def __init__(self, standardDev, *args, **kwargs) :
-		Normal.__init__(self, 'W', *args, **kwargs)
+		Normal.__init__(self, 'W', standardDev, *args, **kwargs)
 		self.standardDev = standardDev
 		self.hyperParameters = ["standardDev"]
 
@@ -174,7 +175,7 @@ class SingleValueWeights(SingleValue) :
 		SingleValue.__init__(self, 'W', value, *args, **kwargs)
 		self.hyperParameters = ["value"]
 
-class ZerosWeights(SingleValueWeights) :
+class ZeroWeights(SingleValueWeights) :
 	"""Initialize the weights to zero"""
 	def __init__(self, *args, **kwargs) :
 		SingleValueWeights.__init__(self, 0)
@@ -186,7 +187,7 @@ class SingleValueBias(SingleValue) :
 		SingleValue.__init__(self, 'b', value, *args, **kwargs)
 		self.hyperParameters = ["value"]
 
-class ZerosBias(SingleValueBias) :
+class ZeroBias(SingleValueBias) :
 	"""Initialize the bias to zeros"""
 	def __init__(self, *args, **kwargs) :
 		SingleValueBias.__init__(self, 0)
