@@ -21,6 +21,8 @@ CHANGELOG
 * bug fix: GeometricEarlyStopping's patience is now truly reset when a better score is achieved
 * refact: Output layers no longer need to have weights/bias
 * feature: Outputlayer can now track the parameters of all layers in a network. Not only those that belong to branches that directly lead to them.
+* feature: Layers now perform basic sanity checks.
+* added test for Autoencode layer
 
 1.0.2rc:
 --------

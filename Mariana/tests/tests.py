@@ -39,7 +39,7 @@ class MLPTests(unittest.TestCase):
         cost = MC.NegativeLogLikelihood()
 
         i = ML.Input(2, 'inp')
-        h = ML.Hidden(10, activation = MA.ReLU(), regularizations = [MR.L1(0), MR.L2(0)], name = "Hidden_0.500705866892")
+        h = ML.Hidden(10, activation = MA.ReLU(), name = "Hidden_0.500705866892")
         o = ML.SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
 
         mlp = i > h > o
@@ -75,7 +75,7 @@ class MLPTests(unittest.TestCase):
         cost = MC.NegativeLogLikelihood()
 
         i = ML.Input(2, 'inp')
-        h = Hidden_layerRef(i, 10, activation = MA.ReLU(), regularizations = [MR.L1(0), MR.L2(0)], name = "Hidden_0.500705866892")
+        h = Hidden_layerRef(i, 10, activation = MA.ReLU(), name = "Hidden_0.500705866892")
         o = ML.SoftmaxClassifier(2, learningScenario = ls, costObject = cost, name = "out")
 
         mlp = i > h > o
@@ -110,12 +110,39 @@ class MLPTests(unittest.TestCase):
         cost = MC.MeanSquaredError()
 
         i = ML.Input(8, name = 'inp')
-        h = ML.Hidden(3, activation = MA.ReLU(), name = "hid")
-        o = ML.Regression(8, activation = MA.ReLU(), learningScenario = ls, costObject = cost, name = "out" )
+        h = ML.Hidden(3, activation = MA.ReLU(), initializations=[MI.SmallUniformWeights(), MI.ZeroBias()], name = "hid")
+        o = ML.Autoencode(targetLayerName = "inp", activation = MA.ReLU(), initializations=[MI.SmallUniformWeights(), MI.ZeroBias()], learningScenario = ls, costObject = cost, name = "out" )
 
         ae = i > h > o
 
-        miniBatchSize = 2
+        miniBatchSize = 1
+        for e in xrange(2000) :
+            for i in xrange(0, len(data), miniBatchSize) :
+                ae.train(o, inp = data[i:i+miniBatchSize])
+
+        res = ae.propagate(o, inp = data)["outputs"]
+        for i in xrange(len(res)) :
+            self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
+
+    # @unittest.skip("skipping")
+    def test_ae_reg(self) :
+
+        data = []
+        for i in xrange(8) :
+            zeros = numpy.zeros(8)
+            zeros[i] = 1
+            data.append(zeros)
+
+        ls = MS.GradientDescent(lr = 0.1)
+        cost = MC.MeanSquaredError()
+
+        i = ML.Input(8, name = 'inp')
+        h = ML.Hidden(3, activation = MA.ReLU(), initializations=[MI.SmallUniformWeights(), MI.ZeroBias()], name = "hid")
+        o = ML.Regression(8, activation = MA.ReLU(), initializations=[MI.SmallUniformWeights(), MI.ZeroBias()], learningScenario = ls, costObject = cost, name = "out" )
+
+        ae = i > h > o
+
+        miniBatchSize = 1
         for e in xrange(2000) :
             for i in xrange(0, len(data), miniBatchSize) :
                 ae.train(o, inp = data[i:i+miniBatchSize], targets = data[i:i+miniBatchSize] )

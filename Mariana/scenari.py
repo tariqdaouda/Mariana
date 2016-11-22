@@ -2,7 +2,7 @@ import theano, numpy
 import theano.tensor as tt
 from Mariana.abstraction import Abstraction_ABC
 
-__all__ = ["LearningScenario_ABC", "Fixed", "GradientDescent", "MomentumGradientDescent", "GradientFloor"]
+__all__ = ["LearningScenario_ABC", "Fixed", "GradientDescent", "MomentumGradientDescent"]
 
 class LearningScenario_ABC(Abstraction_ABC):
  	"""

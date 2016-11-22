@@ -178,8 +178,17 @@ class Layer_ABC(object) :
         """
         pass
 
-    def _sanityCheck(self) :
-        "perform basic checks on layers, automatically called on initialization"
+    def _parametersSanityCheck(self) :
+        "perform basic parameter checks on layers, automatically called on initialization"
+        for k, v in self.getParameterDict().iteritems() :
+            try :
+                if None in self.getParameterShape(k) :
+                    raise ValueError("Parameter '%s' of layer '%s' has invalid shape %s. That can cause initializations to crash." % (k, self.name, self.getParameterShape(k)))
+            except :
+                raise ValueError("Unable to get parameter '%s' of layer '%s'. That can cause initializations to crash." % (k, self.name))
+
+    def _outputsSanityCheck(self) :
+        "perform basic output checks on layers, automatically called on initialization"
         try :
             if self.testOutputs is None :
                 raise AttributeError("Attribute 'testOutputs' of layer '%s' has None value. This attribute defines the test output of the layer, usually without regularizations" % self.name)
@@ -192,30 +201,24 @@ class Layer_ABC(object) :
         except AttributeError :
                 raise AttributeError("Attribute 'outputs' of layer '%s' is not defined. This attribute defines the train output of the layer, usually with regularizations" % self.name)
 
-        for k, v in self.getParameters.iteritems() :
-            try :
-                if None in self.getParameterShape(k)
-                    raise ValueError("Parameter '%s' of layer '%s' has invalid shape %s. That can cause initializations to crash." % (k, self.name, self.getParameterShape(k)))
-            except :
-                    raise ValueError("Unable to get parameter '%s' of layer '%s'. That can cause initializations to crash." % (k, self.name)
-
     def _init(self) :
         "Initialize the layer making it ready for training. This function is automatically called before train/test etc..."
         if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.network.inConnections[self]) ) :
             if self._mustReset :
                 self._whateverFirstInit()
+                self._parametersSanityCheck()
                 self._initParameters()
                 self._mustReset = False
 
             self._setOutputs()
+            self._outputsSanityCheck()
             self._activate()
             self._listRegularizations()
             self._decorate()
             self._setTheanoFunctions()
             self.setCustomTheanoFunctions()
             self._whateverLastInit()
-            self._sanityCheck()
-            
+
             if self.outputs is None :
                 raise ValueError("Invalid layer '%s' has no defined outputs" % self.name)
 
@@ -283,8 +286,8 @@ class Embedding(Layer_ABC) :
         :param int size: the size of the input vector (if your input is a sentence this should be the number of words in it).
         :param int nbDimentions: the number of dimentions in wich to encode each word.
         :param int dictSize: the total number of words.
-        :param bool zeroForNull: if True the dictionnary will be augmented by one elements at te begining (index = 0) whose parameters will always be vector of zeros.
-        This can be used to selectively mask some words in the input, but keep in mind that the index for the first word is moved to one.
+        :param bool zeroForNull: if True the dictionnary will be augmented by one elements at te begining (index = 0) whose parameters will always be vector of zeros. This can be used to selectively mask some words in the input, but keep in mind that the index for the first word is moved to one.
+        
         """
 
         super(Embedding, self).__init__(size, layerType=MNET.TYPE_INPUT_LAYER,  initializations=initializations, **kwargs)
@@ -539,8 +542,8 @@ class Output_ABC(Layer_ABC) :
         layers = [self]
         layers.extend(self.dependencies.values())
         
-        try :
-            for l in layers :
+        for l in layers :
+            try :
                 gradOuts = []
                 upsOuts = []
                 for k, v in l.getParameterDict().iteritems() :
@@ -553,8 +556,9 @@ class Output_ABC(Layer_ABC) :
 
                 setattr(self, "getGradients_%s" % l.name, MWRAP.TheanoFunction("getGradients", self, gradOuts, { "targets" : self.targets }, allow_input_downcast=True,  on_unused_input='ignore') )
                 setattr(self, "getUpdates_%s" % l.name, MWRAP.TheanoFunction("getUpdates", self, gradOuts, { "targets" : self.targets }, allow_input_downcast=True,  on_unused_input='ignore') )
-        except :
-            print("Warning! Unable to setup theano function for retreiving updates and gradients. Perhaps the current learning scenario is not keeping them stored.")
+            except :
+                if MSET.VERBOSE :
+                    print("Warning! Unable to setup theano function for retreiving updates and gradients for layer '%s'. Perhaps the current learning scenario is not keeping them stored." % l.name)
 
     def getGradients(self, layerName=None, *args, **kwargs) :
         if layerName is None :
@@ -562,7 +566,10 @@ class Output_ABC(Layer_ABC) :
         else :
             lname = layerName
 
-        return getattr(self, "getGradients_%s" % lname)(*args, **kwargs)
+        try :
+            return getattr(self, "getGradients_%s" % lname)(*args, **kwargs)
+        except AttributeError :
+            print("There's no theano function for retreiving gradients for layer '%s'. Perhaps the current learning scenario is not keeping them stored." % l.name)
 
     def getUpdates(self, layerName=None, *args, **kwargs) :
         if layerName is None :
@@ -570,7 +577,10 @@ class Output_ABC(Layer_ABC) :
         else :
             lname = layerName
 
-        return getattr(self, "getUpdates_%s" % lname)(*args, **kwargs)
+        try :
+            return getattr(self, "getUpdates_%s" % lname)(*args, **kwargs)
+        except AttributeError :
+            print("There's no theano function for retreiving updates for layer '%s'. Perhaps the current learning scenario is not keeping them stored." % l.name)
 
 class WeightBiasOutput_ABC(Output_ABC, WeightBias_ABC):
     """Generic output layer with weight and bias"""
