@@ -61,7 +61,7 @@ if __name__ == "__main__" :
     
     nbErr = 0
     for example, target in zip(examples, targets) :
-        if target != mlp.classify(o, inp=[example])[0] :
+        if target != mlp.classify(o, inp=[example])["class"] :
             nbErr += 1
 
     print "Nb Errors: %s/%s (%s%%) " % (nbErr, len(targets), float(nbErr)/len(targets) * 100)

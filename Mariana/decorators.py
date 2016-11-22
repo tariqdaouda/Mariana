@@ -135,6 +135,9 @@ class BatchNormalization(Decorator_ABC):
 		self.b = None
 		self.paramShape = None
 
+	def initParameter(self, parameter, value) :
+		setattr(self, parameter, value)
+
 	def getParameterShape(self, *args, **kwargs) :
 		return self.paramShape
 
