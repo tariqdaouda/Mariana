@@ -185,7 +185,10 @@ class Layer_ABC(object) :
                 if None in self.getParameterShape(k) :
                     raise ValueError("Parameter '%s' of layer '%s' has invalid shape %s. That can cause initializations to crash." % (k, self.name, self.getParameterShape(k)))
             except :
-                raise ValueError("Unable to get parameter '%s' of layer '%s'. That can cause initializations to crash." % (k, self.name))
+                message = "Warning! Unable to get shape of parameter '%s' of layer '%s'. That can cause initializations to crash." % (k, self.name)
+                self.network.logLayerEvent(self, message, {})
+                if MSET.VERBOSE :
+                    print(message)
 
     def _outputsSanityCheck(self) :
         "perform basic output checks on layers, automatically called on initialization"
