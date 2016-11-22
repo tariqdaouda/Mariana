@@ -5,6 +5,7 @@ import Mariana.decorators as MD
 import Mariana.layers as ML
 import Mariana.costs as MC
 import Mariana.regularizations as MR
+import Mariana.initializations as MI
 import Mariana.scenari as MS
 
 """A very basic auto encoder that learns to encode 8 bits into 3"""
@@ -27,8 +28,8 @@ def ae1(data) :
 	cost = MC.MeanSquaredError()
 
 	i = ML.Input(8, name = 'inp')
-	h = ML.Hidden(3, activation = MA.ReLU(), name = "hid")
-	o = ML.Regression(8, activation = MA.ReLU(), learningScenario = ls, costObject = cost, name = "out")
+	h = ML.Hidden(3, activation = MA.ReLU(), initializations=[MI.SmallUniformWeights(), MI.ZeroBias()], name = "hid")
+	o = ML.Regression(8, activation = MA.ReLU(), initializations=[MI.SmallUniformWeights(), MI.ZeroBias()], learningScenario = ls, costObject = cost, name = "out")
 
 	ae = i > h > o
 
@@ -47,13 +48,13 @@ def ae2(data) :
 	cost = MC.MeanSquaredError()
 
 	i = ML.Input(8, name = 'inp')
-	h = ML.Hidden(3, activation = MA.ReLU(), name = "hid")
-	o = ML.Autoencode(i.name, activation = MA.ReLU(), learningScenario = ls, costObject = cost, name = "out")
+	h = ML.Hidden(3, activation = MA.ReLU(), initializations=[MI.SmallUniformWeights(), MI.ZeroBias()], name = "hid")
+	o = ML.Autoencode(i.name, activation = MA.ReLU(), initializations=[MI.SmallUniformWeights(), MI.ZeroBias()], learningScenario = ls, costObject = cost, name = "out")
 
 	ae = i > h > o
 	# ae.init()
 	# o.train.printGraph()
-	for e in xrange(1000) :
+	for e in xrange(2000) :
 		for i in xrange(0, len(data), miniBatchSize) :
 			ae.train(o, inp = data[i:i+miniBatchSize] )
 
