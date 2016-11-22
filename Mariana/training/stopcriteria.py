@@ -1,132 +1,132 @@
 __all__ = ["EndOfTraining", "StopCriterion_ABC", "EpochWall", "GeometricEarlyStopping"]
 
 class EndOfTraining(Exception) :
-	"""Exception raised when a training criteria is met"""
-	def __init__(self, stopCriterion) :
-		self.stopCriterion = stopCriterion
-		self.message = "End of training: %s" % stopCriterion.endMessage()
+    """Exception raised when a training criteria is met"""
+    def __init__(self, stopCriterion) :
+        self.stopCriterion = stopCriterion
+        self.message = "End of training: %s" % stopCriterion.endMessage()
 
 class StopCriterion_ABC(object) :
-	"""This defines the interface that a StopCriterion must expose"""
+    """This defines the interface that a StopCriterion must expose"""
 
-	def __init__(self, *args, **kwrags) :
-		self.name = self.__class__.__name__
+    def __init__(self, *args, **kwrags) :
+        self.name = self.__class__.__name__
 
-	def stop(self, trainer) :
-		"""The actual function that is called by the trainer at each epoch. Must be implemented in children"""
-		raise NotImplemented("Must be implemented in child")
+    def stop(self, trainer) :
+        """The actual function that is called by the trainer at each epoch. Must be implemented in children"""
+        raise NotImplemented("Must be implemented in child")
 
-	def endMessage(self) :
-		"""returns information about the reason why the training stopped"""
-		return self.name
+    def endMessage(self) :
+        """returns information about the reason why the training stopped"""
+        return self.name
 
 class EpochWall(StopCriterion_ABC) :
-	"""Stops training when maxEpochs is reached"""
-	def __init__(self, maxEpochs) :
-		StopCriterion_ABC.__init__(self)
-		self.maxEpochs = maxEpochs
+    """Stops training when maxEpochs is reached"""
+    def __init__(self, maxEpochs) :
+        StopCriterion_ABC.__init__(self)
+        self.maxEpochs = maxEpochs
 
-	def stop(self, trainer) :
-		if trainer.store["runInfos"]["epoch"]+1 >= self.maxEpochs :
-			return True
-		return False
+    def stop(self, trainer) :
+        if trainer.store["runInfos"]["epoch"]+1 >= self.maxEpochs :
+            return True
+        return False
 
-	def endMessage(self) :
-		"""returns information about the reason why the training stopped"""
-		return "Reached epoch wall %s" % self.maxEpochs
+    def endMessage(self) :
+        """returns information about the reason why the training stopped"""
+        return "Reached epoch wall %s" % self.maxEpochs
 
 class ScoreWall(StopCriterion_ABC) :
-	"""Stops training when a given score is reached"""
-	def __init__(self, wallValue, datasetMap, outputFunction, outputLayer = None) :
-		"""if outputLayer is None, will consider the average of all outputs"""
-		StopCriterion_ABC.__init__(self)
+    """Stops training when a given score is reached"""
+    def __init__(self, wallValue, datasetMap, outputFunction, outputLayer = None) :
+        """if outputLayer is None, will consider the average of all outputs"""
+        StopCriterion_ABC.__init__(self)
 
-		self.datasetMap = datasetMap
-		self.datasetName = None
-		self.outputLayer = outputLayer
-		self.outputFunction = outputFunction
-		self.wallValue = wallValue
+        self.datasetMap = datasetMap
+        self.datasetName = None
+        self.outputLayer = outputLayer
+        self.outputFunction = outputFunction
+        self.wallValue = wallValue
 
-	def stop(self, trainer) :
-		
-		if self.datasetName is None :
-			found = False
-			for name, m in trainer.maps.iteritems() :
-				if m is self.datasetMap :
-					self.datasetName = name
-					found = True
-					break
-			if not found :
-				raise ValueError("the trainer does not know the supplied dataset map")
+    def stop(self, trainer) :
+        
+        if self.datasetName is None :
+            found = False
+            for name, m in trainer.maps.iteritems() :
+                if m is self.datasetMap :
+                    self.datasetName = name
+                    found = True
+                    break
+            if not found :
+                raise ValueError("the trainer does not know the supplied dataset map")
 
-		if self.outputLayer is None :
-			curr = trainer.store["scores"][self.datasetName]["average"][self.outputFunction]
-		else :
-			curr = trainer.store["scores"][self.datasetName][self.outputLayer.name][self.outputFunction]
-	
-		if curr <= self.wallValue :
-			return True
-		return False
+        if self.outputLayer is None :
+            curr = trainer.store["scores"][self.datasetName]["average"][self.outputFunction]
+        else :
+            curr = trainer.store["scores"][self.datasetName][self.outputLayer.name][self.outputFunction]
+    
+        if curr <= self.wallValue :
+            return True
+        return False
 
-	def endMessage(self) :
-		"""returns information about the reason why the training stopped"""
-		return "Reached score wall %s" % self.wallValue
+    def endMessage(self) :
+        """returns information about the reason why the training stopped"""
+        return "Reached score wall %s" % self.wallValue
 
 class GeometricEarlyStopping(StopCriterion_ABC) :
-	"""Geometrically increases the patiences with the epochs and stops the training when the patience is over."""
-	def __init__(self, datasetMap, patience, patienceIncreaseFactor, significantImprovement, outputFunction, descending = True, outputLayer = None) :
-		"""if outputLayer is None, will consider the average of all outputs.
-		
-		:param boolean descending: If true, means that the score should go down during training (most cases). Use false if the opposite is true (ex: accuracy).
-		"""
-		StopCriterion_ABC.__init__(self)
-		
-		self.outputLayer = outputLayer
-		self.outputFunction = outputFunction
-		self.datasetMap = datasetMap
-		self.mapName = None
-		self.patience = patience
-		self.patienceIncreaseFactor = patienceIncreaseFactor
-		self.wall = patience
-		self.significantImprovement = significantImprovement
+    """Geometrically increases the patiences with the epochs and stops the training when the patience is over."""
+    def __init__(self, datasetMap, patience, patienceIncreaseFactor, significantImprovement, outputFunction, descending = True, outputLayer = None) :
+        """if outputLayer is None, will consider the average of all outputs.
+        
+        :param boolean descending: If true, means that the score should go down during training (most cases). Use false if the opposite is true (ex: accuracy).
+        """
+        StopCriterion_ABC.__init__(self)
+        
+        self.outputLayer = outputLayer
+        self.outputFunction = outputFunction
+        self.datasetMap = datasetMap
+        self.mapName = None
+        self.patience = patience
+        self.patienceIncreaseFactor = patienceIncreaseFactor
+        self.wall = patience
+        self.significantImprovement = significantImprovement
 
-		self.descending = descending
+        self.descending = descending
 
-		self.bestScore = None
+        self.bestScore = None
 
-	def stop(self, trainer) :
-		if self.wall <= 0 :
-			return True
+    def stop(self, trainer) :
+        if self.wall <= 0 :
+            return True
 
-		if self.mapName is None :
-			found = False
-			for name, m in trainer.maps.iteritems() :
-				if m is self.datasetMap :
-					self.mapName = name
-					found = True
-					break
-			if not found :
-				raise ValueError("the trainer does not know the supplied dataset map")
+        if self.mapName is None :
+            found = False
+            for name, m in trainer.maps.iteritems() :
+                if m is self.datasetMap :
+                    self.mapName = name
+                    found = True
+                    break
+            if not found :
+                raise ValueError("the trainer does not know the supplied dataset map")
 
-		try :
-			if self.outputLayer is None :
-				curr = trainer.store["scores"][self.mapName]["average"][self.outputFunction]
-			else :
-				curr = trainer.store["scores"][self.mapName][self.outputLayer.name][self.outputFunction]
-				
-			if self.bestScore is None :
-				self.bestScore = curr
-				self.wall = self.patience
-			elif ( self.descending and curr <= (self.bestScore - self.significantImprovement) ) or ( not self.descending and curr >= (self.bestScore + self.significantImprovement) ) :
-				self.bestScore = curr
-				self.wall = max(self.patience, trainer.store["runInfos"]["epoch"] * self.patienceIncreaseFactor)
-			self.wall -= 1
-				
-		except KeyError :
-			pass
-		
-		return False
-	
-	def endMessage(self) :
-		"""returns information about the reason why the training stopped"""
-		return "Early stopping, no patience left"
+        try :
+            if self.outputLayer is None :
+                curr = trainer.store["scores"][self.mapName]["average"][self.outputFunction]
+            else :
+                curr = trainer.store["scores"][self.mapName][self.outputLayer.name][self.outputFunction]
+                
+            if self.bestScore is None :
+                self.bestScore = curr
+                self.wall = self.patience
+            elif ( self.descending and curr <= (self.bestScore - self.significantImprovement) ) or ( not self.descending and curr >= (self.bestScore + self.significantImprovement) ) :
+                self.bestScore = curr
+                self.wall = max(self.patience, trainer.store["runInfos"]["epoch"] * self.patienceIncreaseFactor)
+            self.wall -= 1
+                
+        except KeyError :
+            pass
+        
+        return False
+    
+    def endMessage(self) :
+        """returns information about the reason why the training stopped"""
+        return "Early stopping, no patience left"

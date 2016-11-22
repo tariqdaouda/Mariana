@@ -60,7 +60,7 @@ def ae2(data) :
 	return ae, o
 
 def printResults(ae, o, data) :
-	res = ae.propagate(o, inp = data)[0]
+	res = ae.propagate(o, inp = data)['outputs']
 	for i, r in enumerate(res) :
 		m = numpy.max(r)
 		t = []
