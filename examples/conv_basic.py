@@ -104,7 +104,7 @@ if __name__ == "__main__" :
 			inputs = trainSet[0][i : i +miniBatchSize]
 			targets = trainSet[1][i : i +miniBatchSize]
 			res = model.train(inputs, targets )
-			trainScores.append(res[0])
+			trainScores.append(res["score"])
 		
 		if epoch%printRate == 0 :
 			trainScore = numpy.mean(trainScores)
@@ -112,8 +112,8 @@ if __name__ == "__main__" :
 			
 			print "---\nepoch", epoch
 			print "\ttrain score:", trainScore
-			if bestValScore > res[0] :
-				bestValScore = res[0]
-				print "\tvalidation score:", res[0], "+best+"
+			if bestValScore > res["score"] :
+				bestValScore = res["score"]
+				print "\tvalidation score:", res["score"], "+best+"
 			else :
-				print "\tvalidation score:", res[0], "best:", bestValScore
+				print "\tvalidation score:", res["score"], "best:", bestValScore

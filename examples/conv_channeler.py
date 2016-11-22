@@ -7,7 +7,7 @@ import Mariana.costs as MC
 import Mariana.regularizations as MR
 import Mariana.scenari as MS
 
-from Mariana.examples.useful import load_mnist
+from useful import load_mnist
 
 ####
 # This is an example of two identical conv nets. The only difference is that the first one uses a convolution input layer
