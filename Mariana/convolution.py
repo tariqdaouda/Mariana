@@ -252,12 +252,22 @@ class Embedding(ConvLayer_ABC, ML.Embedding) :
 
         self.embeddings = None
 
+    def getEmbeddings(self, idxs = None) :
+        """returns the embeddings.
 
-    def getParameterShape(self, param) :
-        if param == "embeddings" :
-            return (self.dictSize, self.nbDimentions, 1)
-        else :
-            raise ValueError("Unknown parameter: %s" % param)
+        :param list idxs: if provided will return the embeddings only for those indexes
+        """
+        if not self.embeddings :
+            raise ValueError("It looks like the network has not been initialized yet. Try calling self.network.init() first.")
+
+        try :
+            fct = self.embeddings.get_value
+        except AttributeError :
+            fct = self.embeddings.eval
+
+        if idxs :
+            return fct()[idxs]
+        return fct()
 
     def _setOutputs(self) :
         self.preOutputs = self.embeddings[self.inputs]
