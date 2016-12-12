@@ -5,10 +5,27 @@
 .. image:: https://img.shields.io/badge/python-2.7-blue.svg 
 .. image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
     :target: https://opensource.org/licenses/Apache-2.0
+
 MARIANA: The Cutest Deep Learning Framework
 =============================================
 
 As neural nets increase in complexity they also become harder to write and harder to teach. Our hypothesis is that these difficulties stem from the absence of a language that elegantly describe neural networks. Mariana (named after the deepest place on earth, the Mariana trench) is an attempt to create such a language within python. That being said, you can also call it an *Extendable Python Machine Learning Framework build on top of Theano that focuses on ease of use*.
+
+**It looks like this:**
+
+.. code:: python
+
+	ls = MS.GradientDescent(lr = 0.01)
+	cost = MC.NegativeLogLikelihood()
+
+	inp = ML.Input(28*28, name = "inputLayer")
+	h1 = ML.Hidden(300, activation = MA.ReLU(), regularizations = [ MR.L1(0.0001) ])
+	h2 = ML.Hidden(300, activation = MA.ReLU(), regularizations = [ MR.L1(0.0001) ])
+	o = ML.SoftmaxClassifier(9, learningScenario = ls, costObject = cost)
+
+	MLP = inp > h1 > h2 > o
+
+ph'nglui mglw'nafh Cthulhu R'lyeh wgah'nagl fhtagn
 
 More Documentation:
 -------------------
@@ -22,8 +39,6 @@ More Documentation:
 .. _here: https://github.com/tariqdaouda/Mariana_talks
 .. _english: https://youtu.be/dGS_Qny1E9E
 .. _french: https://youtu.be/TzRYF1lPP84?t=8m15s
-
-ph'nglui mglw'nafh Cthulhu R'lyeh wgah'nagl fhtagn
 
 Why is it cool?
 ===============
