@@ -17,7 +17,6 @@ CHANGELOG
 * bug fix: Loading a saved model will no longer trigger parameter reinitialisations
 * bug fix: Precition accuracy used to be the same as the classification accuracy
 * Added HeWeights and ScaledVarianceWeights initializations
-* HeWeights are now the default initialization
 * bug fix: GeometricEarlyStopping's patience is now truly reset when a better score is achieved
 * refact: Output layers no longer need to have weights/bias
 * feature: Outputlayer can now track the parameters of all layers in a network. Not only those that belong to branches that directly lead to them.

@@ -73,9 +73,9 @@ class MomentumGradientDescent(LearningScenario_ABC):
 
  	def getUpdates(self, layer, cost) :
  		updates = []
- 		for param in layer.getParameters() :
+ 		for pname, param in layer.getParameterDict().iteritems() :
  			gparam = tt.grad(cost, param)
-	 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
+	 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable, name="momentum-%s_%s" % (layer.name, pname))
 			v = self.momentum * momentum_param + (1-self.momentum)*gparam
 			updates.append((momentum_param, v ))
 			updates.append((param, param - self.lr * momentum_param))
@@ -85,25 +85,3 @@ class MomentumGradientDescent(LearningScenario_ABC):
  			self.gradients[param] = gparam
 
 		return updates
-
-# class GradientFloor(LearningScenario_ABC):
-# 	"A gradient descent that only propagates the gradient if it's supperior to a floor value."
-#  	def __init__(self, lr, momentum, floor):
-#  		LearningScenario_ABC.__init__(self)
- 		
-#  		self.lr = lr
-#  		self.momentum = momentum
-#  		self.floor = floor
-#  		self.hyperParameters = ["lr", "momentum", "floor"]
-
-#  	def getUpdates(self, layer, cost) :
-#  		updates = []
-#  		if self.lr > 0 :
-# 	 		for param in layer.getParameters() :
-# 	 			g = tt.grad(cost, param)
-
-# 		 		momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
-# 				updates.append((momentum_param, self.momentum * momentum_param + (1-self.momentum)*gparam))
-# 				updates.append((param, param - self.lr * momentum_param))
-
-# 		return updates

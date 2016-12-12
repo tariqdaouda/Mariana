@@ -194,19 +194,35 @@ class Network(object) :
         for l in newLayers :
             l.network = self
 
-    def init(self) :
+    def initParameters(self, forceReset = False) :
+        """Initializes the parameters of all layers but does nothing else.
+        Call this before tying parameters together::
+        
+            model = i > h > o
+            model.initParameters()
+            h.W = o.W.T
+
+            model.train(...)
+        """
+        for l in self.layers.itervalues() :
+            l._initParameters(forceReset)
+
+    def init(self, forceInit=False) :
         "Initialiases the network by initialising every layer."
-        if self._mustInit :
+        if self._mustInit or forceInit :
             self.logNetworkEvent("Initialization begins!")
             print "\n" + MSET.OMICRON_SIGNATURE
 
             if len(self.inputs) < 1 :
                 raise ValueError("Network has no inputs")
 
+            self.initParameters(forceReset=False)
+
             for inp in self.inputs.itervalues() :
-                inp._init()
+                inp._initA()
     
             for l in self.layers.itervalues() :
+                l._initB()
                 self.parameters.extend(l.getParameters())
     
             for o in self.layers.itervalues() :
@@ -302,7 +318,7 @@ class Network(object) :
 
         f = open(fn)
         model = cPickle.load(f)
-
+        # print model["layers"].keys()
         expandedLayers = {}
         while len(expandedLayers) < len(model["layers"]) :
             for name, stuff in model["layers"].iteritems() :
@@ -321,13 +337,16 @@ class Network(object) :
                             
                             expandedLayers[name] = stuff["class"](*stuff["arguments"]["args"], **stuff["arguments"]["kwargs"])
 
+        for l in expandedLayers.itervalues() :
+            l._mustReset = False
+
         for l1, l2 in model["edges"] :
             for k, v in model["layers"][l1]["parameters"].iteritems() :
                 setattr(expandedLayers[l1], k, v)
             
             for k, v in model["layers"][l2]["parameters"].iteritems() :
                 setattr(expandedLayers[l2], k, v)
-
+            
             network = expandedLayers[l1] > expandedLayers[l2]
         
         return network

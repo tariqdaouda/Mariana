@@ -15,10 +15,10 @@ class TheanoFunction(object) :
 	error messages.
 	"""
 
-	def __init__(self, name, outputLayer, output_expressions, additional_input_expressions = {}, updates = [], **kwargs) :
+	def __init__(self, name, layer, output_expressions, additional_input_expressions = {}, updates = [], **kwargs) :
 		"""
 		:param str name: name of the function
-		:param Output outputLayer: the output layer the function should be applied to
+		:param Output layer: the output layer the function should be applied to
 		:param list output_expressions: list of tuples of symbolic expressions you want as output and the names you want to give to them: (name, expressions)
 		:param dict additional_input_expressions: additional inputs needed to compute the expressions
 		:param list updates: list of tuples (shared variable, symbolic expression of the update to be applied to it)
@@ -39,9 +39,9 @@ class TheanoFunction(object) :
 		self.cast_warning_told = False
 
 		self.name = name
-		self.outputLayer = outputLayer
+		self.layer = layer
 
-		self.inputs, inpSet = _bckTrckInputs(outputLayer)
+		self.inputs, inpSet = _bckTrckInputs(layer)
 
 		for k, v in additional_input_expressions.iteritems() :
 			if v not in inpSet :
@@ -58,14 +58,24 @@ class TheanoFunction(object) :
 		for name, output_expr in output_expressions :
 			self.output_expressions[name] = output_expr
 		
-		self.updates = updates
-		
+		kwUpdates = {}
+		for k, v in updates :
+			if k in kwUpdates :
+				message = "Parameter '%s' has more than one defined update, only using the first" % k
+				if MSET.VERBOSE :
+					print(message)
+				layer.network.logLayerEvent(layer, message)		
+			else :
+				kwUpdates[k] = v
+
+		self.updates = kwUpdates.items()
+		# print self.name, self.inputs, layer
 		self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.output_expressions.values(), updates = self.updates, **kwargs)
 
 		warningMsg = False
 		if DEVICE_IS_GPU :
 			device = "GPU"
-			msg = "I will use the [-%s-] to run function '%s' of layer '%s'!" % (device, name, outputLayer.name)
+			msg = "I will use the [-%s-] to run function '%s' of layer '%s'!" % (device, name, layer.name)
 			if str(self.getToposort()).find("float64") > -1:
 				warningMsg = True
 				msg += "\n\nBut there are some float64s that do not fit on the GPU and will slow down the computations.\nPlease consider:"
@@ -73,7 +83,7 @@ class TheanoFunction(object) :
 				msg += "\n\t* If you have any dmatrix, dvector or dscalar in your code replace them with matrix, vector, scalar."
 		else:
 			device = "CPU"
-			msg = "I will use the [-%s-] to run function '%s' of layer '%s'!" % (device, name, outputLayer.name)
+			msg = "I will use the [-%s-] to run function '%s' of layer '%s'!" % (device, name, layer.name)
 
 		self.results = OrderedDict()
 		MCAN.friendly("Run device", msg, warning = warningMsg)
@@ -97,8 +107,8 @@ class TheanoFunction(object) :
 
 	def run(self, **kwargs) :
 		"""Run the theano function with the kwargs. Will return an OrderedDict of the outputs"""
-		def _die(fctName, outputLayer, kwargs, exc) :
-			localStr = "!!=> Error in function '%s' for layer '%s':\n%s\n" % (fctName, outputLayer.name, exc.message)
+		def _die(fctName, layer, kwargs, exc) :
+			localStr = "!!=> Error in function '%s' for layer '%s':\n%s\n" % (fctName, layer.name, exc.message)
 			sys.stderr.write(localStr)
 			sys.stderr.write("Have a look at the log file: %s for details about the arguments" % MSET.SAVE_MESSAGE_LOG_FILE)
 			strArgs = []
@@ -110,7 +120,7 @@ class TheanoFunction(object) :
 		try :
 			fres = iter(self.theano_fct(*self.fctInputs.values()))
 		except Exception as e:
-			_die(self.name, self.outputLayer, kwargs, e)
+			_die(self.name, self.layer, kwargs, e)
 			
 		for k in self.output_expressions.iterkeys() :
 			self.results[k] = fres.next()

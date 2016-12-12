@@ -40,11 +40,11 @@ class Initialization_ABC(Abstraction_ABC) :
         message = "%s was initialized using %s" % (layer.name, self.__class__.__name__)
         try :
             self.initialize(layer)
-        except ValueError  as e:
+        except Exception as e:
             message = "%s was *NOT* initialized using %s. Because: %s" % (layer.name, self.__class__.__name__, e.message)
-
-        layer.network.logLayerEvent(layer, message, hyps)
-
+            layer.network.logLayerEvent(layer, message, hyps)
+            raise e
+        
     def initialize(self, layer) :
         """The function that all Initialization_ABCs must implement"""
         raise NotImplemented("This one should be implemented in child")
@@ -63,11 +63,11 @@ class HardSet(Initialization_ABC) :
     def __init__(self, parameter, value, *args, **kwargs) :
         Initialization_ABC.__init__(self, *args, **kwargs)
         self.parameter = parameter
-        self.value = value
-        self.hyperParameters = [parameter]
+        self.value = numpy.asarray(value, dtype=theano.config.floatX)
+        self.hyperParameters = ["parameter"]
 
     def initialize(self, layer) :
-        layer.initParameter( self.parameter,  theano.shared(value = self.value, name = "%s_%s" % (layer.name, self.parameter) ) )
+        layer.initParameter( self.parameter, theano.shared(value = self.value, name = "%s_%s" % (layer.name, self.parameter) ) )
 
 class GlorotTanhInit(Initialization_ABC) :
     """Set up the layer weights according to the tanh initialization introduced by Glorot et al. 2010"""
@@ -143,7 +143,7 @@ class ScaledVarianceWeights(Initialization_ABC):
     
     def initialize(self, layer) :
         shape = layer.getParameterShape(self.parameter)
-        w = numpy.random.randn(shape[0]) / numpy.sqrt(shape[0])
+        w = numpy.random.randn(shape[0]) / numpy.sqrt(shape[0], dtype=theano.config.floatX)
         layer.initParameter( "W",  theano.shared(value = w, name = "%s_%s" % (layer.name, "W") ) )
 
 class Normal(Initialization_ABC) :
@@ -176,7 +176,7 @@ class HeWeights(Initialization_ABC) :
 
     def initialize(self, layer) :
         shape = layer.getParameterShape(self.parameter)
-        v = numpy.random.normal(0, numpy.sqrt(2./shape[0]), shape)
+        v = numpy.random.normal(0, numpy.sqrt(2./shape[0]), shape, dtype=theano.config.floatX)
         layer.initParameter( self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
 
 class SingleValue(Initialization_ABC) :
