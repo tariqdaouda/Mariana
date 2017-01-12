@@ -138,9 +138,14 @@ class Layer_ABC(object) :
         """The last function called during initialization. Does nothing by default, you can put in it
         whatever post-action you want performed on the layer post normal initialization"""
         pass
+    
+    def _setShape(self) :
+        """last chance to define the layer's shape before parameter initialization"""
+        pass
 
     def _initParameters(self, forceReset = False) :
         """creates the parameters if necessary (self._mustRest == True)"""
+        self._setShape()
         if self._mustReset or forceReset :        
             for init in self.initializations :
                 init.apply(self)
@@ -419,17 +424,24 @@ class Composite(Layer_ABC):
     def __init__(self, name = None, **kwargs):
         super(Composite, self).__init__(layerType=MNET.TYPE_HIDDEN_LAYER, size=None, name = name, **kwargs)
 
-    def _femaleConnect(self, layer) :
-        if self.nbInputs is None :
-            self.nbInputs = 0
-        self.nbInputs += layer.nbOutputs
+    # def _femaleConnect(self, layer) :
+    #     if self.nbInputs is None :
+    #         self.nbInputs = 0
+    #     self.nbInputs += layer.nbOutputs
+    #     self.nbOutputs = self.nbInputs
+    
+    def _setShape(self) :
+        """set the number of inputs and outputs"""
+        self.nbInputs = 0
+        for l in self.network.inConnections[self] :
+            self.nbInputs += l.nbOutputs
         self.nbOutputs = self.nbInputs
 
     def _setOutputs(self) :
         outs = []
         for l in self.network.inConnections[self] :
             outs.append(l.outputs)
-
+        
         self.outputs = tt.concatenate( outs, axis = 1 )
         self.testOutputs = tt.concatenate( outs, axis = 1 )
 
@@ -463,11 +475,20 @@ class WeightBias_ABC(Layer_ABC) :
         self.W = None
         self.b = None
 
-    def _femaleConnect(self, layer) :
-        if self.nbInputs is None :
-            self.nbInputs = layer.nbOutputs
-        elif self.nbInputs != layer.nbOutputs :
-            raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
+    # def _femaleConnect(self, layer) :
+    #     if self.nbInputs is None :
+    #         self.nbInputs = layer.nbOutputs
+    #     elif self.nbInputs != layer.nbOutputs :
+    #         raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
+
+    def _setShape(self) :
+        """defines the number of inputs"""
+        self.nbInputs = None
+        for layer in self.network.inConnections[self] :
+            if self.nbInputs is None :
+                self.nbInputs = layer.nbOutputs
+            elif self.nbInputs != layer.nbOutputs :
+                raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
 
     def _setInputs(self) :
         """Adds up the outputs of all incoming layers"""

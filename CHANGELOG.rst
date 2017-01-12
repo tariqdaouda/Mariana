@@ -22,6 +22,7 @@ CHANGELOG
 * feature: Outputlayer can now track the parameters of all layers in a network. Not only those that belong to branches that directly lead to them.
 * feature: Layers now perform basic sanity checks.
 * added test for Autoencode layer
+* bug fix: _setShape() now gives a last chance to set the layers shape before initialization. Fixes a bug where weight matrices could be wrongly initiliazed when the input was a Composite layer
 
 1.0.2rc:
 --------
