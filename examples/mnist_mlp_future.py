@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
 	
 	ggplot = MW.CSV("MLP", loggers = [MLOG.ParameterMean(), MLOG.ParameterMin(), MLOG.ParameterMax(), MLOG.AbstractionHyperParameters()], writeRate=1)
-	pp = MW.PrettyPrinter(loggers = [MLOG.ParameterMean(paramList = ["hid.W"] ), MLOG.AbstractionHyperParameters(layerNames=["hid"]), MLOG.Scores()])
+	pp = MW.PrettyPrinter(loggers = [MLOG.ParameterMean(paramList = ["hid.W"] ), MLOG.ParameterMax(paramList=["hid.W"]), MLOG.AbstractionHyperParameters(layerNames=["hid"]), MLOG.Scores()])
 
 	trainer = MT.DefaultTrainer(
 		trainMaps=trainMaps,
