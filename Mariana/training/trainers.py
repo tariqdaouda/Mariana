@@ -139,7 +139,7 @@ class Trainer_ABC(object) :
             f = open(filename + ".store.pkl", "wb")
             cPickle.dump(self.store, f)
             f.close()
-
+            
         except KeyboardInterrupt :
             if not self.saveIfMurdered :
                 raise

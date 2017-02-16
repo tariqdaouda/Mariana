@@ -412,7 +412,7 @@ class Input(Layer_ABC) :
         self.testOutputs=self.inputs
 
     def _femaleConnect(self, *args) :
-        raise ValueError("Nothing can be connected into an input layer")
+        raise ValueError("Nothing can be connected to an input layer")
 
 class Composite(Layer_ABC):
     """A Composite layer concatenates the outputs of several other layers
