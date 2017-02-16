@@ -3,7 +3,7 @@ import theano.tensor as tt
 
 import Mariana.layers as ML
 import Mariana.initializations as MI
-import Mariana.network as MNET
+import Mariana.settings as MSET
 
 __all__ = ["ConvPooler_ABC", "NoPooling", "MaxPooling2D", "Flatten", "ConvLayer_ABC", "InputChanneler", "Input", "Convolution2D"]
 
@@ -87,7 +87,7 @@ class Flatten(ML.Layer_ABC) :
 
     def __init__(self, **kwargs) :
         """Flattens the output of a convolution layer so it can be fed into a regular layer"""
-        ML.Layer_ABC.__init__(self, None, layerType=MNET.TYPE_HIDDEN_LAYER, **kwargs)
+        ML.Layer_ABC.__init__(self, None, layerTypes=[MSET.TYPE_HIDDEN_LAYER], **kwargs)
         self.outdim = 2
     
         self.inputHeight = None
@@ -130,8 +130,8 @@ class Flatten(ML.Layer_ABC) :
 class ConvLayer_ABC(ML.Layer_ABC) :
     """The abstract class that all convolution layers must implement"""
 
-    def __init__(self, nbChannels, layerType=MNET.TYPE_HIDDEN_LAYER, **kwargs) :
-        ML.Layer_ABC.__init__(self, None, layerType=layerType, **kwargs)
+    def __init__(self, nbChannels, layerTypes=[MSET.TYPE_HIDDEN_LAYER], **kwargs) :
+        ML.Layer_ABC.__init__(self, None, layerTypes=layerTypes, **kwargs)
     
         self.nbChannels = nbChannels
         self.height = None
@@ -192,7 +192,7 @@ class Input(ConvLayer_ABC) :
         :param int height: Image height.
         :param int width: Image width.
         """
-        ConvLayer_ABC.__init__(self, nbChannels, layerType=MNET.TYPE_INPUT_LAYER, **kwargs)
+        ConvLayer_ABC.__init__(self, nbChannels, layerTypes=[MSET.TYPE_INPUT_LAYER], **kwargs)
 
         self.height = height
         self.width = width

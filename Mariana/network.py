@@ -5,9 +5,9 @@ import types
 
 __all__= ["Network", "OutputMap"]
 
-TYPE_INPUT_LAYER = "input"
-TYPE_OUTPUT_LAYER = "output"
-TYPE_HIDDEN_LAYER = "hidden"
+# TYPE_INPUT_LAYER = "input"
+# TYPE_OUTPUT_LAYER = "output"
+# TYPE_HIDDEN_LAYER = "hidden"
 
 def loadModel(filename) :
     """Shorthand for Network.load"""
@@ -145,7 +145,7 @@ class Network(object) :
 
     def _addLayer(self, h) :
         """adds a layer to the network"""
-        global TYPE_INPUT_LAYER, TYPE_OUTPUT_LAYER
+        # global TYPE_INPUT_LAYER, TYPE_OUTPUT_LAYER
         
         try :
             if self.layerAppelidos[h.name] != h.appelido :
@@ -165,10 +165,10 @@ class Network(object) :
                 self.inConnections[h] = set()
                 self.outConnections[h] = set()
 
-        if h.type == TYPE_INPUT_LAYER :
+        if MSET.TYPE_INPUT_LAYER in h.types:
             self.inputs[h.name] = h
             self.logNetworkEvent("New Input layer %s" % (h.name))
-        elif h.type == TYPE_OUTPUT_LAYER :
+        elif MSET.TYPE_OUTPUT_LAYER in h.types :
             self.outputs[h.name] = h
             self.logNetworkEvent("New Output layer %s" % (h.name))
         else :

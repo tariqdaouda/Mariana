@@ -5,7 +5,7 @@ import Mariana.settings as MSET
 from Mariana.abstraction import Abstraction_ABC
 import Mariana.initializations as MI
 
-__all__= ["Decorator_ABC", "BatchNormalization", "Center", "Normalize", "Mask", "BinomialDropout", "Clip"]
+__all__= ["Decorator_ABC", "BatchNormalization", "Center", "Normalize", "Mask", "BinomialDropout", "Clip", "AdditiveGaussianNoise", "MultiplicativeGaussianNoise"]
 
 class Decorator_ABC(Abstraction_ABC) :
     """A decorator is a modifier that is applied on a layer. They are always the last the abstraction to be applied and they can transform a layer in anyway they want."""
@@ -191,3 +191,49 @@ class Clip(Decorator_ABC):
             layer.outputs = layer.outputs.clip(self.lower, self.upper)
         if self.onTest :
             layer.testOutputs = layer.testOutputs.clip(self.lower, self.upper)
+
+class AdditiveGaussianNoise(Decorator_ABC):
+    """Add gaussian noise to the output of the layer"""
+    
+    def __init__(self, std, avg=1, onTrain = True, onTest = False, *args, **kwargs):
+        self.std = std
+        self.avg = avg
+        self.hyperParameters = ["std", "avg"]
+        self.onTrain = onTrain
+        self.onTest = onTest
+        Decorator_ABC.__init__(self, *args, **kwargs)
+        
+    def _decorate(self, outputs, std) :
+        rnd = tt.shared_randomstreams.RandomStreams()
+        randomPick = rnd.normal(size = outputs.shape, avg=self.avg, std=std)
+        return (outputs + randomPick)
+    
+    def decorate(self, layer) :
+        if self.std > 0 :
+            if self.onTrain :
+                layer.outputs = self._decorate(layer.outputs, self.std)
+            if self.onTest :
+                layer.testOutputs = self._decorate(layer.testOutputs, self.std)
+
+class MultiplicativeGaussianNoise(Decorator_ABC):
+    """Multiply gaussian noise to the output of the layer"""
+   
+    def __init__(self, std, avg=1, onTrain = True, onTest = False, *args, **kwargs):
+        self.std = std
+        self.avg = avg
+        self.hyperParameters = ["std", "avg"]
+        self.onTrain = onTrain
+        self.onTest = onTest
+        Decorator_ABC.__init__(self, *args, **kwargs)
+        
+    def _decorate(self, outputs, std) :
+        rnd = tt.shared_randomstreams.RandomStreams()
+        randomPick = rnd.normal(size = outputs.shape, avg=self.avg, std=std)
+        return (outputs * randomPick)
+
+    def decorate(self, layer) :
+        if self.std > 0 :
+            if self.onTrain :
+                layer.outputs = self._decorate(layer.outputs, self.std)
+            if self.onTest :
+                layer.testOutputs = self._decorate(layer.testOutputs, self.std)
