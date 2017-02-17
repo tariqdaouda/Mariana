@@ -1,5 +1,5 @@
 .. image:: https://travis-ci.org/tariqdaouda/Mariana.svg
-    :target: https://travis-ci.org/tariqdaouda/Mariana
+    :target: https://travis-ci.org/tariqdaouda/Mariana.svg?branch=master
 .. image:: https://codecov.io/gh/tariqdaouda/Mariana/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/tariqdaouda/Mariana/branch/master/graph/
 .. image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
