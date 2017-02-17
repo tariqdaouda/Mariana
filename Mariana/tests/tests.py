@@ -48,6 +48,7 @@ class MLPTests(unittest.TestCase):
         self.xor_outs = numpy.array(self.xor_outs)
         for i in xrange(1000) :
             mlp.train(o, inp = self.xor_ins, targets = self.xor_outs )
+            # print mlp.propagateTest(o, inp = self.xor_ins)
 
         return mlp
 
@@ -66,7 +67,7 @@ class MLPTests(unittest.TestCase):
         self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[2] ] )["class"], 1 )
         self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[3] ] )["class"], 0 )
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_save_load_pickle(self) :
         import os
         import Mariana.network as MN
@@ -97,7 +98,7 @@ class MLPTests(unittest.TestCase):
         
         os.remove('test_save.mar.mdl.pkl')
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_ae(self) :
 
         data = []
@@ -124,7 +125,7 @@ class MLPTests(unittest.TestCase):
         for i in xrange(len(res)) :
             self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_ae_reg(self) :
 
         data = []
@@ -151,7 +152,7 @@ class MLPTests(unittest.TestCase):
         for i in xrange(len(res)) :
             self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_composite(self) :
         ls = MS.GradientDescent(lr = 0.1)
         cost = MC.NegativeLogLikelihood()
@@ -176,7 +177,7 @@ class MLPTests(unittest.TestCase):
         self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[3] ] )["class"], 0 )
 
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_multiinputs(self) :
         ls = MS.GradientDescent(lr = 0.1)
 
@@ -200,7 +201,7 @@ class MLPTests(unittest.TestCase):
         m = inpNexus > h1 > o
         m.init()
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_embedding(self) :
         """the first 3 and the last 3 should be diametrically opposed"""
         data = [[0], [1], [2], [3], [4], [5]]
@@ -223,7 +224,7 @@ class MLPTests(unittest.TestCase):
             v = numpy.dot(embeddings[i], embeddings[i+len(data)/2])
             self.assertTrue(v < -1)
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_conv(self) :
         import Mariana.convolution as MCONV
         import theano

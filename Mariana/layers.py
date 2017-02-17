@@ -119,7 +119,6 @@ class Layer_ABC(object) :
         """Returns a free layer with the same parameters."""
         creationArguments=dict(self.creationArguments["kwargs"])
         creationArguments.update(kwargs)
-        # print self, creationArguments
         newLayer=self.__class__(**creationArguments)
         
         for k, v in self.getParameterDict().iteritems() :
@@ -155,8 +154,11 @@ class Layer_ABC(object) :
 
     def initParameter(self, parameter, value) :
         """Initialize a parameter, raise value error if already initialized"""
-        if not hasattr(self, parameter) or getattr(self, parameter) is None :
-            setattr(self, parameter, value)
+        if parameter not in self.parameters :
+            raise ValueError("Layer '%s' has no parameter '%s'. Add it to self.parameters dict and give it a None value." % (self.name, parameter) )
+            
+        if self.parameters[parameter] is None:
+            self.parameters[parameter] = value
         else :
             raise ValueError("Parameter '%s' of layer '%s' has already been initialized" % (parameter, self.name) )
 
@@ -662,7 +664,7 @@ class Output_ABC(Layer_ABC) :
 
         if self.cost is None or self.testCost is None :
             self._setCosts()
-
+        # theano.printing.debugprint(self.cost)
         self.train=MWRAP.TheanoFunction("train", self, [("score", self.cost)], { "targets" : self.targets }, updates=self.updates, allow_input_downcast=True)
         self.test=MWRAP.TheanoFunction("test", self, [("score", self.testCost)], { "targets" : self.targets }, allow_input_downcast=True)
 
