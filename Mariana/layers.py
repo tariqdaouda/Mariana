@@ -88,11 +88,13 @@ class Layer_ABC(object) :
         self._mustReset=True
         self._decorating=False
 
+        self.parameters = {}
+
     def getParameterDict(self) :
         """returns the layer's parameters as dictionary"""
         from theano.compile import SharedVariable
         res={}
-        for k, v in self.__dict__.iteritems() :
+        for k, v in self.parameters.iteritems() :
             if isinstance(v, SharedVariable) :
                 res[k]=v
         return res
@@ -356,8 +358,10 @@ class Embedding(Layer_ABC) :
         self.nbInputs=size
         self.nbOutputs=self.nbDimentions*self.nbInputs
 
-        self.embeddings=None
-        self.fullEmbeddings=None
+        self.parameters={
+            "embeddings":None,
+            "fullEmbeddings":None
+        }
 
         self.inputs=tt.imatrix(name="embInp_" + self.name)
 
@@ -372,13 +376,13 @@ class Embedding(Layer_ABC) :
 
         :param list idxs: if provided will return the embeddings only for those indexes
         """
-        if not self.fullEmbeddings :
+        if not self.parameters["fullEmbeddings"] :
             raise ValueError("It looks like the network has not been initialized yet. Try calling self.network.init() first.")
 
         try :
-            fct=self.fullEmbeddings.get_value
+            fct=self.parameters["fullEmbeddings"].get_value
         except AttributeError :
-            fct=self.fullEmbeddings.eval
+            fct=self.parameters["fullEmbeddings"].eval
 
         if idxs :
             return fct()[idxs]
@@ -387,12 +391,12 @@ class Embedding(Layer_ABC) :
     def _setOutputs(self) :
         if self.zeroForNull :
             self.null=numpy.zeros((1, self.nbDimentions))
-            self.fullEmbeddings=tt.concatenate( [self.null, self.embeddings], axis=0 )
+            self.parameters["fullEmbeddings"]=tt.concatenate( [self.null, self.parameters["embeddings"]], axis=0 )
         else :
-            self.fullEmbeddings=self.embeddings
-            del(self.embeddings)
+            self.parameters["fullEmbeddings"]=self.parameters["embeddings"]
+            del(self.parameters["embeddings"])
 
-        self.preOutputs=self.fullEmbeddings[self.inputs]
+        self.preOutputs=self.parameters["fullEmbeddings"][self.inputs]
 
         self.outputs=self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
         self.testOutputs=self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
@@ -475,8 +479,10 @@ class WeightBias_ABC(Layer_ABC) :
     def __init__(self, size, layerTypes, initializations=[MI.SmallUniformWeights(), MI.ZeroBias()], **kwargs) :
         super(WeightBias_ABC, self).__init__(size, layerTypes=layerTypes, initializations=initializations, **kwargs)
         self.testInputs=None
-        self.W=None
-        self.b=None
+        self.parameters={
+            "W": None,
+            "b": None
+        }
 
     # def _femaleConnect(self, layer) :
     #     if self.nbInputs is None :
@@ -512,13 +518,13 @@ class WeightBias_ABC(Layer_ABC) :
         self.outputs=self.inputs
         self.testOutputs=self.testInputs
         
-        if self.W is not None:
-            self.outputs=tt.dot(self.inputs, self.W)
-            self.testOutputs=tt.dot(self.testInputs, self.W)
+        if self.parameters["W"] is not None:
+            self.outputs=tt.dot(self.inputs, self.parameters["W"])
+            self.testOutputs=tt.dot(self.testInputs, self.parameters["W"])
             
-        if self.b is not None:
-            self.outputs=self.outputs + self.b
-            self.testOutputs=self.testOutputs + self.b
+        if self.parameters["b"] is not None:
+            self.outputs=self.outputs + self.parameters["b"]
+            self.testOutputs=self.testOutputs + self.parameters["b"]
 
     def getParameterShape(self, param) :
         if param == "W" :
@@ -531,14 +537,14 @@ class WeightBias_ABC(Layer_ABC) :
     def getW(self) :
         """Return the weight values"""
         try :
-            return self.W.get_value()
+            return self.parameters["W"].get_value()
         except AttributeError :
             raise ValueError("It looks like the network has not been initialized yet")
 
     def getb(self) :
         """Return the bias values"""
         try :
-            return self.b.get_value()
+            return self.parameters["b"].get_value()
         except AttributeError :
             raise ValueError("It looks like the network has not been initialized yet")
 
@@ -591,8 +597,12 @@ class Output_ABC(Layer_ABC) :
         Defines the costs to be applied.
         There are 2: the training cost (self.cost) and test cost (self.testCost), that has no regularizations.
          """
+        # print "training"
         self.cost=self.costObject.apply(self, self.targets, self.outputs, "training")
+        # theano.printing.debugprint(self.cost)
+        # print "testing"
         self.testCost=self.costObject.apply(self, self.targets, self.testOutputs, "testing")
+        # theano.printing.debugprint(self.testCost)
 
     def _applyRegularizations(self, force=False) :
         """Defines the regularizations to be added to the cost"""

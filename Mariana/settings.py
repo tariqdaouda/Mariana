@@ -14,3 +14,6 @@ numpy.random.seed(RANDOM_SEED)
 TYPE_INPUT_LAYER = "input"
 TYPE_OUTPUT_LAYER = "output"
 TYPE_HIDDEN_LAYER = "hidden"
+
+import theano
+DEVICE_IS_GPU = (theano.config.device.find("gpu") > -1)
