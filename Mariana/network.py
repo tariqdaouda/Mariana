@@ -318,7 +318,6 @@ class Network(object) :
 
         f = open(fn)
         model = cPickle.load(f)
-        # print model["layers"].keys()
         expandedLayers = {}
         while len(expandedLayers) < len(model["layers"]) :
             for name, stuff in model["layers"].iteritems() :

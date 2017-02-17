@@ -68,7 +68,7 @@ class MLPTests(unittest.TestCase):
         self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[3] ] )["class"], 0 )
 
     # @unittest.skip("skipping")
-    def test_save_load_pickle(self) :
+    def test_save_load(self) :
         import os
         import Mariana.network as MN
 

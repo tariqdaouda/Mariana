@@ -24,18 +24,15 @@ class Layer_ABC(object) :
         import inspect
         
         obj=super(Layer_ABC, cls).__new__(cls, *args, **kwargs)
-        argNames=inspect.getargspec(obj.__init__)[0][1:] #remove self
-
-        finalArgs={}
-        for aname, arg in zip(argNames, args) :
-            finalArgs[aname]=arg
-
+        # argNames=inspect.getargspec(obj.__init__)[0][1:] #remove self
+        
+        finalKwargs={}
         for k, v in kwargs.iteritems() :
-            finalArgs[k]=v
+            finalKwargs[k]=v
 
         obj.creationArguments={
-            "args": [], #not used, mainly here for back compatibility
-            "kwargs": finalArgs,
+            "args": args,
+            "kwargs": finalKwargs,
         }
 
         return obj
@@ -717,16 +714,16 @@ class Output_ABC(Layer_ABC) :
 
 class WeightBiasOutput_ABC(Output_ABC, WeightBias_ABC):
     """Generic output layer with weight and bias"""
-    def __init__(self, nbOutputs, costObject, learningScenario, activation, **kwargs):
-        super(WeightBiasOutput_ABC, self).__init__(size=nbOutputs, costObject=costObject, learningScenario=learningScenario, activation=activation, **kwargs)
+    def __init__(self, size, costObject, learningScenario, activation, **kwargs):
+        super(WeightBiasOutput_ABC, self).__init__(size=size, costObject=costObject, learningScenario=learningScenario, activation=activation, **kwargs)
 
     def _setOutputs(self) :
         WeightBias_ABC._setOutputs(self)
  
 class SoftmaxClassifier(WeightBiasOutput_ABC) :
     """A softmax (probabilistic) Classifier"""
-    def __init__(self, nbOutputs, costObject, learningScenario, temperature=1, **kwargs) :
-        super(SoftmaxClassifier, self).__init__(nbOutputs, costObject=costObject, learningScenario=learningScenario, activation=MA.Softmax(temperature=temperature), **kwargs)
+    def __init__(self, size, costObject, learningScenario, temperature=1, **kwargs) :
+        super(SoftmaxClassifier, self).__init__(size, costObject=costObject, learningScenario=learningScenario, activation=MA.Softmax(temperature=temperature), **kwargs)
         self.targets=tt.ivector(name="targets_" + self.name)
 
     def _setCustomTheanoFunctions(self) :
@@ -755,8 +752,8 @@ class SoftmaxClassifier(WeightBiasOutput_ABC) :
 
 class Regression(WeightBiasOutput_ABC) :
     """For regressions, works great with a mean squared error cost"""
-    def __init__(self, nbOutputs, activation, learningScenario, costObject, name=None, **kwargs) :
-        super(Regression, self).__init__(nbOutputs, activation=activation, learningScenario=learningScenario, costObject=costObject, name=name, **kwargs)
+    def __init__(self, size, activation, learningScenario, costObject, name=None, **kwargs) :
+        super(Regression, self).__init__(size, activation=activation, learningScenario=learningScenario, costObject=costObject, name=name, **kwargs)
         self.targets=tt.matrix(name="targets")
 
 class Autoencode(WeightBiasOutput_ABC) :
