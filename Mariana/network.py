@@ -341,10 +341,16 @@ class Network(object) :
 
         for l1, l2 in model["edges"] :
             for k, v in model["layers"][l1]["parameters"].iteritems() :
-                setattr(expandedLayers[l1], k, v)
+                try:
+                    expandedLayers[l1].initParameter(k, v)
+                except :
+                    expandedLayers[l1].updateParameter(k, v)
             
             for k, v in model["layers"][l2]["parameters"].iteritems() :
-                setattr(expandedLayers[l2], k, v)
+                try:
+                    expandedLayers[l2].initParameter(k, v)
+                except :
+                    expandedLayers[l2].updateParameter(k, v)
             
             network = expandedLayers[l1] > expandedLayers[l2]
         
