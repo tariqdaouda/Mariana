@@ -22,7 +22,7 @@ class TheanoFunction(object) :
         :param list updates: list of tuples (shared variable, symbolic expression of the update to be applied to it)
         :param dict \*\*kwargs: additional arguments to passed to the real theano function underneath
         """
-        def _bckTrckInputs(startLayer, inputs = OrderedDict(), inpSet = set()) :        
+        def _bckTrckInputs(startLayer, inputs = OrderedDict(), inpSet = set()) :     
             if MSET.TYPE_INPUT_LAYER in startLayer.types :
                 inpOut = startLayer.inputs
                 if inpOut not in inpSet :

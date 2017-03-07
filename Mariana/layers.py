@@ -116,7 +116,7 @@ class Layer_ABC(object) :
         """Returns a free layer with the same parameters."""
         creationArguments=dict(self.creationArguments["kwargs"])
         creationArguments.update(kwargs)
-        newLayer=self.__class__(**creationArguments)
+        newLayer=self.__class__(*self.creationArguments["args"], **creationArguments)
         
         for k, v in self.getParameterDict().iteritems() :
             setattr(newLayer, k, v)
@@ -164,7 +164,7 @@ class Layer_ABC(object) :
         if parameter not in self.getParameterDict().keys() :
             raise ValueError("Parameter '%s' has not been initialized as parameter of layer '%s'" % (parameter, self.name) )
         else :
-            setattr(self, parameter, value)
+            self.parameters[parameter] = value
 
     #theano hates abstract methods defined with a decorator
     def _setOutputs(self) :
@@ -240,6 +240,7 @@ class Layer_ABC(object) :
             self._parametersSanityCheck()
             self._initParameters()
             self._setOutputs()
+            self._decorate()
             self._outputsSanityCheck()
             self._activate()
             # except Exception as e:
@@ -264,7 +265,6 @@ class Layer_ABC(object) :
         """Initialize the fancy attributes of the layer such as: regularizers, decorators and theano functions. This function is automatically called before train/test etc..."""
         # try :
         self._listRegularizations()
-        self._decorate()
         self._setTheanoFunctions()
         # self._setCustomTheanoFunctions()
         self._whateverLastInit()
@@ -283,10 +283,9 @@ class Layer_ABC(object) :
     def connect(self, layer) :
         """Connect the layer to another one. Using the '>' operator to connect two layers actually calls this function.
         This function returns the resulting network"""
-        self.network.merge(self, layer)
-
         self._maleConnect(layer)
         layer._femaleConnect(self)
+        self.network.merge(self, layer)
 
         return self.network
 
@@ -334,36 +333,61 @@ class Layer_ABC(object) :
     #     net.init()
     #     return object.__getattr__(self, k)
 
-class Embedding(Layer_ABC) :
-    """This input layer will take care of creating the embeddings and training them. Embeddings are learned representations
-    of the inputs that are much loved in NLP."""
+class Input(Layer_ABC) :
+    "An input layer"
+    def __init__(self, size, name=None, **kwargs) :
+        super(Input, self).__init__(size, layerTypes=[MSET.TYPE_INPUT_LAYER], name=name, **kwargs)
+        self.nbInputs=size
+        self.inputs=tt.matrix(name="inp_"+self.name)
 
-    def __init__(self, size, nbDimentions, dictSize, zeroForNull=False, initializations=[MI.SmallUniformEmbeddings()], **kwargs) :
+    def _setOutputs(self) :
+        "initializes the output to be the same as the inputs"
+        self.outputs=self.inputs
+        self.testOutputs=self.inputs
+
+    def _femaleConnect(self, *args) :
+        raise ValueError("Nothing can be connected to an input layer")
+
+class Embedding(Layer_ABC) :
+    """Embeddings are learned representations of the inputs that are much loved in NLP.
+    This layer will take care of creating the embeddings and optimizing them. It can either be used as an input layer or as hidden layer"""
+
+    def __init__(self, nbDimentions, dictSize, zeroForNull=False, size=None, initializations=[MI.SmallUniformEmbeddings()], **kwargs) :
         """
-        :param int size: the size of the input vector (if your input is a sentence this should be the number of words in it).
         :param int nbDimentions: the number of dimentions in wich to encode each word.
         :param int dictSize: the total number of words.
         :param bool zeroForNull: if True the dictionnary will be augmented by one elements at te begining (index=0) whose parameters will always be vector of zeros. This can be used to selectively mask some words in the input, but keep in mind that the index for the first word is moved to one.
+        :param int size: the size of the input vector (if your input is a sentence this should be the number of words in it). You don't have to provide a value in the embedding layer is a hidden layer
         
         """
 
-        super(Embedding, self).__init__(size, layerTypes=[MSET.TYPE_INPUT_LAYER],  initializations=initializations, **kwargs)
+        super(Embedding, self).__init__(size, layerTypes=[MSET.TYPE_INPUT_LAYER], initializations=initializations, **kwargs)
 
         self.zeroForNull=zeroForNull
 
         self.dictSize=dictSize
         self.nbDimentions=nbDimentions
 
-        self.nbInputs=size
-        self.nbOutputs=self.nbDimentions*self.nbInputs
-
         self.parameters={
             "embeddings":None,
             "fullEmbeddings":None
         }
 
-        self.inputs=tt.imatrix(name="embInp_" + self.name)
-
+        self.inputs=None
+        self.testInputs=None
+        
+        if size is not None :
+            self.nbInputs=size
+            self.nbOutputs=self.nbDimentions*self.nbInputs    
+ 
+    def _femaleConnect(self, layer) :
+        self.types=[MSET.TYPE_HIDDEN_LAYER]
+        if not hasattr(self, "nbInputs") or self.nbInputs is None :
+            self.nbInputs=layer.nbOutputs
+            self.nbOutputs=self.nbDimentions*self.nbInputs
+        elif self.nbInputs != layer.nbOutputs :
+            raise ValueError("All layers connected to '%s' must have the same number of outputs. Got: %s, previously had: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
+    
     def getParameterShape(self, param) :
         if param == "embeddings" :
             return (self.dictSize, self.nbDimentions)
@@ -388,34 +412,36 @@ class Embedding(Layer_ABC) :
         return fct()
 
     def _setOutputs(self) :
+        if len(self.network.inConnections[self]) == 0 :
+            if self.inputs is None :
+                self.inputs=tt.imatrix(name="embInp_" + self.name)
+                self.testInputs=self.inputs
+        else :
+            for layer in self.network.inConnections[self] :
+                if layer.outputs.dtype.find("int") != 0 :
+                    outs=tt.cast(layer.outputs, dtype=MSET.INTX)
+                    testOuts=tt.cast(layer.testOutputs, dtype=MSET.INTX)
+                else :
+                    outs=layer.outputs
+                    testOuts=layer.testOutputs
+
+                if self.inputs is None :   
+                    self.inputs=outs
+                    self.testInputs=testOuts
+                else :
+                    self.inputs+=outs
+                    self.testInputs+=testOuts
+
         if self.zeroForNull :
             self.null=numpy.zeros((1, self.nbDimentions))
-            self.parameters["fullEmbeddings"]=tt.concatenate( [self.null, self.parameters["embeddings"]], axis=0 )
+            self.parameters["fullEmbeddings"]=tt.concatenate( [self.null, self.parameters["embeddings"]], axis=0)
         else :
             self.parameters["fullEmbeddings"]=self.parameters["embeddings"]
             del(self.parameters["embeddings"])
 
         self.preOutputs=self.parameters["fullEmbeddings"][self.inputs]
-
         self.outputs=self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
-        self.testOutputs=self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
-
-class Input(Layer_ABC) :
-    "An input layer"
-    def __init__(self, size, name=None, **kwargs) :
-        super(Input, self).__init__(size, layerTypes=[MSET.TYPE_INPUT_LAYER], name=name, **kwargs)
-        # self.kwargs=kwargs
-        self.nbInputs=size
-
-        self.inputs=tt.matrix(name="inp_"+self.name)
-
-    def _setOutputs(self) :
-        "initializes the output to be the same as the inputs"
-        self.outputs=self.inputs
-        self.testOutputs=self.inputs
-
-    def _femaleConnect(self, *args) :
-        raise ValueError("Nothing can be connected to an input layer")
+        self.testOutputs=self.preOutputs.reshape((self.testInputs.shape[0], self.nbOutputs))
 
 class Composite(Layer_ABC):
     """A Composite layer concatenates the outputs of several other layers

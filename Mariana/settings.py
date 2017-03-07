@@ -17,3 +17,5 @@ TYPE_HIDDEN_LAYER = "hidden"
 
 import theano
 DEVICE_IS_GPU = (theano.config.device.find("gpu") > -1)
+INTX="int32"
+FLOATX=theano.config.floatX

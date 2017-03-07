@@ -145,7 +145,6 @@ class Network(object) :
 
     def _addLayer(self, h) :
         """adds a layer to the network"""
-        # global TYPE_INPUT_LAYER, TYPE_OUTPUT_LAYER
         
         try :
             if self.layerAppelidos[h.name] != h.appelido :
@@ -165,14 +164,14 @@ class Network(object) :
                 self.inConnections[h] = set()
                 self.outConnections[h] = set()
 
-        if MSET.TYPE_INPUT_LAYER in h.types:
-            self.inputs[h.name] = h
-            self.logNetworkEvent("New Input layer %s" % (h.name))
-        elif MSET.TYPE_OUTPUT_LAYER in h.types :
-            self.outputs[h.name] = h
-            self.logNetworkEvent("New Output layer %s" % (h.name))
-        else :
-            self.logNetworkEvent("New Hidden layer %s" % (h.name))
+        # if MSET.TYPE_INPUT_LAYER in h.types:
+        #     self.inputs[h.name] = h
+        #     self.logNetworkEvent("New Input layer %s" % (h.name))
+        # elif MSET.TYPE_OUTPUT_LAYER in h.types :
+        #     self.outputs[h.name] = h
+        #     self.logNetworkEvent("New Output layer %s" % (h.name))
+        # else :
+        #     self.logNetworkEvent("New Hidden layer %s" % (h.name))
 
     def merge(self, fromLayer, toLayer) :
         """Merges the networks of two layers together. fromLayer must be part of the self"""
@@ -194,6 +193,18 @@ class Network(object) :
         for l in newLayers :
             l.network = self
 
+        self.inputs = OrderedDict()
+        self.outputs = OrderedDict()
+        for name, layer in self.layers.iteritems() :
+            if MSET.TYPE_INPUT_LAYER in layer.types:
+                self.inputs[layer.name] = layer
+                self.logNetworkEvent("Registering Input layer %s" % (layer.name))
+            if MSET.TYPE_OUTPUT_LAYER in layer.types :
+                self.outputs[layer.name] = layer
+                self.logNetworkEvent("Registering Output layer %s" % (layer.name))
+            if MSET.TYPE_HIDDEN_LAYER in layer.types :
+                self.logNetworkEvent("Registering Hidden layer %s" % (layer.name))
+
     def initParameters(self, forceReset = False) :
         """Initializes the parameters of all layers but does nothing else.
         Call this before tying parameters together::
@@ -211,7 +222,7 @@ class Network(object) :
         "Initialiases the network by initialising every layer."
         if self._mustInit or forceInit :
             self.logNetworkEvent("Initialization begins!")
-            print "\n" + MSET.OMICRON_SIGNATURE
+            print("\n" + MSET.OMICRON_SIGNATURE)
 
             if len(self.inputs) < 1 :
                 raise ValueError("Network has no inputs")
@@ -337,21 +348,15 @@ class Network(object) :
                             expandedLayers[name] = stuff["class"](*stuff["arguments"]["args"], **stuff["arguments"]["kwargs"])
 
         for l in expandedLayers.itervalues() :
+            for k, v in model["layers"][l.name]["parameters"].iteritems() :
+                # print l, k, v.get_value()
+                try:
+                    l.updateParameter(k, v)
+                except :
+                    l.initParameter(k, v)
             l._mustReset = False
-
+           
         for l1, l2 in model["edges"] :
-            for k, v in model["layers"][l1]["parameters"].iteritems() :
-                try:
-                    expandedLayers[l1].initParameter(k, v)
-                except :
-                    expandedLayers[l1].updateParameter(k, v)
-            
-            for k, v in model["layers"][l2]["parameters"].iteritems() :
-                try:
-                    expandedLayers[l2].initParameter(k, v)
-                except :
-                    expandedLayers[l2].updateParameter(k, v)
-            
             network = expandedLayers[l1] > expandedLayers[l2]
         
         return network

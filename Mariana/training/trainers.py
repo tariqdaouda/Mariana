@@ -404,6 +404,10 @@ class DefaultTrainer(Trainer_ABC) :
                     else :
                         raise ValueError("Unknown map name: '%s'" % mapName)
                     
+                    # import numpy
+                    # inputs = [numpy.arange(model["Sequence"].nbInputs)+1]
+                    # print model.propagate("Sequence", Sequence=inputs)
+
                     scores = _trainTest(
                         aMap,
                         modelFct,

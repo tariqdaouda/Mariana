@@ -5,7 +5,13 @@ import Mariana.settings as MSET
 from Mariana.abstraction import Abstraction_ABC
 import Mariana.initializations as MI
 
-__all__= ["Decorator_ABC", "BatchNormalization", "Center", "Normalize", "Mask", "BinomialDropout", "Clip", "AdditiveGaussianNoise", "MultiplicativeGaussianNoise"]
+__all__= ["Decorator_ABC", "BatchNormalization", "Center", "Normalize", "Mask", "RandomMask", "BinomialDropout", "Clip", "AdditiveGaussianNoise", "MultiplicativeGaussianNoise"]
+
+def iCast(thing) :
+    if thing.dtype.find("int") > -1 :
+        return tt.cast(thing, MSET.INTX)
+    else :
+        return tt.cast(thing, theano.config.floatX)
 
 class Decorator_ABC(Abstraction_ABC) :
     """A decorator is a modifier that is applied on a layer. They are always the last the abstraction to be applied and they can transform a layer in anyway they want."""
@@ -54,6 +60,33 @@ class Mask(Decorator_ABC):
         if self.onTest :
             layer.testOutputs = layer.testOutputs * self.mask
 
+class RandomMask(Decorator_ABC):
+    """
+    This decorator takes a list of masks and will randomly apply them to the outputs of the layer it decorates.
+    Could be used as a fast approximation for dropout. 
+    """
+    def __init__(self, masks, onTrain=True, onTest=False, *args, **kwargs):
+        Decorator_ABC.__init__(self)
+        self.nbMasks = len(masks)
+        self.onTest = onTest
+        self.onTrain = onTrain
+
+        if self.nbMasks > 0 :
+            self.masks = theano.shared(numpy.asarray(masks, dtype=theano.config.floatX))
+            self.hyperParameters.extend([])
+
+    def decorate(self, layer) :
+        if self.nbMasks > 0 :
+            rnd = tt.shared_randomstreams.RandomStreams()
+            maskId = rnd.random_integers(low=0, high=self.nbMasks-1, ndim=1)
+            mask = self.masks[maskId]
+
+            if self.onTrain :
+                layer.outputs = layer.outputs * mask
+    
+            if self.onTest :
+                layer.testOutputs = layer.testOutputs * mask
+
 class BinomialDropout(Decorator_ABC):
     """Stochastically mask some parts of the output of the layer. Use it to make things such as denoising autoencoders and dropout layers"""
     def __init__(self, ratio, onTrain=True, onTest=False):
@@ -73,8 +106,8 @@ class BinomialDropout(Decorator_ABC):
         rnd = tt.shared_randomstreams.RandomStreams()
         mask = rnd.binomial(n = 1, p = (1-self.ratio), size = outputs.shape)
         # cast to stay in GPU float limit
-        mask = tt.cast(mask, theano.config.floatX)
-        return (outputs * mask) / self.ratio
+        mask = iCast(mask)
+        return (outputs * mask)
 
     def decorate(self, layer) :
         if self.onTrain :
