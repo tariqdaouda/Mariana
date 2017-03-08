@@ -26,7 +26,7 @@ Mariana's goal is to create a **powerful language** through wich complex deep ne
 	h2 = ML.Hidden(300, activation = MA.ReLU(), regularizations = [ MR.L1(0.0001) ])
 	o = ML.SoftmaxClassifier(9, learningScenario = ls, costObject = cost)
 	
-	#adding a skip connection
+	#adding skip connections
 	inp > h2
 	inp > o
 	
