@@ -271,18 +271,6 @@ Mariana allows you to clone layers so you can train a model, extract one of it's
 
   h2 = h.clone()
 
-You can also transform an output layer into a hidden layer, that you can include afterwards in an other model.
-
-.. code:: python
-
-  h3 = o.toHidden()
-
-And a hidden layer to an output layer using:
-
-.. code:: python
-
-  o = h.toOutput(ML.Regression, costObject = cost, learningScenario = ls)
-
 Visualizing networks
 ====================
 
