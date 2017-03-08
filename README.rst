@@ -25,8 +25,12 @@ Mariana's goal is to create a **powerful language** through wich complex deep ne
 	h1 = ML.Hidden(300, activation = MA.ReLU(), regularizations = [ MR.L1(0.0001) ])
 	h2 = ML.Hidden(300, activation = MA.ReLU(), regularizations = [ MR.L1(0.0001) ])
 	o = ML.SoftmaxClassifier(9, learningScenario = ls, costObject = cost)
-
-	MLP = inp > h1 > h2 > o
+	
+	#adding a skip connection
+	inp > h2
+	inp > o
+	
+	MLP_skip = inp > h1 > h2 > o
 
 It also supports **multiple inputs, outputs, forks** and they work exactly like this example. Just create layers and connect them as you wich (avoid recurrences though, they are not yet supported). You can then export your complex creations into neat HTML files (cf. the end) and use them to awe strike your collegues.
 
