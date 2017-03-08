@@ -12,7 +12,7 @@
 MARIANA: The Cutest Deep Learning Framework
 =============================================
 
-As neural nets increase in complexity they also become harder to write and harder to teach. Our hypothesis is that these difficulties stem from the absence of a language that elegantly describe neural networks. Mariana (named after the deepest place on earth, the Mariana trench) is an attempt to create such a language within python. That being said, you can also call it an *Extendable Python Machine Learning Framework build on top of Theano that focuses on ease of use*.
+Mariana's goal is to create a **powerful language** through wich complex deep neural networks can be meaningfully expressed and easily manipulated. It's here to empower **researchers** and **teachers**, while greatly facilitating **AI technolgy transfer** into other domains.
 
 **It looks like this:**
 
@@ -27,6 +27,8 @@ As neural nets increase in complexity they also become harder to write and harde
 	o = ML.SoftmaxClassifier(9, learningScenario = ls, costObject = cost)
 
 	MLP = inp > h1 > h2 > o
+
+It also supports **multiple inputs, outputs, forks** and they work exactly like this example. Just create layers and connect them as you wich (avoid recurrences though, they are not yet supported). You can then export your complex creations into neat HTML files (cf. the end) and use them to awe strike your collegues.
 
 ph'nglui mglw'nafh Cthulhu R'lyeh wgah'nagl fhtagn
 
