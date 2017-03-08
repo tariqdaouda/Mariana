@@ -49,7 +49,7 @@ Mariana's goal is to create a **powerful language** through wich complex deep ne
 	#Visualizing
 	MLP_skip.saveHTML("mySkipMLP")
 
-It also supports **multiple inputs, outputs, forks** and they work exactly like this example with a **skip**. Just create layers and connect them as you wich (avoid recurrences though, they are not yet supported). You can then export your complex creations into neat HTML files and use them to awe strike your collegues. You can 
+It also supports **multiple inputs, outputs, forks** and they work exactly like this example with a **skip**. Just create layers and connect them as you wich (avoid recurrences though, they are not yet supported). You can then export your complex creations into neat HTML files and use them to awe strike your collegues. See further down to discover how you can train your creations.
 
 .. image:: http://bioinfo.iric.ca/~daoudat/Mariana/_static/MLP_skip.png
 
