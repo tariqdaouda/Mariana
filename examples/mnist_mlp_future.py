@@ -54,6 +54,7 @@ if __name__ == "__main__":
 	trainMaps.mapOutput(o, trainData.numbers)
 
 	testData = MDM.Series(images=test_set[0], numbers=test_set[1])
+	# testMaps = MDM.DatasetMapper(["test", "accuracy"])
 	testMaps = MDM.DatasetMapper("testAndAccuracy")
 	testMaps.mapInput(i, testData.images)
 	testMaps.mapOutput(o, testData.numbers)

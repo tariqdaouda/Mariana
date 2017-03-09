@@ -75,7 +75,7 @@ class Trainer_ABC(object) :
             "scores" : {}
         }
 
-    def start(self, runName, saveIfMurdered=False, **kwargs) :
+    def start(self, runName, saveIfMurdered=True, **kwargs) :
         """Starts the training and encapsulates it into a safe environement.
         If the training stops because of an Exception or SIGTEM, the trainer
         will save logs, the store, and the last version of the model.

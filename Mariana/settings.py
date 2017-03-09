@@ -1,7 +1,7 @@
 #Personal tribute to nomad soul
 OMICRON_SIGNATURE = ">|\/| /-\ |-> | /-\ |\| /-\>"
 
-VERBOSE = True
+VERBOSE = False
 SAVE_MESSAGE_LOG = True
 SAVE_MESSAGE_LOG_FILE = "Mariana_logs.txt"
 

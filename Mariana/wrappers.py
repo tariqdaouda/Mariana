@@ -5,6 +5,13 @@ import sys
 import Mariana.candies as MCAN
 import Mariana.settings as MSET
 
+
+# class TheanoFunctionHandle(object):
+#     """A descrription of a theano function used for just-in-time compilation"""
+#     def __init__(self, arg):
+#         super(TheanoFunctionHandle, self).__init__()
+#         self.arg = arg
+        
 class TheanoFunction(object) :
     """
     This class encapsulates a Theano function.
@@ -13,7 +20,7 @@ class TheanoFunction(object) :
     error messages.
     """
 
-    def __init__(self, name, layer, output_expressions, additional_input_expressions = {}, updates = [], **kwargs) :
+    def __init__(self, name, layer, output_expressions, flow, additional_input_expressions = {}, updates = [], **kwargs) :
         """
         :param str name: name of the function
         :param Output layer: the output layer the function should be applied to
@@ -21,16 +28,17 @@ class TheanoFunction(object) :
         :param dict additional_input_expressions: additional inputs needed to compute the expressions
         :param list updates: list of tuples (shared variable, symbolic expression of the update to be applied to it)
         :param dict \*\*kwargs: additional arguments to passed to the real theano function underneath
+        :parama flow: either "train" or "test". Defines if regularizations and decorators should be applied
         """
-        def _bckTrckInputs(startLayer, inputs = OrderedDict(), inpSet = set()) :     
+        def _bckTrckInputs(startLayer, flow, inputs = OrderedDict(), inpSet = set()) :     
             if MSET.TYPE_INPUT_LAYER in startLayer.types :
-                inpOut = startLayer.inputs
+                inpOut = startLayer.inputs[flow]
                 if inpOut not in inpSet :
                     inputs[startLayer.name] = inpOut
                     inpSet.add(inpOut)
             
             for layer in startLayer.network.inConnections[startLayer] :
-                _bckTrckInputs(layer, inputs, inpSet)
+                _bckTrckInputs(layer, flow, inputs, inpSet)
             
             return inputs, inpSet
 
@@ -39,7 +47,7 @@ class TheanoFunction(object) :
         self.name = name
         self.layer = layer
 
-        self.inputs, inpSet = _bckTrckInputs(layer)
+        self.inputs, inpSet = _bckTrckInputs(layer, flow)
 
         for k, v in additional_input_expressions.iteritems() :
             if v not in inpSet :

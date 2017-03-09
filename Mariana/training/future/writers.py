@@ -24,15 +24,7 @@ class PrettyPrinter(Writer_ABC) :
         self.tree = None
 
     def commit(self, trainer) :
-        # def recTree(vals, res, value, i=0) :
-        #     if i == len(vals)-1 :
-        #         res.append("%s|->%s: %s" %(" "*i*2, vals[i], value) ) 
-        #         return res
-
-        #     s = "%s|-%s" %(" "*i*2, vals[i])
-        #     res.append( s ) 
-        #     return recTree(vals, res, value, i+1)
-
+        
         def setTree(vals, res) :
             tres = res
             for v in vals :
@@ -54,20 +46,6 @@ class PrettyPrinter(Writer_ABC) :
 
         s = ["\n>Epoch: %s, commit: %s, runtime: %s" %(trainer.store["runInfos"]["epoch"], self.nbCommits, trainer.store["runInfos"]["runtime"])]
 
-        if self.treeView and self.tree is None :
-            self.tree = {}
-            for logi, log in enumerate(self.loggers) :
-                self.tree[logi] = {}
-                for k, v in log.log(trainer) :
-                    self.tree[logi] = setTree(k.split("."), self.tree[logi])
-                    # print k
-                    #print self.tree[logi]
-        #print self.tree
-        #comp = compileTree(self.tree)
-        #print len(comp)
-        # print '\n'.join()
-        #stop
-         # lineSep = "%s\n"
         for log in self.loggers :
             try :
                 name = log.name
@@ -79,8 +57,6 @@ class PrettyPrinter(Writer_ABC) :
             for k, v in log.log(trainer) :
                 if not self.treeView :
                     s.append("|-%s: %s" % (k, v))
-                # else :
-                    # s = recTree(k.split("."), s, v)
 
         print '\n'.join(s)
         sys.stdout.flush()

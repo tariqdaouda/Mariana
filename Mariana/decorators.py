@@ -55,10 +55,10 @@ class Mask(Decorator_ABC):
 
     def decorate(self, layer) :
         if self.onTrain :
-            layer.outputs = layer.outputs * self.mask
+            layer.outputs["train"] = layer.outputs["train"] * self.mask
         
         if self.onTest :
-            layer.testOutputs = layer.testOutputs * self.mask
+            layer.outputs["test"] = layer.outputs["test"] * self.mask
 
 class RandomMask(Decorator_ABC):
     """
@@ -82,10 +82,10 @@ class RandomMask(Decorator_ABC):
             mask = self.masks[maskId]
 
             if self.onTrain :
-                layer.outputs = layer.outputs * mask
+                layer.outputs["train"] = layer.outputs["train"] * mask
     
             if self.onTest :
-                layer.testOutputs = layer.testOutputs * mask
+                layer.outputs["test"] = layer.outputs["test"] * mask
 
 class BinomialDropout(Decorator_ABC):
     """Stochastically mask some parts of the output of the layer. Use it to make things such as denoising autoencoders and dropout layers"""
@@ -111,10 +111,10 @@ class BinomialDropout(Decorator_ABC):
 
     def decorate(self, layer) :
         if self.onTrain :
-            layer.outputs = self._decorate(layer.outputs)
+            layer.outputs["train"] = self._decorate(layer.outputs["train"])
         
         if self.onTest :
-            layer.testOutputs = self._decorate(layer.testOutputs)
+            layer.outputs["test"] = self._decorate(layer.outputs["test"])
 
 class Center(Decorator_ABC) :
     """Centers the outputs by substracting the mean"""
@@ -126,9 +126,9 @@ class Center(Decorator_ABC) :
 
     def decorate(self, layer) :
         if self.onTrain :
-            layer.output = layer.output-tt.mean(layer.output)
+            layer.outputs["train"] = layer.outputs["train"]-tt.mean(layer.outputs["train"])
         if self.onTest :
-            layer.testOutput = layer.testOutput-tt.mean(layer.testOutput)
+            layer.outputs["test"] = layer.outputs["test"]-tt.mean(layer.outputs["test"])
 
 class Normalize(Decorator_ABC) :
     """
@@ -146,12 +146,12 @@ class Normalize(Decorator_ABC) :
 
     def decorate(self, layer) :
         if self.onTrain :
-            std = tt.sqrt( tt.var(layer.outputs) + self.espilon )
-            layer.output = ( layer.output-tt.mean(layer.output) / std )
+            std = tt.sqrt( tt.var(layer.outputs["train"]s) + self.espilon )
+            layer.outputs["train"] = ( layer.outputs["train"]-tt.mean(layer.output) / std )
 
         if self.onTest :
-            std = tt.sqrt( tt.var(layer.testOutputs) + self.espilon )
-            layer.testOutput = ( layer.testOutput-tt.mean(layer.testOutput) ) / std
+            std = tt.sqrt( tt.var(layer.outputs["test"]) + self.espilon )
+            layer.outputs["test"] = ( layer.outputs["test"]-tt.mean(layer.outputs["test"]) ) / std
 
 class BatchNormalization(Decorator_ABC):
     """Applies Batch Normalization to the outputs of the layer.
@@ -197,14 +197,14 @@ class BatchNormalization(Decorator_ABC):
             layer.batchnorm_b = self.b
 
             if self.onTrain :
-                mu = tt.mean(layer.outputs)
-                sigma = tt.sqrt( tt.var(layer.outputs) + self.epsilon )
-                layer.outputs = layer.batchnorm_W * ( (layer.outputs - mu) / sigma ) + layer.batchnorm_b
+                mu = tt.mean(layer.outputs["train"])
+                sigma = tt.sqrt( tt.var(layer.outputs["train"]) + self.epsilon )
+                layer.outputs["train"] = layer.batchnorm_W * ( (layer.outputs["train"] - mu) / sigma ) + layer.batchnorm_b
 
             if self.onTest :
-                mu = tt.mean(layer.testOutputs)
-                sigma = tt.sqrt( tt.var(layer.testOutputs) + self.epsilon )
-                layer.testOutputs = layer.batchnorm_W * ( (layer.testOutputs - mu) / sigma ) + layer.batchnorm_b
+                mu = tt.mean(layer.outputs["test"])
+                sigma = tt.sqrt( tt.var(layer.outputs["test"]) + self.epsilon )
+                layer.outputs["test"] = layer.batchnorm_W * ( (layer.outputs["test"] - mu) / sigma ) + layer.batchnorm_b
 
 class Clip(Decorator_ABC):
     """Clips the neurone activations, preventing them to go beyond the specified range"""
@@ -221,9 +221,9 @@ class Clip(Decorator_ABC):
         
     def decorate(self, layer) :
         if self.onTrain :
-            layer.outputs = layer.outputs.clip(self.lower, self.upper)
+            layer.outputs["train"] = layer.outputs["train"].clip(self.lower, self.upper)
         if self.onTest :
-            layer.testOutputs = layer.testOutputs.clip(self.lower, self.upper)
+            layer.outputs["test"] = layer.outputs["test"].clip(self.lower, self.upper)
 
 class AdditiveGaussianNoise(Decorator_ABC):
     """Add gaussian noise to the output of the layer"""
@@ -244,9 +244,9 @@ class AdditiveGaussianNoise(Decorator_ABC):
     def decorate(self, layer) :
         if self.std > 0 :
             if self.onTrain :
-                layer.outputs = self._decorate(layer.outputs, self.std)
+                layer.outputs["train"] = self._decorate(layer.outputs["train"], self.std)
             if self.onTest :
-                layer.testOutputs = self._decorate(layer.testOutputs, self.std)
+                layer.outputs["test"] = self._decorate(layer.outputs["test"], self.std)
 
 class MultiplicativeGaussianNoise(Decorator_ABC):
     """Multiply gaussian noise to the output of the layer"""
@@ -267,6 +267,6 @@ class MultiplicativeGaussianNoise(Decorator_ABC):
     def decorate(self, layer) :
         if self.std > 0 :
             if self.onTrain :
-                layer.outputs = self._decorate(layer.outputs, self.std)
+                layer.outputs["train"] = self._decorate(layer.outputs["train"], self.std)
             if self.onTest :
-                layer.testOutputs = self._decorate(layer.testOutputs, self.std)
+                layer.outputs["test"] = self._decorate(layer.outputs["test"], self.std)

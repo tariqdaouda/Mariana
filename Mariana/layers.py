@@ -61,22 +61,28 @@ class Layer_ABC(object) :
         self.types=layerTypes
 
         self.nbInputs=None
-        self.testInputs=None
-        self.inputs=None
+        self.inputs={
+            "train": None,
+            "test": None
+        }
+
         self.nbOutputs=size
-        self.outputs=None # this is a symbolic var
-        self.testOutputs=None # this is a symbolic var
+        self.outputs={
+            "train": None,
+            "test": None,
+            "train_preactivation": None,
+            "test_preactivation": None,
+        }
 
-        self.preactivation_outputs=None
-        self.preactivation_testOutputs=None
-
-        self.activation=activation
-        self.regularizationObjects=regularizations
-        self.regularizations=[]
-        self.decorators=decorators
-        self.initializations=initializations
-        self.learningScenario=learningScenario
-
+        self.abstractions={
+            "activation": activation,
+            "regularizations": regularizations,
+            "decorators": decorators,
+            "initializations": initializations,
+            "learningScenario": learningScenario,
+        }
+        self.parameters = {}
+        
         self.network=MNET.Network()
         self.network._addLayer(self)
 
@@ -85,8 +91,6 @@ class Layer_ABC(object) :
         self._mustInit=True
         self._mustReset=True
         self._decorating=False
-
-        self.parameters = {}
 
     def getParameterDict(self) :
         """returns the layer's parameters as dictionary"""
@@ -146,7 +150,7 @@ class Layer_ABC(object) :
         """creates the parameters if necessary (self._mustRest == True)"""
         self._setShape()
         if self._mustReset or forceReset :        
-            for init in self.initializations :
+            for init in self.abstractions["initializations"] :
                 init.apply(self)
         self._mustReset=False
 
@@ -175,43 +179,43 @@ class Layer_ABC(object) :
         testOuts=[]
         for l in self.network.inConnections[self] :
             self.nbInputs += l.nbOutputs  
-            outs.append(l.outputs)
-            testOuts.append(l.testOutputs)
+            outs.append(l.outputs["train"])
+            testOuts.append(l.outputs["test"])
         
-        self.inputs=tt.concatenate( outs, axis=1 )
-        self.testInputs=tt.concatenate( testOuts, axis=1 )
+        self.inputs["train"]=tt.concatenate( outs, axis=1 )
+        self.inputs["test"]=tt.concatenate( testOuts, axis=1 )
 
     def _setOutputs(self) :
-        """Defines the outputs and testOutputs of the layer before the application of the activation function. This function is called by _init() ans should be written in child."""
+        """Defines the outputs and outputs["test"] of the layer before the application of the activation function. This function is called by _init() ans should be written in child."""
         raise NotImplemented("Should be implemented in child")
 
     def _decorate(self) :
         """applies decorators"""
-        for d in self.decorators :
+        for d in self.abstractions["decorators"] :
             d.apply(self)
 
     def _activate(self) :
         """applies activation"""
-        self.preactivation_outputs=self.outputs
-        self.preactivation_testOutputs=self.testOutputs
+        self.outputs["train_preactivation"]=self.outputs["train"]
+        self.outputs["test_preactivation"]=self.outputs["test"]
 
-        self.outputs=self.activation.apply(self, self.preactivation_outputs, 'training')
-        self.testOutputs=self.activation.apply(self, self.preactivation_testOutputs, 'testing')
+        self.outputs["train"]=self.abstractions["activation"].apply(self, self.outputs["train_preactivation"], 'training')
+        self.outputs["test"]=self.abstractions["activation"].apply(self, self.outputs["test_preactivation"], 'testing')
 
-    def _listRegularizations(self) :
-        self.regularizations=[]
-        for reg in self.regularizationObjects :
-            self.regularizations.append(reg.getFormula(self))
+    # def _listRegularizations(self) :
+    #     self.abstractions["regularizations"]=[]
+    #     for reg in self.abstractions["regularizations"] :
+    #         self.abstractions["regularizations"].append(reg.getFormula(self))
 
     def _setTheanoFunctions(self) :
         """Creates propagate/propagateTest theano function that returns the layer's outputs.
-        propagateTest returns the testOutputs, some decorators might not be applied.
+        propagateTest returns the outputs["test"], some decorators might not be applied.
         This is called after decorating"""
-        self.propagate=MWRAP.TheanoFunction("propagate", self, [("outputs", self.outputs)], allow_input_downcast=True)
-        self.propagateTest=MWRAP.TheanoFunction("propagateTest", self, [("outputs", self.testOutputs)], allow_input_downcast=True)
+        self.propagate=MWRAP.TheanoFunction("propagate", self, [("outputs", self.outputs["train"])], flow="train", allow_input_downcast=True)
+        self.propagateTest=MWRAP.TheanoFunction("propagateTest", self, [("outputs", self.outputs["test"])], flow="test", allow_input_downcast=True)
         
-        # self.propagate_preAct=MWRAP.TheanoFunction("propagate_preAct", self, [("outputs", self.preactivation_outputs)], allow_input_downcast=True)
-        # self.propagateTest_preAct=MWRAP.TheanoFunction("propagateTest_preAct", self, [("outputs", self.preactivation_testOutputs)], allow_input_downcast=True)
+        # self.propagate_preAct=MWRAP.TheanoFunction("propagate_preAct", self, [("outputs", self.outputs["train_preactivation"])], flow="train", allow_input_downcast=True)
+        # self.propagateTest_preAct=MWRAP.TheanoFunction("propagateTest_preAct", self, [("outputs", self.outputs["test_preactivation"])], flow="test", allow_input_downcast=True)
 
     def _parametersSanityCheck(self) :
         "perform basic parameter checks on layers, automatically called on initialization"
@@ -228,13 +232,13 @@ class Layer_ABC(object) :
     def _outputsSanityCheck(self) :
         "perform basic output checks on layers, automatically called on initialization"
         try :
-            if self.testOutputs is None :
-                raise AttributeError("Attribute 'testOutputs' of layer '%s' has None value. This attribute defines the test output of the layer, usually without regularizations" % self.name)
+            if self.outputs["test"] is None :
+                raise AttributeError("Attribute 'outputs['test']' of layer '%s' has None value. This attribute defines the test output of the layer, usually without regularizations" % self.name)
         except AttributeError :
-                raise AttributeError("Attribute 'testOutputs' of layer '%s' is not defined. This attribute defines the test output of the layer, usually without regularizations" % self.name)
+                raise AttributeError("Attribute 'outputs['test']' of layer '%s' is not defined. This attribute defines the test output of the layer, usually without regularizations" % self.name)
 
         try :
-            if self.outputs is None :
+            if self.outputs["train"] is None :
                 raise AttributeError("Attribute 'outputs' of layer '%s' has None value. This attribute defines the train output of the layer, usually with regularizations" % self.name)
         except AttributeError :
                 raise AttributeError("Attribute 'outputs' of layer '%s' is not defined. This attribute defines the train output of the layer, usually with regularizations" % self.name)
@@ -258,7 +262,7 @@ class Layer_ABC(object) :
 
     def _initB(self) :
         """Initialize the fancy attributes of the layer such as: regularizers, decorators and theano functions. This function is automatically called before train/test etc..."""
-        self._listRegularizations()
+        # self._listRegularizations()
         self._setTheanoFunctions()
         self._whateverLastInit()
         
@@ -328,12 +332,16 @@ class Input(Layer_ABC) :
     def __init__(self, size, name=None, **kwargs) :
         super(Input, self).__init__(size, layerTypes=[MSET.TYPE_INPUT_LAYER], name=name, **kwargs)
         self.nbInputs=size
-        self.inputs=tt.matrix(name="inp_"+self.name)
+        self.inputs["train"]=tt.matrix(name="inp_"+self.name)
+        self.inputs["test"]=self.inputs["train"]
+
+    def _setInputs(self) :
+        pass
 
     def _setOutputs(self) :
         "initializes the output to be the same as the inputs"
-        self.outputs=self.inputs
-        self.testOutputs=self.inputs
+        self.outputs["train"]=self.inputs["train"]
+        self.outputs["test"]=self.inputs["train"]
 
     def _femaleConnect(self, *args) :
         raise ValueError("Nothing can be connected to an input layer")
@@ -363,8 +371,8 @@ class Embedding(Layer_ABC) :
             "fullEmbeddings":None
         }
 
-        self.inputs=None
-        self.testInputs=None
+        self.inputs["train"]=None
+        self.inputs["test"]=None
         
         if size is not None :
             self.nbInputs=size
@@ -383,6 +391,10 @@ class Embedding(Layer_ABC) :
             return (self.dictSize, self.nbDimentions)
         else :
             raise ValueError("Unknown parameter: %s" % param)
+
+    def _setInputs(self) :
+        if len(self.network.inConnections[self]) > 0 :
+            super(Embedding, _setInputs)._setInputs()
 
     def getEmbeddings(self, idxs=None) :
         """returns the embeddings.
@@ -403,24 +415,24 @@ class Embedding(Layer_ABC) :
 
     def _setOutputs(self) :
         if len(self.network.inConnections[self]) == 0 :
-            if self.inputs is None :
-                self.inputs=tt.imatrix(name="embInp_" + self.name)
-                self.testInputs=self.inputs
+            if self.inputs["train"] is None :
+                self.inputs["train"]=tt.imatrix(name="embInp_" + self.name)
+                self.inputs["test"]=self.inputs["train"]
         else :
             for layer in self.network.inConnections[self] :
-                if layer.outputs.dtype.find("int") != 0 :
-                    outs=tt.cast(layer.outputs, dtype=MSET.INTX)
-                    testOuts=tt.cast(layer.testOutputs, dtype=MSET.INTX)
+                if layer.outputs["train"].dtype.find("int") != 0 :
+                    outs=tt.cast(layer.outputs["train"], dtype=MSET.INTX)
+                    testOuts=tt.cast(layer.outputs["test"], dtype=MSET.INTX)
                 else :
-                    outs=layer.outputs
-                    testOuts=layer.testOutputs
+                    outs=layer.outputs["train"]
+                    testOuts=layer.outputs["test"]
 
-                if self.inputs is None :   
-                    self.inputs=outs
-                    self.testInputs=testOuts
+                if self.inputs["train"] is None :   
+                    self.inputs["train"]=outs
+                    self.inputs["test"]=testOuts
                 else :
-                    self.inputs+=outs
-                    self.testInputs+=testOuts
+                    self.inputs["train"]+=outs
+                    self.inputs["test"]+=testOuts
 
         if self.zeroForNull :
             self.null=numpy.zeros((1, self.nbDimentions))
@@ -429,9 +441,9 @@ class Embedding(Layer_ABC) :
             self.parameters["fullEmbeddings"]=self.parameters["embeddings"]
             del(self.parameters["embeddings"])
 
-        self.preOutputs=self.parameters["fullEmbeddings"][self.inputs]
-        self.outputs=self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
-        self.testOutputs=self.preOutputs.reshape((self.testInputs.shape[0], self.nbOutputs))
+        self.preOutputs=self.parameters["fullEmbeddings"][self.inputs["train"]]
+        self.outputs["train"]=self.preOutputs.reshape((self.inputs["train"].shape[0], self.nbOutputs))
+        self.outputs["test"]=self.preOutputs.reshape((self.inputs["test"].shape[0], self.nbOutputs))
 
 class Addition(Layer_ABC):
     """Adds up the values of all afferent layers"""
@@ -451,15 +463,15 @@ class Addition(Layer_ABC):
         inputs = 0
         testInputs = 0
         for l in self.network.inConnections[self] :
-            inputs += l.outputs
-            testInputs += l.testOutputs
+            inputs += l.outputs["train"]
+            testInputs += l.outputs["test"]
 
-        self.inputs = inputs
-        self.testInputs = testInputs
+        self.inputs["train"] = inputs
+        self.inputs["test"] = testInputs
 
     def _setOutputs(self) :
-        self.outputs=self.inputs
-        self.testOutputs=self.testInputs
+        self.outputs["train"]=self.inputs["train"]
+        self.outputs["test"]=self.inputs["test"]
 
 class Pass(Layer_ABC) :
     def __init__(self, name=None, **kwargs):
@@ -474,20 +486,20 @@ class Pass(Layer_ABC) :
 
     def _setOutputs(self) :
         for layer in self.network.inConnections[self] :
-            if self.inputs is None :
-                self.inputs=layer.outputs
+            if self.inputs["train"] is None :
+                self.inputs["train"]=layer.outputs["train"]
             else :
-                self.inputs += layer.outputs
+                self.inputs["train"] += layer.outputs["train"]
 
-        self.outputs=self.inputs
-        self.testOutputs=self.inputs
+        self.outputs["train"]=self.inputs["train"]
+        self.outputs["test"]=self.inputs["train"]
 
 class WeightBias_ABC(Layer_ABC) :
     """A layer with weigth and bias. If would like to disable either one of them do not provide an initialization"""
 
     def __init__(self, size, layerTypes, initializations=[MI.SmallUniformWeights(), MI.ZeroBias()], **kwargs) :
         super(WeightBias_ABC, self).__init__(size, layerTypes=layerTypes, initializations=initializations, **kwargs)
-        self.testInputs=None
+        self.inputs["test"]=None
         self.parameters={
             "W": None,
             "b": None
@@ -503,18 +515,18 @@ class WeightBias_ABC(Layer_ABC) :
                 raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
 
     def _setOutputs(self) :
-        """Defines, self.outputs and self.testOutputs"""
+        """Defines, self.outputs["train"] and self.outputs["test"]"""
 
-        self.outputs=self.inputs
-        self.testOutputs=self.testInputs
+        self.outputs["train"]=self.inputs["train"]
+        self.outputs["test"]=self.inputs["test"]
         
         if self.parameters["W"] is not None:
-            self.outputs=tt.dot(self.inputs, self.parameters["W"])
-            self.testOutputs=tt.dot(self.testInputs, self.parameters["W"])
+            self.outputs["train"]=tt.dot(self.inputs["train"], self.parameters["W"])
+            self.outputs["test"]=tt.dot(self.inputs["test"], self.parameters["W"])
             
         if self.parameters["b"] is not None:
-            self.outputs=self.outputs + self.parameters["b"]
-            self.testOutputs=self.testOutputs + self.parameters["b"]
+            self.outputs["train"]=self.outputs["train"] + self.parameters["b"]
+            self.outputs["test"]=self.outputs["test"] + self.parameters["b"]
 
     def getParameterShape(self, param) :
         if param == "W" :
@@ -587,35 +599,34 @@ class Output_ABC(Layer_ABC) :
         Defines the costs to be applied.
         There are 2: the training cost (self.cost) and test cost (self.testCost), that has no regularizations.
          """
-        self.cost=self.costObject.apply(self, self.targets, self.outputs, "training")
-        self.testCost=self.costObject.apply(self, self.targets, self.testOutputs, "testing")
+        self.cost=self.costObject.apply(self, self.targets, self.outputs["train"], "training")
+        self.testCost=self.costObject.apply(self, self.targets, self.outputs["test"], "testing")
         
     def _applyRegularizations(self, force=False) :
         """Defines the regularizations to be added to the cost"""
         if self._mustRegularize or force :
             self._backTrckDependencies()
             for l in self.dependencies.itervalues() :
-                if l.__class__  is not Composite :
-                    try :
-                        for reg in l.regularizations :
-                            self.cost += reg
-                    except AttributeError :
-                        pass
+                try :
+                    for reg in l.abstractions["regularizations"] :
+                        self.cost += reg.apply(l)
+                except AttributeError :
+                    pass
         self._mustRegularize=False
 
     def _setUpdates(self) :
         """Defines parameter updates according to training scenari"""
         self._backTrckDependencies()
         self.dctUpdates={}
-        self.updates=self.learningScenario.apply(self, self.cost)
+        self.updates=self.abstractions["learningScenario"].apply(self, self.cost)
         self.dctUpdates[self.name]=self.updates
         
         # print self.name, self.updates 
         for l in self.dependencies.itervalues() :
-            if l.learningScenario is not None :
-                updates=l.learningScenario.apply(l, self.cost)
+            if l.abstractions["learningScenario"] is not None :
+                updates=l.abstractions["learningScenario"].apply(l, self.cost)
             else :
-                updates=self.learningScenario.apply(l, self.cost)
+                updates=self.abstractions["learningScenario"].apply(l, self.cost)
             # print l.name, updates 
             self.updates.extend(updates)
             self.dctUpdates[l.name]=updates
@@ -649,8 +660,8 @@ class Output_ABC(Layer_ABC) :
         if self.cost is None or self.testCost is None :
             self._setCosts()
         
-        self.train=MWRAP.TheanoFunction("train", self, [("score", self.cost)], { "targets" : self.targets }, updates=self.updates, allow_input_downcast=True)
-        self.test=MWRAP.TheanoFunction("test", self, [("score", self.testCost)], { "targets" : self.targets }, allow_input_downcast=True)
+        self.train=MWRAP.TheanoFunction("train", self, [("score", self.cost)], additional_input_expressions={ "targets" : self.targets }, updates=self.updates, flow="train", allow_input_downcast=True)
+        self.test=MWRAP.TheanoFunction("test", self, [("score", self.testCost)], additional_input_expressions={ "targets" : self.targets }, flow="test", allow_input_downcast=True)
 
     def _setGetGradientsUpdatesFunctions(self) :
         """Defines functions for retreving gradients/updates"""
@@ -662,15 +673,15 @@ class Output_ABC(Layer_ABC) :
                 gradOuts=[]
                 upsOuts=[]
                 for k, v in l.getParameterDict().iteritems() :
-                    if l.learningScenario is not None :
-                        gradOuts.append( (k, l.learningScenario.gradients[v]) )
-                        upsOuts.append( (k, l.learningScenario.updates[v]) )
+                    if l.abstractions["learningScenario"] is not None :
+                        gradOuts.append( (k, l.abstractions["learningScenario"].gradients[v]) )
+                        upsOuts.append( (k, l.abstractions["learningScenario"].updates[v]) )
                     else :
-                        gradOuts.append( (k, self.learningScenario.gradients[v]) )
-                        upsOuts.append( (k, self.learningScenario.updates[v]) )
+                        gradOuts.append( (k, self.abstractions["learningScenario"].gradients[v]) )
+                        upsOuts.append( (k, self.abstractions["learningScenario"].updates[v]) )
 
-                setattr(self, "getGradients_%s" % l.name, MWRAP.TheanoFunction("getGradients", self, gradOuts, { "targets" : self.targets }, allow_input_downcast=True, on_unused_input='ignore') )
-                setattr(self, "getUpdates_%s" % l.name, MWRAP.TheanoFunction("getUpdates", self, gradOuts, { "targets" : self.targets }, allow_input_downcast=True, on_unused_input='ignore') )
+                setattr(self, "getGradients_%s" % l.name, MWRAP.TheanoFunction("getGradients", self, gradOuts, additional_input_expressions={ "targets" : self.targets }, flow="train", allow_input_downcast=True, on_unused_input='ignore') )
+                setattr(self, "getUpdates_%s" % l.name, MWRAP.TheanoFunction("getUpdates", self, gradOuts, additional_input_expressions={ "targets" : self.targets }, flow="train", allow_input_downcast=True, on_unused_input='ignore') )
             except :
                 msg="Warning! Unable to setup theano function for retreiving updates and gradients for layer '%s'. Perhaps the current learning scenario is not keeping them stored." % l.name
                 self.network.logLayerEvent(self, msg, {})
@@ -722,20 +733,20 @@ class SoftmaxClassifier(WeightBiasOutput_ABC) :
             * predictionAccuracy: returns the accuracy (between [0, 1]) of the model, computed on test outputs.
         """
         Output_ABC._setCustomTheanoFunctions(self)
-        clas=tt.argmax(self.outputs, axis=1)
-        pred=tt.argmax(self.testOutputs, axis=1)
+        clas=tt.argmax(self.outputs["train"], axis=1)
+        pred=tt.argmax(self.outputs["test"], axis=1)
 
-        self.classify=MWRAP.TheanoFunction("classify", self, [ ("class", clas) ], allow_input_downcast=True)
-        self.predict=MWRAP.TheanoFunction("predict", self, [ ("class", pred) ], allow_input_downcast=True)
+        self.classify=MWRAP.TheanoFunction("classify", self, [ ("class", clas) ], flow="train", allow_input_downcast=True)
+        self.predict=MWRAP.TheanoFunction("predict", self, [ ("class", pred) ], flow="test", allow_input_downcast=True)
 
         clasAcc=tt.mean( tt.eq(self.targets, clas ) )
         predAcc=tt.mean( tt.eq(self.targets, pred ) )
 
-        self.classificationAccuracy=MWRAP.TheanoFunction("classificationAccuracy", self, [("accuracy", clasAcc)], { "targets" : self.targets }, allow_input_downcast=True)
-        self.predictionAccuracy=MWRAP.TheanoFunction("predictionAccuracy", self, [("accuracy", predAcc)], { "targets" : self.targets }, allow_input_downcast=True)
+        self.classificationAccuracy=MWRAP.TheanoFunction("classificationAccuracy", self, [("accuracy", clasAcc)], additional_input_expressions={ "targets" : self.targets }, flow="train", allow_input_downcast=True)
+        self.predictionAccuracy=MWRAP.TheanoFunction("predictionAccuracy", self, [("accuracy", predAcc)], additional_input_expressions={ "targets" : self.targets }, flow="test", allow_input_downcast=True)
 
-        self.trainAndAccuracy=MWRAP.TheanoFunction("trainAndAccuracy", self, [("score", self.cost), ("accuracy", clasAcc)], { "targets" : self.targets },  updates=self.updates, allow_input_downcast=True)
-        self.testAndAccuracy=MWRAP.TheanoFunction("testAndAccuracy", self, [("score", self.testCost), ("accuracy", predAcc)], { "targets" : self.targets }, allow_input_downcast=True)
+        self.trainAndAccuracy=MWRAP.TheanoFunction("trainAndAccuracy", self, [("score", self.cost), ("accuracy", clasAcc)], additional_input_expressions={ "targets" : self.targets },  updates=self.updates, flow="train", allow_input_downcast=True)
+        self.testAndAccuracy=MWRAP.TheanoFunction("testAndAccuracy", self, [("score", self.testCost), ("accuracy", predAcc)], additional_input_expressions={ "targets" : self.targets }, flow="test", allow_input_downcast=True)
 
 class Regression(WeightBiasOutput_ABC) :
     """For regressions, works great with a mean squared error cost"""
@@ -759,9 +770,9 @@ class Autoencode(WeightBiasOutput_ABC) :
         super(Autoencode, self)._initParameters(forceReset)
 
     def _whateverFirstInit(self) :
-        self.targets=self.network[self.targetLayerName].outputs
+        self.targets=self.network[self.targetLayerName].outputs["train"]
     
     def _setCustomTheanoFunctions(self) :
         super(Autoencode, self)._setCustomTheanoFunctions()
-        self.train=MWRAP.TheanoFunction("train", self, [("score", self.cost)], {}, updates=self.updates, allow_input_downcast=True)
-        self.test=MWRAP.TheanoFunction("test", self, [("score", self.testCost)], {}, allow_input_downcast=True)
+        self.train=MWRAP.TheanoFunction("train", self, [("score", self.cost)], {}, updates=self.updates, flow="train", allow_input_downcast=True)
+        self.test=MWRAP.TheanoFunction("test", self, [("score", self.testCost)], {}, flow="test", allow_input_downcast=True)

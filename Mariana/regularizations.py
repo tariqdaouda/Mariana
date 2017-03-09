@@ -66,4 +66,4 @@ class ActivationL1(SingleLayerRegularizer_ABC) :
 		self.hyperParameters = ["factor"]
 
 	def getFormula(self, layer) :
-		return self.factor * ( abs(layer.outputs).sum() )
+		return self.factor * ( abs(layer.outputs["train"]).sum() )

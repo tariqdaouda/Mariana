@@ -48,7 +48,7 @@ class ParameterValue_ABC(Logger_ABC) :
                     for k, v in layer.getParameterDict().iteritems() :
                         store.append( (self.getKey(layer, k) , self.getValue(v) ) )      
                 else :
-                    v = getattr(layer, paramName)
+                    v = layer.parameters[paramName]
                     store.append( (self.getKey(layer, paramName) , self.getValue(v) ) )
                 
         return store
@@ -89,13 +89,11 @@ class AbstractionHyperParameters(Logger_ABC) :
 
     def __init__(self, layerNames = None) :
         self.layerNames = layerNames
-        self.abstractions = ["initializations", "activation", "decorators", "regularizationObjects", "learningScenario", "costObject"]
+        # self.abstractions = ["initializations", "activation", "decorators", "regularizationObjects", "learningScenario", "costObject"]
         self.store = []
 
     def updateStore(self, layer, abstraction, absType) :
         if abstraction is None :
-            key = "%s.%s" % (layer.name, absType)
-            self.store.append( (key, None) )
             return
         
         try :
@@ -111,7 +109,7 @@ class AbstractionHyperParameters(Logger_ABC) :
         else :
             key = "%s.%s" % (layer.name, abName)
             self.store.append( (key, True) )
-
+        
     def log(self, trainer) :
         if len(self.store) > 0 :
             return self.store
@@ -123,18 +121,18 @@ class AbstractionHyperParameters(Logger_ABC) :
 
         for lname in layerNames :
             layer = trainer.model[lname]
-            for absType in self.abstractions :
+            for absType in layer.abstractions :
+                # print absType, layer.abstractions[absType]
                 try :
-                    iterAbs = iter(getattr(layer, absType))
+                    iterAbs = iter(layer.abstractions[absType])
                 except TypeError:
-                    print layer, absType
-                    self.updateStore(layer, getattr(layer, absType), absType)
-                except AttributeError :
-                    pass
+                    abstraction = layer.abstractions[absType]
+                    self.updateStore(layer, abstraction, absType)
                 else :
                     for abstraction in iterAbs :
                         self.updateStore(layer, abstraction, absType)
         
+        # print self.store
         return self.store
 
 class Scores(Logger_ABC) :
