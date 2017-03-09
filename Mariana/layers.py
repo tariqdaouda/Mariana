@@ -199,7 +199,7 @@ class Layer_ABC(object) :
         # self.propagate_preAct=MWRAP.TheanoFunction("propagate_preAct", self, [("outputs", self.preactivation_outputs)], allow_input_downcast=True)
         # self.propagateTest_preAct=MWRAP.TheanoFunction("propagateTest_preAct", self, [("outputs", self.preactivation_testOutputs)], allow_input_downcast=True)
 
-     def _parametersSanityCheck(self) :
+    def _parametersSanityCheck(self) :
         "perform basic parameter checks on layers, automatically called on initialization"
         for k, v in self.getParameterDict().iteritems() :
             try :
