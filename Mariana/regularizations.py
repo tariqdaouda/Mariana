@@ -33,7 +33,7 @@ class L1(SingleLayerRegularizer_ABC) :
 		self.hyperParameters = ["factor"]
 
 	def getFormula(self, layer) :
-		return self.factor * ( abs(layer.W).sum() )
+		return self.factor * ( abs(layer.parameters["W"]).sum() )
 
 class L2(SingleLayerRegularizer_ABC) :
 	"""
@@ -48,7 +48,7 @@ class L2(SingleLayerRegularizer_ABC) :
 		self.hyperParameters = ["factor"]
 
 	def getFormula(self, layer) :
-		return self.factor * ( (layer.W * layer.W).sum() )
+		return self.factor * ( (layer.parameters["W"] ** 2).sum() )
 
 class ActivationL1(SingleLayerRegularizer_ABC) :
 	"""

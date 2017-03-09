@@ -199,14 +199,7 @@ class Layer_ABC(object) :
         # self.propagate_preAct=MWRAP.TheanoFunction("propagate_preAct", self, [("outputs", self.preactivation_outputs)], allow_input_downcast=True)
         # self.propagateTest_preAct=MWRAP.TheanoFunction("propagateTest_preAct", self, [("outputs", self.preactivation_testOutputs)], allow_input_downcast=True)
 
-    # def _setCustomTheanoFunctions(self) :
-    #     """This is where you should put the definitions of your custom theano functions. Theano functions
-    #     must be declared as self attributes using a wrappers.TheanoFunction object, cf. wrappers documentation.
-    #     This is called just before _whateverLastInit.
-    #     """
-    #     pass
-
-    def _parametersSanityCheck(self) :
+     def _parametersSanityCheck(self) :
         "perform basic parameter checks on layers, automatically called on initialization"
         for k, v in self.getParameterDict().iteritems() :
             try :
@@ -235,7 +228,6 @@ class Layer_ABC(object) :
     def _initA(self) :
         """Initialize the essential attributes of the layer such as: outputs and activations. This function is automatically called before train/test etc..."""
         if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.network.inConnections[self]) ) :
-            # try :
             self._whateverFirstInit()
             self._parametersSanityCheck()
             self._initParameters()
@@ -243,19 +235,7 @@ class Layer_ABC(object) :
             self._decorate()
             self._outputsSanityCheck()
             self._activate()
-            # except Exception as e:
-                # raise e
-                # raise LayerInitException(self, e)
             
-            # self._listRegularizations()
-            # self._decorate()
-            # self._setTheanoFunctions()
-            # self._setCustomTheanoFunctions()
-            # self._whateverLastInit()
-
-            # if self.outputs is None :
-                # raise ValueError("Invalid layer '%s' has no defined outputs" % self.name)
-
             for l in self.network.outConnections[self] :
                 l._registerInput(self)
                 l._initA()
@@ -263,15 +243,10 @@ class Layer_ABC(object) :
 
     def _initB(self) :
         """Initialize the fancy attributes of the layer such as: regularizers, decorators and theano functions. This function is automatically called before train/test etc..."""
-        # try :
         self._listRegularizations()
         self._setTheanoFunctions()
-        # self._setCustomTheanoFunctions()
         self._whateverLastInit()
-        # except Exception as e:
-            # raise
-            # raise LayerInitException(self, e)
-
+        
     def _maleConnect(self, layer) :
         """What happens to A when A > B"""
         pass
@@ -456,12 +431,6 @@ class Composite(Layer_ABC):
     def __init__(self, name=None, **kwargs):
         super(Composite, self).__init__(layerTypes=[MSET.TYPE_HIDDEN_LAYER], size=None, name=name, **kwargs)
 
-    # def _femaleConnect(self, layer) :
-    #     if self.nbInputs is None :
-    #         self.nbInputs=0
-    #     self.nbInputs += layer.nbOutputs
-    #     self.nbOutputs=self.nbInputs
-    
     def _setShape(self) :
         """set the number of inputs and outputs"""
         self.nbInputs=0
@@ -508,12 +477,6 @@ class WeightBias_ABC(Layer_ABC) :
             "W": None,
             "b": None
         }
-
-    # def _femaleConnect(self, layer) :
-    #     if self.nbInputs is None :
-    #         self.nbInputs=layer.nbOutputs
-    #     elif self.nbInputs != layer.nbOutputs :
-    #         raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
 
     def _setShape(self) :
         """defines the number of inputs"""
