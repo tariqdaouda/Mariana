@@ -13,7 +13,7 @@ import Mariana.network as MNET
 import Mariana.wrappers as MWRAP
 import Mariana.candies as MCAN
 
-__all__=["Layer_ABC", "WeightBiasOutput_ABC", "WeightBias_ABC", "Output_ABC", "Input", "Hidden", "Composite", "Embedding", "SoftmaxClassifier", "Regression", "Autoencode"]
+__all__=["Layer_ABC", "WeightBiasOutput_ABC", "WeightBias_ABC", "Output_ABC", "Input", "Hidden", "Addition", "Embedding", "SoftmaxClassifier", "Regression", "Autoencode"]
 
 class Layer_ABC(object) :
     "The interface that every layer should expose"
@@ -61,6 +61,7 @@ class Layer_ABC(object) :
         self.types=layerTypes
 
         self.nbInputs=None
+        self.testInputs=None
         self.inputs=None
         self.nbOutputs=size
         self.outputs=None # this is a symbolic var
@@ -167,6 +168,19 @@ class Layer_ABC(object) :
             self.parameters[parameter] = value
 
     #theano hates abstract methods defined with a decorator
+    def _setInputs(self) :
+        """Sets the inputs to the layer. Default behaviour is concatenation"""
+        self.nbInputs=0
+        outs=[]
+        testOuts=[]
+        for l in self.network.inConnections[self] :
+            self.nbInputs += l.nbOutputs  
+            outs.append(l.outputs)
+            testOuts.append(l.testOutputs)
+        
+        self.inputs=tt.concatenate( outs, axis=1 )
+        self.testInputs=tt.concatenate( testOuts, axis=1 )
+
     def _setOutputs(self) :
         """Defines the outputs and testOutputs of the layer before the application of the activation function. This function is called by _init() ans should be written in child."""
         raise NotImplemented("Should be implemented in child")
@@ -199,7 +213,7 @@ class Layer_ABC(object) :
         # self.propagate_preAct=MWRAP.TheanoFunction("propagate_preAct", self, [("outputs", self.preactivation_outputs)], allow_input_downcast=True)
         # self.propagateTest_preAct=MWRAP.TheanoFunction("propagateTest_preAct", self, [("outputs", self.preactivation_testOutputs)], allow_input_downcast=True)
 
-     def _parametersSanityCheck(self) :
+    def _parametersSanityCheck(self) :
         "perform basic parameter checks on layers, automatically called on initialization"
         for k, v in self.getParameterDict().iteritems() :
             try :
@@ -229,6 +243,7 @@ class Layer_ABC(object) :
         """Initialize the essential attributes of the layer such as: outputs and activations. This function is automatically called before train/test etc..."""
         if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.network.inConnections[self]) ) :
             self._whateverFirstInit()
+            self._setInputs()
             self._parametersSanityCheck()
             self._initParameters()
             self._setOutputs()
@@ -418,33 +433,33 @@ class Embedding(Layer_ABC) :
         self.outputs=self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
         self.testOutputs=self.preOutputs.reshape((self.testInputs.shape[0], self.nbOutputs))
 
-class Composite(Layer_ABC):
-    """A Composite layer concatenates the outputs of several other layers
-    for example is we have::
+class Addition(Layer_ABC):
+    """Adds up the values of all afferent layers"""
 
-        c=Composite()
-        layer1 > c
-        layer2 > c
-
-    The output of c will be single vector: [layer1.output, layer2.output]
-    """
     def __init__(self, name=None, **kwargs):
-        super(Composite, self).__init__(layerTypes=[MSET.TYPE_HIDDEN_LAYER], size=None, name=name, **kwargs)
+        super(Addition, self).__init__(layerTypes=[MSET.TYPE_HIDDEN_LAYER], size=None, name=name, **kwargs)
 
-    def _setShape(self) :
+    def _femaleConnect(self, layer) :
+        if self.nbInputs is None :
+            self.nbInputs=layer.nbOutputs
+        elif self.nbInputs != layer.nbOutputs :
+            raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
+        self.nbOutputs=layer.nbOutputs
+
+    def _setInputs(self) :
         """set the number of inputs and outputs"""
-        self.nbInputs=0
+        inputs = 0
+        testInputs = 0
         for l in self.network.inConnections[self] :
-            self.nbInputs += l.nbOutputs
-        self.nbOutputs=self.nbInputs
+            inputs += l.outputs
+            testInputs += l.testOutputs
+
+        self.inputs = inputs
+        self.testInputs = testInputs
 
     def _setOutputs(self) :
-        outs=[]
-        for l in self.network.inConnections[self] :
-            outs.append(l.outputs)
-        
-        self.outputs=tt.concatenate( outs, axis=1 )
-        self.testOutputs=tt.concatenate( outs, axis=1 )
+        self.outputs=self.inputs
+        self.testOutputs=self.testInputs
 
 class Pass(Layer_ABC) :
     def __init__(self, name=None, **kwargs):
@@ -487,21 +502,8 @@ class WeightBias_ABC(Layer_ABC) :
             elif self.nbInputs != layer.nbOutputs :
                 raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
 
-    def _setInputs(self) :
-        """Adds up the outputs of all incoming layers"""
-        self.inputs=None
-        self.testInputs=None
-        for layer in self.network.inConnections[self] :
-            if self.inputs is None :
-                self.inputs=layer.outputs
-                self.testInputs=layer.testOutputs
-            else :
-                self.inputs += layer.outputs
-                self.testInputs += layer.testOutputs
-
     def _setOutputs(self) :
         """Defines, self.outputs and self.testOutputs"""
-        self._setInputs()
 
         self.outputs=self.inputs
         self.testOutputs=self.testInputs
@@ -585,13 +587,9 @@ class Output_ABC(Layer_ABC) :
         Defines the costs to be applied.
         There are 2: the training cost (self.cost) and test cost (self.testCost), that has no regularizations.
          """
-        # print "training"
         self.cost=self.costObject.apply(self, self.targets, self.outputs, "training")
-        # theano.printing.debugprint(self.cost)
-        # print "testing"
         self.testCost=self.costObject.apply(self, self.targets, self.testOutputs, "testing")
-        # theano.printing.debugprint(self.testCost)
-
+        
     def _applyRegularizations(self, force=False) :
         """Defines the regularizations to be added to the cost"""
         if self._mustRegularize or force :
@@ -650,7 +648,7 @@ class Output_ABC(Layer_ABC) :
 
         if self.cost is None or self.testCost is None :
             self._setCosts()
-        # theano.printing.debugprint(self.cost)
+        
         self.train=MWRAP.TheanoFunction("train", self, [("score", self.cost)], { "targets" : self.targets }, updates=self.updates, allow_input_downcast=True)
         self.test=MWRAP.TheanoFunction("test", self, [("score", self.testCost)], { "targets" : self.targets }, allow_input_downcast=True)
 
