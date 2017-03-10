@@ -146,14 +146,14 @@ class Normalize(Decorator_ABC) :
 
     def decorate(self, layer) :
         if self.onTrain :
-            std = tt.sqrt( tt.var(layer.outputs["train"]s) + self.espilon )
+            std = tt.sqrt( tt.var(layer.outputs["train"]) + self.espilon )
             layer.outputs["train"] = ( layer.outputs["train"]-tt.mean(layer.output) / std )
 
         if self.onTest :
             std = tt.sqrt( tt.var(layer.outputs["test"]) + self.espilon )
             layer.outputs["test"] = ( layer.outputs["test"]-tt.mean(layer.outputs["test"]) ) / std
 
-class BatchNormalization(Decorator_ABC):
+class BatchNormalization_deprectaded_to_become_layer(Decorator_ABC):
     """Applies Batch Normalization to the outputs of the layer.
     Implementation according to Sergey Ioffe and Christian Szegedy (http://arxiv.org/abs/1502.03167)
     
