@@ -1,13 +1,13 @@
 from abc import ABCMeta#, abstractmethod
 from collections import OrderedDict
 
-# import types
 import theano, numpy, time
 import theano.tensor as tt
 
 import Mariana.activations as MA
 import Mariana.initializations as MI
 import Mariana.settings as MSET
+import Mariana.custom_types as MTYPES
 
 import Mariana.network as MNET
 import Mariana.wrappers as MWRAP
@@ -43,7 +43,7 @@ class Layer_ABC(object) :
         activation=MA.Pass(),
         regularizations=[],
         initializations=[],
-        learningScenario=None,
+        learningScenari=[],
         decorators=[],
         name=None
     ):
@@ -61,25 +61,18 @@ class Layer_ABC(object) :
         self.types=layerTypes
 
         self.nbInputs=None
-        self.inputs={
-            "train": None,
-            "test": None
-        }
+        self.inputs=MTYPES.Variable()
 
         self.nbOutputs=size
-        self.outputs={
-            "train": None,
-            "test": None,
-            "train_preactivation": None,
-            "test_preactivation": None,
-        }
+        self.outputs=MTYPES.Variable()
+        self.outputs_preactivation=MTYPES.Variable()
 
         self.abstractions={
             "activation": activation,
             "regularizations": regularizations,
             "decorators": decorators,
             "initializations": initializations,
-            "learningScenario": learningScenario,
+            "learningScenari": learningScenari,
         }
         self.parameters = {}
         
@@ -196,27 +189,19 @@ class Layer_ABC(object) :
 
     def _activate(self) :
         """applies activation"""
-        self.outputs["train_preactivation"]=self.outputs["train"]
-        self.outputs["test_preactivation"]=self.outputs["test"]
+        self.outputs_preactivation["train"]=self.outputs["train"]
+        self.outputs_preactivation["test"]=self.outputs["test"]
 
-        self.outputs["train"]=self.abstractions["activation"].apply(self, self.outputs["train_preactivation"], 'training')
-        self.outputs["test"]=self.abstractions["activation"].apply(self, self.outputs["test_preactivation"], 'testing')
-
-    # def _listRegularizations(self) :
-    #     self.abstractions["regularizations"]=[]
-    #     for reg in self.abstractions["regularizations"] :
-    #         self.abstractions["regularizations"].append(reg.getFormula(self))
+        self.outputs["train"]=self.abstractions["activation"].apply(self, self.outputs_preactivation["train"], 'training')
+        self.outputs["test"]=self.abstractions["activation"].apply(self, self.outputs_preactivation["test"], 'testing')
 
     def _setTheanoFunctions(self) :
         """Creates propagate/propagateTest theano function that returns the layer's outputs.
         propagateTest returns the outputs["test"], some decorators might not be applied.
         This is called after decorating"""
-        self.propagate=MWRAP.TheanoFunction("propagate", self, [("outputs", self.outputs["train"])], flow="train", allow_input_downcast=True)
-        self.propagateTest=MWRAP.TheanoFunction("propagateTest", self, [("outputs", self.outputs["test"])], flow="test", allow_input_downcast=True)
+        self.propagate=MWRAP.TheanoFunctionHandle("propagate", self, self.outputs["train"], stream="train", allow_input_downcast=True)
+        self.propagateTest=MWRAP.TheanoFunctionHandle("propagateTest", self, self.outputs["test"], stream="test", allow_input_downcast=True)
         
-        # self.propagate_preAct=MWRAP.TheanoFunction("propagate_preAct", self, [("outputs", self.outputs["train_preactivation"])], flow="train", allow_input_downcast=True)
-        # self.propagateTest_preAct=MWRAP.TheanoFunction("propagateTest_preAct", self, [("outputs", self.outputs["test_preactivation"])], flow="test", allow_input_downcast=True)
-
     def _parametersSanityCheck(self) :
         "perform basic parameter checks on layers, automatically called on initialization"
         for k, v in self.getParameterDict().iteritems() :
@@ -332,8 +317,9 @@ class Input(Layer_ABC) :
     def __init__(self, size, name=None, **kwargs) :
         super(Input, self).__init__(size, layerTypes=[MSET.TYPE_INPUT_LAYER], name=name, **kwargs)
         self.nbInputs=size
-        self.inputs["train"]=tt.matrix(name="inp_"+self.name)
-        self.inputs["test"]=self.inputs["train"]
+        self.inputs=MTYPES.Inputs(tt.matrix)
+        # self.inputs["train"]=MTYPES.Input(tt.matrix(name="inp_"+self.name))
+        # self.inputs["test"]=self.inputs["train"]
 
     def _setInputs(self) :
         pass
@@ -567,7 +553,7 @@ class Output_ABC(Layer_ABC) :
 
     def __init__(self, size, costObject, backTrckAll=False, **kwargs) :
         super(Output_ABC, self).__init__(size, layerTypes=[MSET.TYPE_OUTPUT_LAYER], **kwargs)
-        self.targets=None
+        self.targets=MTYPES.Targets()
         self.dependencies=OrderedDict()
         self.costObject=costObject
         self.backTrckAll=backTrckAll
@@ -575,6 +561,7 @@ class Output_ABC(Layer_ABC) :
         self.cost=None
         self.testCost=None
         self.updates=None
+        self.gradients=None
         self._mustRegularize=True
         self.dependencies=None
 
@@ -599,8 +586,8 @@ class Output_ABC(Layer_ABC) :
         Defines the costs to be applied.
         There are 2: the training cost (self.cost) and test cost (self.testCost), that has no regularizations.
          """
-        self.cost=self.costObject.apply(self, self.targets, self.outputs["train"], "training")
-        self.testCost=self.costObject.apply(self, self.targets, self.outputs["test"], "testing")
+        self.cost=self.costObject.apply(self, self.targets["train"], self.outputs["train"], "training")
+        self.testCost=self.costObject.apply(self, self.targets["test"], self.outputs["test"], "testing")
         
     def _applyRegularizations(self, force=False) :
         """Defines the regularizations to be added to the cost"""
@@ -617,19 +604,33 @@ class Output_ABC(Layer_ABC) :
     def _setUpdates(self) :
         """Defines parameter updates according to training scenari"""
         self._backTrckDependencies()
-        self.dctUpdates={}
-        self.updates=self.abstractions["learningScenario"].apply(self, self.cost)
-        self.dctUpdates[self.name]=self.updates
         
-        # print self.name, self.updates 
+        self.updates = OrderedDict()
+        self.gradients = OrderedDict()
         for l in self.dependencies.itervalues() :
-            if l.abstractions["learningScenario"] is not None :
-                updates=l.abstractions["learningScenario"].apply(l, self.cost)
-            else :
-                updates=self.abstractions["learningScenario"].apply(l, self.cost)
-            # print l.name, updates 
-            self.updates.extend(updates)
-            self.dctUpdates[l.name]=updates
+            for sc in self.abstractions["learningScenari"] :
+                res = sc.apply(l, self.cost)
+                self.updates.update(res["updates"])
+                self.gradients.update(res["gradients"])
+            
+            for sc in l.abstractions["learningScenari"] :
+                res = sc.apply(l, self.cost)
+                self.updates.update(res["updates"])
+                self.gradients.update(res["gradients"])
+
+        # self.dctUpdates={}
+        # self.updates=self.abstractions["learningScenari"].apply(self, self.cost)
+        # self.dctUpdates[self.name]=self.updates
+        
+        # # print self.name, self.updates 
+        # for l in self.dependencies.itervalues() :
+        #     if l.abstractions["learningScenari"] is not None :
+        #         updates=l.abstractions["learningScenari"].apply(l, self.cost)
+        #     else :
+        #         updates=self.abstractions["learningScenari"].apply(l, self.cost)
+        #     # print l.name, updates 
+        #     self.updates.extend(updates)
+        #     self.dctUpdates[l.name]=updates
 
     def _setTheanoFunctions(self) :
         """
@@ -647,46 +648,8 @@ class Output_ABC(Layer_ABC) :
             self._setUpdates()
 
         super(Output_ABC, self)._setTheanoFunctions()
-        self._setCustomTheanoFunctions()
-        self._setGetGradientsUpdatesFunctions()
-    
-    def _setCustomTheanoFunctions(self) :
-        """Adds train, test, model functions::
-
-            * train: update parameters and return cost
-            * test: do not update parameters and return cost without adding regularizations
-        """
-
-        if self.cost is None or self.testCost is None :
-            self._setCosts()
-        
-        self.train=MWRAP.TheanoFunction("train", self, [("score", self.cost)], additional_input_expressions={ "targets" : self.targets }, updates=self.updates, flow="train", allow_input_downcast=True)
-        self.test=MWRAP.TheanoFunction("test", self, [("score", self.testCost)], additional_input_expressions={ "targets" : self.targets }, flow="test", allow_input_downcast=True)
-
-    def _setGetGradientsUpdatesFunctions(self) :
-        """Defines functions for retreving gradients/updates"""
-        layers=[self]
-        layers.extend(self.dependencies.values())
-        
-        for l in layers :
-            try :
-                gradOuts=[]
-                upsOuts=[]
-                for k, v in l.getParameterDict().iteritems() :
-                    if l.abstractions["learningScenario"] is not None :
-                        gradOuts.append( (k, l.abstractions["learningScenario"].gradients[v]) )
-                        upsOuts.append( (k, l.abstractions["learningScenario"].updates[v]) )
-                    else :
-                        gradOuts.append( (k, self.abstractions["learningScenario"].gradients[v]) )
-                        upsOuts.append( (k, self.abstractions["learningScenario"].updates[v]) )
-
-                setattr(self, "getGradients_%s" % l.name, MWRAP.TheanoFunction("getGradients", self, gradOuts, additional_input_expressions={ "targets" : self.targets }, flow="train", allow_input_downcast=True, on_unused_input='ignore') )
-                setattr(self, "getUpdates_%s" % l.name, MWRAP.TheanoFunction("getUpdates", self, gradOuts, additional_input_expressions={ "targets" : self.targets }, flow="train", allow_input_downcast=True, on_unused_input='ignore') )
-            except :
-                msg="Warning! Unable to setup theano function for retreiving updates and gradients for layer '%s'. Perhaps the current learning scenario is not keeping them stored." % l.name
-                self.network.logLayerEvent(self, msg, {})
-                if MSET.VERBOSE :
-                    print(msg)
+        self.train = MWRAP.TheanoFunctionHandle("train", self, self.cost, stream="train", updates=self.updates, allow_input_downcast=True)
+        self.train = MWRAP.TheanoFunctionHandle("test", self, self.testCost, stream="test", allow_input_downcast=True)
 
     def getGradients(self, layerName=None, *args, **kwargs) :
         if layerName is None :
@@ -712,17 +675,17 @@ class Output_ABC(Layer_ABC) :
 
 class WeightBiasOutput_ABC(Output_ABC, WeightBias_ABC):
     """Generic output layer with weight and bias"""
-    def __init__(self, size, costObject, learningScenario, activation, **kwargs):
-        super(WeightBiasOutput_ABC, self).__init__(size=size, costObject=costObject, learningScenario=learningScenario, activation=activation, **kwargs)
+    def __init__(self, size, costObject, learningScenari, activation, **kwargs):
+        super(WeightBiasOutput_ABC, self).__init__(size=size, costObject=costObject, learningScenari=learningScenari, activation=activation, **kwargs)
 
     def _setOutputs(self) :
         WeightBias_ABC._setOutputs(self)
  
 class SoftmaxClassifier(WeightBiasOutput_ABC) :
     """A softmax (probabilistic) Classifier"""
-    def __init__(self, size, costObject, learningScenario, temperature=1, **kwargs) :
-        super(SoftmaxClassifier, self).__init__(size, costObject=costObject, learningScenario=learningScenario, activation=MA.Softmax(temperature=temperature), **kwargs)
-        self.targets=tt.ivector(name="targets_" + self.name)
+    def __init__(self, size, costObject, learningScenari, temperature=1, **kwargs) :
+        super(SoftmaxClassifier, self).__init__(size, costObject=costObject, learningScenari=learningScenari, activation=MA.Softmax(temperature=temperature), **kwargs)
+        self.targets=MTYPES.Targets(tt.ivector) #tt.ivector(name="targets_" + self.name)
 
     def _setCustomTheanoFunctions(self) :
         """defines::
@@ -750,16 +713,16 @@ class SoftmaxClassifier(WeightBiasOutput_ABC) :
 
 class Regression(WeightBiasOutput_ABC) :
     """For regressions, works great with a mean squared error cost"""
-    def __init__(self, size, activation, learningScenario, costObject, name=None, **kwargs) :
-        super(Regression, self).__init__(size, activation=activation, learningScenario=learningScenario, costObject=costObject, name=name, **kwargs)
+    def __init__(self, size, activation, learningScenari, costObject, name=None, **kwargs) :
+        super(Regression, self).__init__(size, activation=activation, learningScenari=learningScenari, costObject=costObject, name=name, **kwargs)
         self.targets=tt.matrix(name="targets")
 
 class Autoencode(WeightBiasOutput_ABC) :
     """An auto encoding layer. This one takes another layer as inputs and tries to reconstruct its activations.
     You could achieve the same result with a Regression layer, but this one has the advantage of not needing to be fed specific inputs"""
 
-    def __init__(self, targetLayerName, activation, learningScenario, costObject, name=None, **kwargs) :
-        super(Autoencode, self).__init__(None, activation=activation, learningScenario=learningScenario, costObject=costObject, name=name, **kwargs)
+    def __init__(self, targetLayerName, activation, learningScenari, costObject, name=None, **kwargs) :
+        super(Autoencode, self).__init__(None, activation=activation, learningScenari=learningScenari, costObject=costObject, name=name, **kwargs)
         self.targetLayerName=targetLayerName
 
     def _setNbOutputs(self) :

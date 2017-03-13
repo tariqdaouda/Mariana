@@ -8,6 +8,7 @@ class Abstraction_ABC(object):
 	def __init__(self, *args, **kwargs):
 		self.name = self.__class__.__name__
  		self.hyperParameters = []
+ 		self.parameters = {}
 
 	def apply(self, layer, cost) :
 		"""Apply to a layer and update networks's log"""
