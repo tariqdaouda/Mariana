@@ -72,7 +72,7 @@ class Layer_ABC(object) :
             "regularizations": regularizations,
             "decorators": decorators,
             "initializations": initializations,
-            "learningScenari": learningScenari,
+            "scenari": learningScenari,
         }
         self.parameters = {}
         
@@ -149,6 +149,7 @@ class Layer_ABC(object) :
 
     def initParameter(self, parameter, value) :
         """Initialize a parameter, raise value error if already initialized"""
+        # print self, parameter
         if parameter not in self.parameters :
             raise ValueError("Layer '%s' has no parameter '%s'. Add it to self.parameters dict and give it a None value." % (self.name, parameter) )
             
@@ -317,7 +318,7 @@ class Input(Layer_ABC) :
     def __init__(self, size, name=None, **kwargs) :
         super(Input, self).__init__(size, layerTypes=[MSET.TYPE_INPUT_LAYER], name=name, **kwargs)
         self.nbInputs=size
-        self.inputs=MTYPES.Inputs(tt.matrix)
+        self.inputs=MTYPES.Inputs(tt.matrix, name="Inp_%s" % self.name)
         # self.inputs["train"]=MTYPES.Input(tt.matrix(name="inp_"+self.name))
         # self.inputs["test"]=self.inputs["train"]
 
@@ -604,19 +605,20 @@ class Output_ABC(Layer_ABC) :
     def _setUpdates(self) :
         """Defines parameter updates according to training scenari"""
         self._backTrckDependencies()
-        
-        self.updates = OrderedDict()
-        self.gradients = OrderedDict()
-        for l in self.dependencies.itervalues() :
-            for sc in self.abstractions["learningScenari"] :
-                res = sc.apply(l, self.cost)
-                self.updates.update(res["updates"])
-                self.gradients.update(res["gradients"])
+        self.updates = MWRAP.Updates(self, self.dependencies.values(), self.cost)
+
+        # self.updates = OrderedDict()
+        # self.gradients = OrderedDict()
+        # for l in self.dependencies.itervalues() :
+        #     for sc in self.abstractions["learningScenari"] :
+        #         res = sc.apply(l, self.cost)
+        #         self.updates.update(res["updates"])
+        #         self.gradients.update(res["gradients"])
             
-            for sc in l.abstractions["learningScenari"] :
-                res = sc.apply(l, self.cost)
-                self.updates.update(res["updates"])
-                self.gradients.update(res["gradients"])
+        #     for sc in l.abstractions["learningScenari"] :
+        #         res = sc.apply(l, self.cost)
+        #         self.updates.update(res["updates"])
+        #         self.gradients.update(res["gradients"])
 
         # self.dctUpdates={}
         # self.updates=self.abstractions["learningScenari"].apply(self, self.cost)
@@ -649,7 +651,7 @@ class Output_ABC(Layer_ABC) :
 
         super(Output_ABC, self)._setTheanoFunctions()
         self.train = MWRAP.TheanoFunctionHandle("train", self, self.cost, stream="train", updates=self.updates, allow_input_downcast=True)
-        self.train = MWRAP.TheanoFunctionHandle("test", self, self.testCost, stream="test", allow_input_downcast=True)
+        self.test = MWRAP.TheanoFunctionHandle("test", self, self.testCost, stream="test", allow_input_downcast=True)
 
     def getGradients(self, layerName=None, *args, **kwargs) :
         if layerName is None :

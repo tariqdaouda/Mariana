@@ -1,6 +1,7 @@
 import theano, numpy
 import theano.tensor as tt
 from Mariana.abstraction import Abstraction_ABC
+from collections import OrderedDict
 
 __all__ = ["LearningScenario_ABC", "Fixed", "GradientDescent", "MomentumGradientDescent"]
         
@@ -12,10 +13,14 @@ class LearningScenario_ABC(Abstraction_ABC):
     """
     def __init__(self, parameters=None, *args, **kwargs) :
         super(Abstraction_ABC, self).__init__(*args, **kwargs)
-        self.parameters = parameters
+        if parameters :
+            self.parameters = set(parameters)
+        else :
+            self.parameters = parameters
+
         self.hyperParameters = ["parameters"]
 
-    def apply(self, layer, cost) :
+    def apply(self, layer, paramName, cost) :
         """Apply to a layer and update networks's log"""
         hyps = {}
         for k in self.hyperParameters :
@@ -24,9 +29,12 @@ class LearningScenario_ABC(Abstraction_ABC):
         message = "%s follows learning scenario %s" % (layer.name, self.__class__.__name__)
         layer.network.logLayerEvent(layer, message, hyps)
 
-        return self.getUpdates(layer, cost)
+        if self.parameters is not None and paramName is not self.parameters :
+            raise KeyError("%s is not among the list of specified parameters" % paramName)
 
-    def getUpdates(self, thing, cost) :
+        return self.getUpdates(layer.parameters[paramName], cost)
+
+    def getUpdates(self, param, cost) :
         """return the updates for the parameters of layer. Must be implemented in child"""
         raise NotImplemented("Must be implemented in child")
 
@@ -35,21 +43,8 @@ class Fixed(LearningScenario_ABC):
     def __init__(self, **kwargs):
        super(Fixed, self).__init__(**kwargs)
         
-    def getUpdates(self, layer, cost) :
-        if self.parameters is not None :
-            parameters = []
-            for k in self.parameters :
-                parameters.append(getattr(thing, k))
-        else :
-            parameters = thing.getParameters()
-
-        gradients = {}
-        updates = {}
-        for param in parameters :
-            gradients[param] = 0
-            updates[param] = 0
- 
-        return {"updates" : updates, "gradients": gradients}
+    def getUpdates(self, parameter, cost) :
+        return {"update" : parameter, "gradient": 0}
 
 class GradientDescent(LearningScenario_ABC):
     "The GradientDescent scenario has a fixed learning rate."
@@ -58,22 +53,24 @@ class GradientDescent(LearningScenario_ABC):
         self.lr = lr
         self.hyperParameters.append("lr")
 
-    def getUpdates(self, thing, cost) :
-        if self.parameters is not None :
-            parameters = []
-            for k in self.parameters :
-                parameters.append(getattr(thing, k))
-        else :
-            parameters = thing.getParameters()
+    def getUpdates(self, param, cost) :
+        gparam = tt.grad(cost, param)
+        update = param -self.lr * gparam
+        return {"update" : update, "gradient": gparam}
 
-        gradients = {}
-        updates = {}
-        for param in parameters :
-            gparam = tt.grad(cost, param)
-            gradients[param] = gparam
-            updates[param] = -self.lr * gparam
+    # def getUpdates(self, thing, cost) :
+    #     parameters = self.getPs()
+
+    #     gradients = OrderedDict()
+    #     updates = OrderedDict()
+    #     attrNames = []
+    #     for param in parameters :
+    #         gparam = tt.grad(cost, param)
+    #         gradients[param] = gparam
+    #         updates[param] = -self.lr * gparam
+    #         attrNames.append(name)
  
-        return {"updates" : updates, "gradients": gradients}
+    #     return {"updates" : updates, "gradients": gradients, "attribute_names": attrNames}
 
 # class GradientDescent_bck(LearningScenario_ABC):
 #     "The GradientDescent scenario has a fixed learning rate."
