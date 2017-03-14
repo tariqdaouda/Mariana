@@ -32,9 +32,9 @@ class LearningScenario_ABC(Abstraction_ABC):
         if self.parameters is not None and paramName is not self.parameters :
             raise KeyError("%s is not among the list of specified parameters" % paramName)
 
-        return self.getUpdates(layer.parameters[paramName], cost)
+        return self.getUpdates(layer.parameters[paramName], cost, layer)
 
-    def getUpdates(self, param, cost) :
+    def getUpdates(self, param, cost, layer) :
         """return the updates for the parameters of layer. Must be implemented in child"""
         raise NotImplemented("Must be implemented in child")
 
@@ -43,19 +43,36 @@ class Fixed(LearningScenario_ABC):
     def __init__(self, **kwargs):
        super(Fixed, self).__init__(**kwargs)
         
-    def getUpdates(self, parameter, cost) :
+    def getUpdates(self, parameter, cost, layer) :
         return {"update" : parameter, "gradient": 0}
 
 class GradientDescent(LearningScenario_ABC):
     "The GradientDescent scenario has a fixed learning rate."
-    def __init__(self, lr, **kwargs):
+    def __init__(self, lr, momentum = 0, **kwargs):
         super(GradientDescent, self).__init__(**kwargs)
         self.lr = lr
+        self.momentum = momentum
         self.hyperParameters.append("lr")
+        self.hyperParameters.append("momentum")
 
-    def getUpdates(self, param, cost) :
-        gparam = tt.grad(cost, param)
-        update = param -self.lr * gparam
+        self.parameters = {}
+
+    def getUpdates(self, param, cost, layer) :
+        if momentum > 0 :
+            gparam = tt.grad(cost, param)
+            key = "momentum-%s.%s" % (layer.name, pname)
+            self.parameters[key] = theano.shared(param.get_value()*0., broadcastable=param.broadcastable, name=key)
+
+            mom_update = self.momentum * self.parameters[key] + (1-self.momentum)*gparam
+            updates.append((self.parameters[key], mom_update ))
+            updates.append((param, param - self.lr * self.parameters[key]))
+
+            # self.updates[param] = v
+            # self.updates["momentum"] = param - self.lr * self.parameters[key]
+        else :
+            gparam = tt.grad(cost, param)
+            update = param -self.lr * gparam
+
         return {"update" : update, "gradient": gparam}
 
     # def getUpdates(self, thing, cost) :
