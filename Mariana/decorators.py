@@ -153,7 +153,7 @@ class Normalize(Decorator_ABC) :
             std = tt.sqrt( tt.var(layer.outputs["test"]) + self.espilon )
             layer.outputs["test"] = ( layer.outputs["test"]-tt.mean(layer.outputs["test"]) ) / std
 
-class BatchNormalization_deprectaded_to_become_layer(Decorator_ABC):
+class BatchNormalization_deprecated_to_become_layer(Decorator_ABC):
     """Applies Batch Normalization to the outputs of the layer.
     Implementation according to Sergey Ioffe and Christian Szegedy (http://arxiv.org/abs/1502.03167)
     

@@ -319,7 +319,7 @@ class Input(Layer_ABC) :
         super(Input, self).__init__(size, layerTypes=[MSET.TYPE_INPUT_LAYER], name=name, **kwargs)
         self.nbInputs=size
         self.inputs=MTYPES.Inputs(tt.matrix, name="Inp_%s" % self.name)
-        # self.inputs["train"]=MTYPES.Input(tt.matrix(name="inp_"+self.name))
+        # self.inputs["train"]=tt.matrix(name="inp_"+self.name)
         # self.inputs["test"]=self.inputs["train"]
 
     def _setInputs(self) :
@@ -328,7 +328,7 @@ class Input(Layer_ABC) :
     def _setOutputs(self) :
         "initializes the output to be the same as the inputs"
         self.outputs["train"]=self.inputs["train"]
-        self.outputs["test"]=self.inputs["train"]
+        self.outputs["test"]=self.inputs["test"]
 
     def _femaleConnect(self, *args) :
         raise ValueError("Nothing can be connected to an input layer")
