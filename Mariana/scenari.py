@@ -3,7 +3,37 @@ import theano.tensor as tt
 from Mariana.abstraction import Abstraction_ABC
 from collections import OrderedDict
 
-__all__ = ["LearningScenario_ABC", "Fixed", "GradientDescent", "MomentumGradientDescent"]
+__all__ = ["LearningScenario_ABC", "ParameterGradUpdates", "OptimizerResult", "Fixed", "GradientDescent"]
+
+class ParameterGradUpdates(object):
+    """docstring for ParameterGradUpdates"""
+    def __init__(self, parameter, name, update, gradient):
+        super(ParameterGradUpdates, self).__init__()
+        self.name = name
+        self.parameter = parameter
+        self.update = update
+        self.gradient = gradient
+        
+class OptimizerFreeResults(object):
+    """use this a return object for an optimizer"""
+    def __init__(self):
+        super(OptimizerFreeResults, self).__init__()
+        self.parameters = []
+    
+    def add(self, parameter, name, update, gradient) :
+        param = ParameterGradUpdates(parameter, name, update, gradient)
+        self.parameters.append(param)
+
+class OptimizerResult(object):
+    """use this a return object for an optimizer"""
+    def __init__(self, parameter, update, gradient):
+        super(OptimizerResult, self).__init__()
+        self.parameter = ParameterGradUpdates(parameter, "parameter", update, gradient)
+        self.coParameters = []
+   
+    def addCoParameter(self, parameter, name, update, gradient) :
+        param = ParameterGradUpdates(parameter, name, update, gradient)
+        self.coParameters.append(param)
         
 class LearningScenario_ABC(Abstraction_ABC):
     """
@@ -11,30 +41,36 @@ class LearningScenario_ABC(Abstraction_ABC):
     this class must also include a list attribute **self.hyperParameters** containing the names of all attributes that must be considered
     as hyper-parameters.
     """
-    def __init__(self, parameters=None, *args, **kwargs) :
+    def __init__(self, applyTo=None, *args, **kwargs) :
         super(Abstraction_ABC, self).__init__(*args, **kwargs)
-        if parameters :
-            self.parameters = set(parameters)
+        if applyTo :
+            self.applyTo = set(applyTo)
         else :
-            self.parameters = parameters
+            self.applyTo = applyTo
 
-        self.hyperParameters = ["parameters"]
+        self.freeParameters = OptimizerFreeResults()
+        self.hyperParameters = ["applyTo"]
 
-    def apply(self, layer, paramName, cost) :
+    def apply(self, layer, entity, paramName, loss) :
         """Apply to a layer and update networks's log"""
         hyps = {}
         for k in self.hyperParameters :
             hyps[k] = getattr(self, k)
 
-        message = "%s follows learning scenario %s" % (layer.name, self.__class__.__name__)
+        message = "%s uses optimizer %s of layer %s" % (entity, self.__class__.__name__, layer.name)
         layer.network.logLayerEvent(layer, message, hyps)
 
-        if self.parameters is not None and paramName is not self.parameters :
-            raise KeyError("%s is not among the list of specified parameters" % paramName)
+        if self.applyTo is not None and paramName is not self.applyTo :
+            return None
 
-        return self.getUpdates(layer.parameters[paramName], cost, layer)
+        try:
+            param = entity.getParameterDict()[paramName]
+        except KeyError as e:
+            raise KeyError("%s has no parameter %s"%(entity, paramName))
 
-    def getUpdates(self, param, cost, layer) :
+        return self.getUpdates(param, loss, layer, paramName)
+
+    def getUpdates(self, param, loss, layer, paramName) :
         """return the updates for the parameters of layer. Must be implemented in child"""
         raise NotImplemented("Must be implemented in child")
 
@@ -43,8 +79,9 @@ class Fixed(LearningScenario_ABC):
     def __init__(self, **kwargs):
        super(Fixed, self).__init__(**kwargs)
         
-    def getUpdates(self, parameter, cost, layer) :
-        return {"update" : parameter, "gradient": 0}
+    def getUpdates(self, parameter, loss, layer) :
+        ret = OptimizerResult(None, None)
+        return ret
 
 class GradientDescent(LearningScenario_ABC):
     "The GradientDescent scenario has a fixed learning rate."
@@ -57,79 +94,19 @@ class GradientDescent(LearningScenario_ABC):
 
         self.parameters = {}
 
-    def getUpdates(self, param, cost, layer) :
-        if momentum > 0 :
-            gparam = tt.grad(cost, param)
-            key = "momentum-%s.%s" % (layer.name, pname)
-            self.parameters[key] = theano.shared(param.get_value()*0., broadcastable=param.broadcastable, name=key)
-
-            mom_update = self.momentum * self.parameters[key] + (1-self.momentum)*gparam
-            updates.append((self.parameters[key], mom_update ))
-            updates.append((param, param - self.lr * self.parameters[key]))
-
-            # self.updates[param] = v
-            # self.updates["momentum"] = param - self.lr * self.parameters[key]
+    def getUpdates(self, param, loss, layer, paramName) :
+        if self.momentum > 0 :
+            gparam = tt.grad(loss, param)
+            momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable, name="momentum.%s.%s" % (layer.name, paramName))
+            param_update = self.momentum * momentum_param + (1-self.momentum)*gparam
+            
+            momentum_update = param - self.lr * momentum_param
+            
+            ret = OptimizerResult(param, param_update, gparam)
+            ret.addCoParameter(momentum_param, "momentum", momentum_update, None)
         else :
-            gparam = tt.grad(cost, param)
+            gparam = tt.grad(loss, param)
             update = param -self.lr * gparam
+            ret = OptimizerResult(param, update, gparam)
 
-        return {"update" : update, "gradient": gparam}
-
-    # def getUpdates(self, thing, cost) :
-    #     parameters = self.getPs()
-
-    #     gradients = OrderedDict()
-    #     updates = OrderedDict()
-    #     attrNames = []
-    #     for param in parameters :
-    #         gparam = tt.grad(cost, param)
-    #         gradients[param] = gparam
-    #         updates[param] = -self.lr * gparam
-    #         attrNames.append(name)
- 
-    #     return {"updates" : updates, "gradients": gradients, "attribute_names": attrNames}
-
-# class GradientDescent_bck(LearningScenario_ABC):
-#     "The GradientDescent scenario has a fixed learning rate."
-#     def __init__(self, lr):
-#        super(GradientDescent_bck, self).__init__()
-#         self.lr = lr
-#         self.hyperParameters = ["lr"]
-#         self.gradients = {}
-#         self.updates = {}
-
-#     def getUpdates(self, layer, cost) :
-#         updates = []
-#         for param in layer.getParameters() :
-#             gparam = tt.grad(cost, param)
-#             updates.append((param, param - self.lr * gparam))
-#             self.updates[param] = param - self.lr * gparam
-#             self.gradients[param] = gparam
- 
-#         return updates
-
-# class MomentumGradientDescent(LearningScenario_ABC):
-#     "The MomentumGradientDescent scenario has a fixed learning rate and a fixed momentum."
-#     def __init__(self, lr, momentum):
-#         super(MomentumGradientDescent, self).__init__()
-#         self.lr = lr
-#         self.momentum = momentum
-#         self.hyperParameters.extend(["lr", "momentum"])
-
-#         self.gradients = {}
-#         self.updates = {}
-
-#     def getUpdates(self, layer, cost) :
-#         updates = []
-#         for pname, param in layer.getParameterDict().iteritems() :
-#             gparam = tt.grad(cost, param)
-#             momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable, name="momentum-%s_%s" % (layer.name, pname))
-#             v = self.momentum * momentum_param + (1-self.momentum)*gparam
-#             updates.append((momentum_param, v ))
-#             updates.append((param, param - self.lr * momentum_param))
-
-#             self.updates[param] = v
-#             self.updates["momentum"] = param - self.lr * momentum_param
-#             self.gradients[param] = gparam
-
-#         return updates
+        return ret

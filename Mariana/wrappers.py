@@ -6,48 +6,75 @@ import Mariana.candies as MCAN
 import Mariana.settings as MSET
 import Mariana.custom_types as MTYPES
 
-class Updates(object):
-    """docstring for Updates"""
-    def __init__(self, output_layer, layers, cost):
-        super(Updates, self).__init__()
-        self.output_layers = [output_layer]
-        self.layers = layers
-        self.cost = cost
-
+class UpdateStore(object):
+    """docstring for UpdateStore"""
+    def __init__(self):
+        super(UpdateStore, self).__init__()
+        self.names = {
+            "updates": OrderedDict(),
+            "gradients": OrderedDict(),
+        }
         self.updates = OrderedDict()
         self.gradients = OrderedDict()
-        self.param_names = OrderedDict()
+    
+    def add(self, parameter, update, gradient, name) :
+        if update :
+            self.updates[parameter] = update
+            self.names["updates"][parameter] = name
+        
+        if gradient :
+            self.gradients[parameter] = gradient
+            self.names["gradients"][parameter] = name
+
+class Updates(object):
+    """docstring for Updates"""
+    def __init__(self, output_layer, loss):
+        super(Updates, self).__init__()
+        self.output_layers = [output_layer]
+        self.layers = [output_layer]
+        self.layers.extend(output_layer.dependencies.values())
+        self.loss = loss
+
+        self.store = UpdateStore()
 
     def extend(self, updates) :
         if updates :
             self.output_layers.extend(updates.output_layers)
             self.layers.extend(updates.layers)
-            self.cost += updates.cost
+            self.loss += updates.loss
 
     def compile(self) :
-        for output_layer in self.output_layers :
-            for sc in output_layer.abstractions["scenari"] :
-                for k, v in output_layer.parameters.iteritems() :
-                    if v :
-                        res = sc.apply(output_layer, k, self.cost)
-                        self.updates[v] = res["update"]
-                        self.gradients[v] = res["gradient"]
-                        self.param_names[v] = "%s.%s" %(output_layer.name, k)
+        def _apply(store, layer, entity, param_name, cute_name, loss) :
+            res = sc.apply(layer, layer, param_name, loss)
+            gup = res.parameter
+            if gup :
+                store.add(gup.parameter, gup.update, gup.gradient, cute_name)
+                for gup_co in res.coParameters :
+                    cute_name2 = "%s.%s" %(cute_name, gup_co.name)
+                    store.add(gup_co.parameter, gup_co.update, gup_co.gradient, cute_name2)
 
+        scCheck = set()
         for layer in self.layers :
-            for k, v in layer.parameters.iteritems() :
-                if v :
-                    for sc in output_layer.abstractions["scenari"] :
-                        res = sc.apply(layer, k, self.cost)
-                        self.updates[v] = res["update"]
-                        self.gradients[v] = res["gradient"]
-                        self.param_names[v] = "%s.%s" %(layer.name, k)
-                    
-                    for sc in layer.abstractions["scenari"] :
-                        res = sc.apply(layer, k, self.cost)
-                        self.updates[v] = res["update"]
-                        self.gradients[v] = res["gradient"]
-                        self.param_names[v] = "%s.%s" %(layer.name, k)
+            for sc in layer.abstractions["scenari"] :
+                if sc not in scCheck :
+                    for gup_free in sc.freeParameters.parameters :
+                        pname = "%s.%s.%s" %(output_layer.name, sc.__class__.__name__, gup_free.name)
+                        self.store.add(gup_free.parameter, gup_free.update, gup_free.gradient, pname)
+                    scCheck.add(sc)
+
+                for k in layer.getParameterNames() :
+                    pname = "%s.%s" %(layer.name, k)
+                    _apply(self.store, layer, layer, k, pname, self.loss)
+
+                for abst in layer.abstractions :
+                    try:
+                        names = abst.getParameterNames()
+                    except Exception as e:
+                        pass
+                    else :
+                        for k in names:
+                            pname = "%s.%s.%s" %(layer.name, abst.__class__.__name__, k)
+                            _apply(self.store, layer, abst, k, pname, self.loss)
 
 class TheanoFunctionHandle(object) :
     """
@@ -166,7 +193,7 @@ class TheanoFunction(object) :
 
             if self.updates :
                 self.updates.compile()
-                updates = self.updates.updates
+                updates = self.updates.store.updates
             else :
                 updates = {}
 
@@ -218,10 +245,10 @@ class TheanoFunction(object) :
         self._parseInputs(inputs)
 
         if not self.gradients_fct :
-            self.gradients_fct = theano.function(inputs = self.inputs.values(), outputs = self.updates.gradients.values(), **self.theano_kwargs)
+            self.gradients_fct = theano.function(inputs = self.inputs.values(), outputs = self.updates.store.gradients.values(), **self.theano_kwargs)
 
         fres = iter(self.gradients_fct(*self.fct_inputs.values()))
-        for k in self.updates.param_names.itervalues() :
+        for k in self.updates.store.names["gradients"].itervalues() :
             self.results[k] = fres.next()
 
         return self.results
@@ -233,10 +260,10 @@ class TheanoFunction(object) :
         self._parseInputs(inputs)
 
         if not self.updates_fct :
-            self.updates_fct = theano.function(inputs = self.inputs.values(), outputs = self.updates.updates.values(), **self.theano_kwargs)
+            self.updates_fct = theano.function(inputs = self.inputs.values(), outputs = self.updates.store.updates.values(), **self.theano_kwargs)
 
         fres = iter(self.updates_fct(*self.fct_inputs.values()))
-        for k in self.updates.param_names.itervalues() :
+        for k in self.updates.store.names["updates"].itervalues() :
             self.results[k] = fres.next()
 
         return self.results

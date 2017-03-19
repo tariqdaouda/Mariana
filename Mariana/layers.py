@@ -229,6 +229,10 @@ class Layer_ABC(object) :
         except AttributeError :
                 raise AttributeError("Attribute 'outputs' of layer '%s' is not defined. This attribute defines the train output of the layer, usually with regularizations" % self.name)
 
+    def pushLearningScenario(self, sc) :
+        """Adds a new top optimizer"""
+        self.abstractions["scenari"].insert(0, sc)
+
     def _initA(self) :
         """Initialize the essential attributes of the layer such as: outputs and activations. This function is automatically called before train/test etc..."""
         if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.network.inConnections[self]) ) :
@@ -552,17 +556,15 @@ class Output_ABC(Layer_ABC) :
         * test: returns the cost, ignores trainOnly decoartors
         """
 
-    def __init__(self, size, costObject, backTrckAll=False, **kwargs) :
+    def __init__(self, size, cost, backTrckAll=False, **kwargs) :
         super(Output_ABC, self).__init__(size, layerTypes=[MSET.TYPE_OUTPUT_LAYER], **kwargs)
         self.targets=MTYPES.Targets()
         self.dependencies=OrderedDict()
-        self.costObject=costObject
         self.backTrckAll=backTrckAll
 
-        self.cost=None
-        self.testCost=None
+        self.cost=cost
+        self.loss=None
         self.updates=None
-        self.gradients=None
         self._mustRegularize=True
         self.dependencies=None
 
@@ -582,22 +584,16 @@ class Output_ABC(Layer_ABC) :
             else:
                 self.dependencies=_bckTrk(self.dependencies, self)
 
-    def _setCosts(self) :
-        """
-        Defines the costs to be applied.
-        There are 2: the training cost (self.cost) and test cost (self.testCost), that has no regularizations.
-         """
-        self.cost=self.costObject.apply(self, self.targets["train"], self.outputs["train"], "training")
-        self.testCost=self.costObject.apply(self, self.targets["test"], self.outputs["test"], "testing")
-        
     def _applyRegularizations(self, force=False) :
         """Defines the regularizations to be added to the cost"""
         if self._mustRegularize or force :
             self._backTrckDependencies()
             for l in self.dependencies.itervalues() :
+                for sc in self.abstractions["scenari"] :
+                    l.pushLearningScenario(sc)
                 try :
                     for reg in l.abstractions["regularizations"] :
-                        self.cost += reg.apply(l)
+                        self.loss["train"] += reg.apply(l)
                 except AttributeError :
                     pass
         self._mustRegularize=False
@@ -605,88 +601,37 @@ class Output_ABC(Layer_ABC) :
     def _setUpdates(self) :
         """Defines parameter updates according to training scenari"""
         self._backTrckDependencies()
-        self.updates = MWRAP.Updates(self, self.dependencies.values(), self.cost)
-
-        # self.updates = OrderedDict()
-        # self.gradients = OrderedDict()
-        # for l in self.dependencies.itervalues() :
-        #     for sc in self.abstractions["learningScenari"] :
-        #         res = sc.apply(l, self.cost)
-        #         self.updates.update(res["updates"])
-        #         self.gradients.update(res["gradients"])
-            
-        #     for sc in l.abstractions["learningScenari"] :
-        #         res = sc.apply(l, self.cost)
-        #         self.updates.update(res["updates"])
-        #         self.gradients.update(res["gradients"])
-
-        # self.dctUpdates={}
-        # self.updates=self.abstractions["learningScenari"].apply(self, self.cost)
-        # self.dctUpdates[self.name]=self.updates
-        
-        # # print self.name, self.updates 
-        # for l in self.dependencies.itervalues() :
-        #     if l.abstractions["learningScenari"] is not None :
-        #         updates=l.abstractions["learningScenari"].apply(l, self.cost)
-        #     else :
-        #         updates=self.abstractions["learningScenari"].apply(l, self.cost)
-        #     # print l.name, updates 
-        #     self.updates.extend(updates)
-        #     self.dctUpdates[l.name]=updates
+        self.updates = MWRAP.Updates(self, self.loss["train"])
 
     def _setTheanoFunctions(self) :
         """
         Sets all the theano function.
-        Calls self._setCosts() before if either self.cost or self.testCost is None.
+        Calls self._setLosses() before if either self.cost or self.testCost is None.
         self._applyRegularizations()
         Calls self._setUpdates() if self.updates is None.
         """
-        if self.cost is None or self.testCost is None :
-            self._setCosts()
-
+        super(Output_ABC, self)._setTheanoFunctions()
+        self.loss = MTYPES.Losses(self, self.cost, self.targets, self.outputs)
         self._applyRegularizations()
         
         if self.updates is None :
             self._setUpdates()
 
-        super(Output_ABC, self)._setTheanoFunctions()
-        self.train = MWRAP.TheanoFunctionHandle("train", self, self.cost, stream="train", updates=self.updates, allow_input_downcast=True)
-        self.test = MWRAP.TheanoFunctionHandle("test", self, self.testCost, stream="test", allow_input_downcast=True)
-
-    def getGradients(self, layerName=None, *args, **kwargs) :
-        if layerName is None :
-            lname=self.name
-        else :
-            lname=layerName
-
-        try :
-            return getattr(self, "getGradients_%s" % lname)(*args, **kwargs)
-        except AttributeError :
-            print("There's no theano function for retreiving gradients for layer '%s'. Perhaps the current learning scenario is not keeping them stored." % layerName)
-
-    def getUpdates(self, layerName=None, *args, **kwargs) :
-        if layerName is None :
-            lname=self.name
-        else :
-            lname=layerName
-
-        try :
-            return getattr(self, "getUpdates_%s" % lname)(*args, **kwargs)
-        except AttributeError :
-            print("There's no theano function for retreiving updates for layer '%s'. Perhaps the current learning scenario is not keeping them stored." % layerName)
+        self.train = MWRAP.TheanoFunctionHandle("train", self, self.loss["train"], stream="train", updates=self.updates, allow_input_downcast=True)
+        self.test = MWRAP.TheanoFunctionHandle("test", self, self.loss["test"], stream="test", allow_input_downcast=True)
 
 class WeightBiasOutput_ABC(Output_ABC, WeightBias_ABC):
     """Generic output layer with weight and bias"""
-    def __init__(self, size, costObject, learningScenari, activation, **kwargs):
-        super(WeightBiasOutput_ABC, self).__init__(size=size, costObject=costObject, learningScenari=learningScenari, activation=activation, **kwargs)
+    def __init__(self, size, cost, learningScenari, activation, **kwargs):
+        super(WeightBiasOutput_ABC, self).__init__(size=size, cost=cost, learningScenari=learningScenari, activation=activation, **kwargs)
 
     def _setOutputs(self) :
         WeightBias_ABC._setOutputs(self)
  
 class SoftmaxClassifier(WeightBiasOutput_ABC) :
     """A softmax (probabilistic) Classifier"""
-    def __init__(self, size, costObject, learningScenari, temperature=1, **kwargs) :
-        super(SoftmaxClassifier, self).__init__(size, costObject=costObject, learningScenari=learningScenari, activation=MA.Softmax(temperature=temperature), **kwargs)
+    def __init__(self, size, cost, learningScenari, temperature=1, **kwargs) :
+        super(SoftmaxClassifier, self).__init__(size, cost=cost, learningScenari=learningScenari, activation=MA.Softmax(temperature=temperature), **kwargs)
         self.targets=MTYPES.Targets(tt.ivector) #tt.ivector(name="targets_" + self.name)
 
     def _setCustomTheanoFunctions(self) :
@@ -715,16 +660,16 @@ class SoftmaxClassifier(WeightBiasOutput_ABC) :
 
 class Regression(WeightBiasOutput_ABC) :
     """For regressions, works great with a mean squared error cost"""
-    def __init__(self, size, activation, learningScenari, costObject, name=None, **kwargs) :
-        super(Regression, self).__init__(size, activation=activation, learningScenari=learningScenari, costObject=costObject, name=name, **kwargs)
+    def __init__(self, size, activation, learningScenari, cost, name=None, **kwargs) :
+        super(Regression, self).__init__(size, activation=activation, learningScenari=learningScenari, cost=cost, name=name, **kwargs)
         self.targets=tt.matrix(name="targets")
 
 class Autoencode(WeightBiasOutput_ABC) :
     """An auto encoding layer. This one takes another layer as inputs and tries to reconstruct its activations.
     You could achieve the same result with a Regression layer, but this one has the advantage of not needing to be fed specific inputs"""
 
-    def __init__(self, targetLayerName, activation, learningScenari, costObject, name=None, **kwargs) :
-        super(Autoencode, self).__init__(None, activation=activation, learningScenari=learningScenari, costObject=costObject, name=name, **kwargs)
+    def __init__(self, targetLayerName, activation, learningScenari, cost, name=None, **kwargs) :
+        super(Autoencode, self).__init__(None, activation=activation, learningScenari=learningScenari, cost=cost, name=name, **kwargs)
         self.targetLayerName=targetLayerName
 
     def _setNbOutputs(self) :
