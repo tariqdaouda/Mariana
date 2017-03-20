@@ -18,11 +18,19 @@ class UpdateStore(object):
         self.gradients = OrderedDict()
     
     def add(self, parameter, update, gradient, name) :
-        if update :
+        if update is None: 
+            if parameter in self.updates :
+                del self.updates[parameter]
+                del self.names["updates"][parameter]
+        else :
             self.updates[parameter] = update
             self.names["updates"][parameter] = name
-        
-        if gradient :
+            
+        if gradient is None:
+            if parameter in self.gradients:
+                del self.gradients[parameter]
+                del self.names["gradients"][parameter]
+        else :
             self.gradients[parameter] = gradient
             self.names["gradients"][parameter] = name
 
@@ -44,10 +52,10 @@ class Updates(object):
             self.loss += updates.loss
 
     def compile(self) :
-        def _apply(store, layer, entity, param_name, cute_name, loss) :
+        def _apply(sc, store, layer, entity, param_name, cute_name, loss) :
             res = sc.apply(layer, layer, param_name, loss)
-            gup = res.parameter
-            if gup :
+            if res is not None :
+                gup = res.parameter
                 store.add(gup.parameter, gup.update, gup.gradient, cute_name)
                 for gup_co in res.coParameters :
                     cute_name2 = "%s.%s" %(cute_name, gup_co.name)
@@ -64,7 +72,7 @@ class Updates(object):
 
                 for k in layer.getParameterNames() :
                     pname = "%s.%s" %(layer.name, k)
-                    _apply(self.store, layer, layer, k, pname, self.loss)
+                    _apply(sc, self.store, layer, layer, k, pname, self.loss)
 
                 for abst in layer.abstractions :
                     try:
@@ -74,7 +82,7 @@ class Updates(object):
                     else :
                         for k in names:
                             pname = "%s.%s.%s" %(layer.name, abst.__class__.__name__, k)
-                            _apply(self.store, layer, abst, k, pname, self.loss)
+                            _apply(sc, self.store, layer, abst, k, pname, self.loss)
 
 class TheanoFunctionHandle(object) :
     """
@@ -237,10 +245,9 @@ class TheanoFunction(object) :
         return self.results
 
     def getGradients(self, inputs={}) :
-
         self._compile()
         if not self.updates :
-            raise TypeError("Function has not updates, cannot have gradients")
+            raise TypeError("Function has no updates, cannot have gradients")
 
         self._parseInputs(inputs)
 
@@ -248,25 +255,27 @@ class TheanoFunction(object) :
             self.gradients_fct = theano.function(inputs = self.inputs.values(), outputs = self.updates.store.gradients.values(), **self.theano_kwargs)
 
         fres = iter(self.gradients_fct(*self.fct_inputs.values()))
+        results = OrderedDict()
         for k in self.updates.store.names["gradients"].itervalues() :
-            self.results[k] = fres.next()
+            results[k] = fres.next()
 
-        return self.results
+        return results
         
     def getUpdates(self, inputs={}) :
         self._compile()
         if not self.updates :
-            raise TypeError("Function has not updates")
+            raise TypeError("Function has no updates")
         self._parseInputs(inputs)
 
         if not self.updates_fct :
             self.updates_fct = theano.function(inputs = self.inputs.values(), outputs = self.updates.store.updates.values(), **self.theano_kwargs)
 
         fres = iter(self.updates_fct(*self.fct_inputs.values()))
+        results = OrderedDict()
         for k in self.updates.store.names["updates"].itervalues() :
-            self.results[k] = fres.next()
+            results[k] = fres.next()
 
-        return self.results
+        return results
 
     def getToposort(self) :
         """returns the toposort ( name of all ops  of the function in order of application ) of the function"""

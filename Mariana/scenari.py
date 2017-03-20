@@ -60,13 +60,13 @@ class LearningScenario_ABC(Abstraction_ABC):
         message = "%s uses optimizer %s of layer %s" % (entity, self.__class__.__name__, layer.name)
         layer.network.logLayerEvent(layer, message, hyps)
 
-        if self.applyTo is not None and paramName is not self.applyTo :
-            return None
-
         try:
             param = entity.getParameterDict()[paramName]
-        except KeyError as e:
+        except :
             raise KeyError("%s has no parameter %s"%(entity, paramName))
+
+        if self.applyTo is not None and paramName not in self.applyTo :
+            return None
 
         return self.getUpdates(param, loss, layer, paramName)
 
@@ -76,21 +76,23 @@ class LearningScenario_ABC(Abstraction_ABC):
 
 class Fixed(LearningScenario_ABC):
     "No learning, the layer weights stay fixed"
-    def __init__(self, **kwargs):
-       super(Fixed, self).__init__(**kwargs)
+    def __init__(self, applyTo=None, **kwargs):
+       super(Fixed, self).__init__(applyTo, **kwargs)
         
-    def getUpdates(self, parameter, loss, layer) :
-        ret = OptimizerResult(None, None)
+    def getUpdates(self, param, *args, **kwargs) :
+        ret = OptimizerResult(param, None, None)
         return ret
 
 class GradientDescent(LearningScenario_ABC):
     "The GradientDescent scenario has a fixed learning rate."
-    def __init__(self, lr, momentum = 0, **kwargs):
+    def __init__(self, lr, momentum = 0, reverse=False, **kwargs):
         super(GradientDescent, self).__init__(**kwargs)
         self.lr = lr
         self.momentum = momentum
+        self.reverse = reverse
         self.hyperParameters.append("lr")
         self.hyperParameters.append("momentum")
+        self.hyperParameters.append("reverse")
 
         self.parameters = {}
 
@@ -98,15 +100,22 @@ class GradientDescent(LearningScenario_ABC):
         if self.momentum > 0 :
             gparam = tt.grad(loss, param)
             momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable, name="momentum.%s.%s" % (layer.name, paramName))
+            
             param_update = self.momentum * momentum_param + (1-self.momentum)*gparam
             
-            momentum_update = param - self.lr * momentum_param
-            
+            if self.reverse :
+                momentum_update = param + self.lr * momentum_param
+            else :
+                momentum_update = param - self.lr * momentum_param
+                    
             ret = OptimizerResult(param, param_update, gparam)
             ret.addCoParameter(momentum_param, "momentum", momentum_update, None)
         else :
             gparam = tt.grad(loss, param)
-            update = param -self.lr * gparam
+            if self.reverse :
+                update = param +self.lr * gparam
+            else :
+                update = param -self.lr * gparam
             ret = OptimizerResult(param, update, gparam)
 
         return ret

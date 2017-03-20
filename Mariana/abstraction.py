@@ -8,7 +8,6 @@ class Abstraction_ABC(object):
     as hyper-parameters.
     """
     def __init__(self, *args, **kwargs):
-        self.name = self.__class__.__name__
         self.hyperParameters = []
         self.parameters = {}
 
@@ -50,4 +49,4 @@ class Abstraction_ABC(object):
         return res
 
     def __repr__(self) :
-        return "< %s >" % self.name
+        return "< %s >" % self.__class__.__name__

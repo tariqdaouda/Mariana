@@ -83,7 +83,7 @@ class GlorotTanhInit(Initialization_ABC) :
                     high = numpy.sqrt(6. / (layer.nbInputs + layer.nbOutputs)),
                     size = shape
                 )
-        layer.initParameter( "W", theano.shared(W) )
+        layer.initParameter( "W", theano.shared(W, name = "%s_W" % (layer.name) ) )
 
 class Uniform(Initialization_ABC) :
     """Random values from a unifrom distribution (divided by the overall sum)."""
@@ -121,7 +121,7 @@ class SmallUniform(Uniform) :
 
         v /= sum(v)
         v = numpy.asarray(v, dtype=theano.config.floatX)
-        layer.initParameter( self.parameter,  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter)) )
+        layer.initParameter( self.parameter, theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter)) )
 
 class SmallUniformWeights(SmallUniform) :
     """Small random weights from a unifrom distribution (divided by the overall sum)"""

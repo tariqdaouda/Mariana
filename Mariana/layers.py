@@ -323,9 +323,7 @@ class Input(Layer_ABC) :
         super(Input, self).__init__(size, layerTypes=[MSET.TYPE_INPUT_LAYER], name=name, **kwargs)
         self.nbInputs=size
         self.inputs=MTYPES.Inputs(tt.matrix, name="Inp_%s" % self.name)
-        # self.inputs["train"]=tt.matrix(name="inp_"+self.name)
-        # self.inputs["test"]=self.inputs["train"]
-
+    
     def _setInputs(self) :
         pass
 
@@ -502,8 +500,9 @@ class WeightBias_ABC(Layer_ABC) :
         for layer in self.network.inConnections[self] :
             if self.nbInputs is None :
                 self.nbInputs=layer.nbOutputs
-            elif self.nbInputs != layer.nbOutputs :
-                raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
+            else :
+                self.nbInputs += layer.nbOutputs
+                # raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
 
     def _setOutputs(self) :
         """Defines, self.outputs["train"] and self.outputs["test"]"""
