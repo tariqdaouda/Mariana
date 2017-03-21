@@ -38,17 +38,18 @@ class Updates(object):
     """docstring for Updates"""
     def __init__(self, output_layer, loss):
         super(Updates, self).__init__()
+        print "ssss"
         self.output_layers = [output_layer]
-        self.layers = [output_layer]
+        # self.layers = [output_layer]
         self.layers.extend(output_layer.dependencies.values())
         self.loss = loss
 
         self.store = UpdateStore()
 
-    def extend(self, updates) :
+    def add(self, updates) :
         if updates :
             self.output_layers.extend(updates.output_layers)
-            self.layers.extend(updates.layers)
+            # self.layers.extend(updates.layers)
             self.loss += updates.loss
 
     def compile(self) :
@@ -61,9 +62,22 @@ class Updates(object):
                     cute_name2 = "%s.%s" %(cute_name, gup_co.name)
                     store.add(gup_co.parameter, gup_co.update, gup_co.gradient, cute_name2)
 
+        optimizers = {}
+        for o in self.output_layers :
+            optimizers[o] = o.abstractions["scenari"]
+            for l in o.dependencies :
+                try :
+                    optimizers[l].append(o.abstractions["scenari"])
+                except KeyError :
+                    optimizers[l] = [o.abstractions["scenari"]]
+
+        for o in self.output_layers :
+            for l in o.dependencies :
+                optimizers[l] = optimizers[l.name].extend(l.abstractions["scenari"])
+        
         scCheck = set()
-        for layer in self.layers :
-            for sc in layer.abstractions["scenari"] :
+        for layer, scenari in optimizers.iteritems() :
+            for sc in scenari :
                 if sc not in scCheck :
                     for gup_free in sc.freeParameters.parameters :
                         pname = "%s.%s.%s" %(output_layer.name, sc.__class__.__name__, gup_free.name)
@@ -92,7 +106,7 @@ class TheanoFunctionHandle(object) :
     error messages.
     """
 
-    def __init__(self, name, layer, output, stream, updates=None, **theano_kwargs) :
+    def __init__(self, name, layer, output, stream, update=False, **theano_kwargs) :
         """
         :param Output layer: the output layer the function should be applied to
         :param list updates: boolean defining if updates should be applied
@@ -112,7 +126,7 @@ class TheanoFunctionHandle(object) :
             return inputs
 
         self.name = name
-        self.updates = updates
+        self.updates = None
         self.layer = layer
         self.stream = stream
         self.theano_kwargs = theano_kwargs
@@ -122,21 +136,25 @@ class TheanoFunctionHandle(object) :
             if v.__class__ is MTYPES.Targets :
                 self.inputs["%s.%s" % (layer.name, k)] = v[stream]
 
-        self.output = output
+        self.output = output[stream]
         self.theano_fct = None
 
     def hasUpdates(self) :
         return self.updates is not None
 
     def __add__(self, other) :
+        if self.stream != other.stream :
+            raise TypeError("All functions must be in the same stream %s != %s" %(self.stream, other.stream))
+        
         if other.__class__ is TheanoFunction :
             if other.isCompiled() :
-                raise TypeError("Added value cannot be an already compiled function")
+                raise TypeError("Cannot add an already compiled function")
             other._addHandle(self)
             return other
         elif other.__class__ is not TheanoFunctionHandle :
             raise TypeError("Added value must be another valid function")
 
+        # print self, other
         return TheanoFunction([self, other])
 
     def _develop(self) :
@@ -180,7 +198,6 @@ class TheanoFunction(object) :
             self.updates = None
             
             self.fct_inputs_varToName = OrderedDict()
-            self.fct_inputs = OrderedDict()
             
             self.theano_kwargs = {}
             for handle in self.theano_handles :
@@ -189,22 +206,23 @@ class TheanoFunction(object) :
                 for k, v in handle.inputs.iteritems() :
                     self.inputs[k] = v
                     self.fct_inputs_varToName[v] = k
-                    self.fct_inputs[k] = None
-                
+                    
                 self.outputs["%s.%s" % (handle.layer.name, handle.name)] = handle.output
                 
                 if handle.hasUpdates() :
                     if self.updates is None :
                         self.updates = handle.updates
                     else :
-                        self.updates.extend(handle.updates)
+                        self.updates.add(handle.updates)
 
             if self.updates :
                 self.updates.compile()
                 updates = self.updates.store.updates
             else :
                 updates = {}
-
+            
+            # print self.inputs
+            # print self.outputs
             self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs.values(), updates = updates, **self.theano_kwargs)
 
             if MSET.DEVICE_IS_GPU :
@@ -218,26 +236,28 @@ class TheanoFunction(object) :
 
     def _parseInputs(self, inputs = {}) :
         nbArgs = 0
-        for k, v in inputs.iteritems() :
+        fct_inputs = OrderedDict()
+        for param, pname in self.fct_inputs_varToName.iteritems() :
             try :
-                self.fct_inputs[k] = inputs[k]
+                fct_inputs[param] = inputs[pname]
             except KeyError :
                 try:
-                    kk = self.fct_inputs_varToName[k]
-                    self.fct_inputs[kk] = inputs[v]
+                    fct_inputs[param] = inputs[param]
                 except KeyError as e:
-                    raise TypeError("'%s' is not among this function arguments" % k)
+                    raise TypeError("missing argument '%s' " % pname)
             nbArgs += 1
 
-        if nbArgs != len(self.fct_inputs) :
-            args = str(self.fct_inputs.keys()).replace("[", "").replace("]", "")
+        if nbArgs != len(self.fct_inputs_varToName) :
+            args = str(fct_inputs.keys()).replace("[", "").replace("]", "")
             raise TypeError("Function expects the following arguments: %s, %d provided" % (args, nbArgs) )
+
+        return fct_inputs
 
     def run(self, inputs = {}) :
         self._compile()
-        self._parseInputs(inputs)
+        fct_inputs = self._parseInputs(inputs)
 
-        fres = iter(self.theano_fct(*self.fct_inputs.values()))
+        fres = iter(self.theano_fct(*fct_inputs.values()))
         
         for k in self.outputs.iterkeys() :
             self.results[k] = fres.next()
@@ -249,12 +269,11 @@ class TheanoFunction(object) :
         if not self.updates :
             raise TypeError("Function has no updates, cannot have gradients")
 
-        self._parseInputs(inputs)
-
+        fct_inputs = self._parseInputs(inputs)
         if not self.gradients_fct :
             self.gradients_fct = theano.function(inputs = self.inputs.values(), outputs = self.updates.store.gradients.values(), **self.theano_kwargs)
 
-        fres = iter(self.gradients_fct(*self.fct_inputs.values()))
+        fres = iter(self.gradients_fct(*fct_inputs.values()))
         results = OrderedDict()
         for k in self.updates.store.names["gradients"].itervalues() :
             results[k] = fres.next()
@@ -265,12 +284,12 @@ class TheanoFunction(object) :
         self._compile()
         if not self.updates :
             raise TypeError("Function has no updates")
-        self._parseInputs(inputs)
+        fct_inputs = self._parseInputs(inputs)
 
         if not self.updates_fct :
             self.updates_fct = theano.function(inputs = self.inputs.values(), outputs = self.updates.store.updates.values(), **self.theano_kwargs)
 
-        fres = iter(self.updates_fct(*self.fct_inputs.values()))
+        fres = iter(self.updates_fct(*fct_inputs.values()))
         results = OrderedDict()
         for k in self.updates.store.names["updates"].itervalues() :
             results[k] = fres.next()

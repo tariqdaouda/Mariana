@@ -200,8 +200,9 @@ class Layer_ABC(object) :
         """Creates propagate/propagateTest theano function that returns the layer's outputs.
         propagateTest returns the outputs["test"], some decorators might not be applied.
         This is called after decorating"""
-        self.propagate=MWRAP.TheanoFunctionHandle("propagate", self, self.outputs["train"], stream="train", allow_input_downcast=True)
-        self.propagateTest=MWRAP.TheanoFunctionHandle("propagateTest", self, self.outputs["test"], stream="test", allow_input_downcast=True)
+        self.propagate = {}
+        self.propagate["train"]=MWRAP.TheanoFunctionHandle("propagate", self, self.outputs["train"], stream="train", allow_input_downcast=True)
+        self.propagate["test"]=MWRAP.TheanoFunctionHandle("propagateTest", self, self.outputs["test"], stream="test", allow_input_downcast=True)
         
     def _parametersSanityCheck(self) :
         "perform basic parameter checks on layers, automatically called on initialization"
@@ -229,9 +230,9 @@ class Layer_ABC(object) :
         except AttributeError :
                 raise AttributeError("Attribute 'outputs' of layer '%s' is not defined. This attribute defines the train output of the layer, usually with regularizations" % self.name)
 
-    def pushLearningScenario(self, sc) :
-        """Adds a new top optimizer"""
-        self.abstractions["scenari"].insert(0, sc)
+    # def pushLearningScenario(self, sc) :
+    #     """Adds a new top optimizer"""
+    #     self.abstractions["scenari"].insert(0, sc)
 
     def _initA(self) :
         """Initialize the essential attributes of the layer such as: outputs and activations. This function is automatically called before train/test etc..."""
@@ -563,7 +564,7 @@ class Output_ABC(Layer_ABC) :
 
         self.cost=cost
         self.loss=None
-        self.updates=None
+        # self.updates=None
         self._mustRegularize=True
         self.dependencies=None
 
@@ -588,19 +589,14 @@ class Output_ABC(Layer_ABC) :
         if self._mustRegularize or force :
             self._backTrckDependencies()
             for l in self.dependencies.itervalues() :
-                for sc in self.abstractions["scenari"] :
-                    l.pushLearningScenario(sc)
+                # for sc in self.abstractions["scenari"] :
+                    # l.pushLearningScenario(sc)
                 try :
                     for reg in l.abstractions["regularizations"] :
                         self.loss["train"] += reg.apply(l)
                 except AttributeError :
                     pass
         self._mustRegularize=False
-
-    def _setUpdates(self) :
-        """Defines parameter updates according to training scenari"""
-        self._backTrckDependencies()
-        self.updates = MWRAP.Updates(self, self.loss["train"])
 
     def _setTheanoFunctions(self) :
         """
@@ -609,14 +605,16 @@ class Output_ABC(Layer_ABC) :
         self._applyRegularizations()
         Calls self._setUpdates() if self.updates is None.
         """
+        self._backTrckDependencies()
         super(Output_ABC, self)._setTheanoFunctions()
         self.loss = MTYPES.Losses(self, self.cost, self.targets, self.outputs)
         self._applyRegularizations()
         
-        if self.updates is None :
-            self._setUpdates()
+        # if self.updates is None :
+        #     self._setUpdates()
 
-        self.train = MWRAP.TheanoFunctionHandle("train", self, self.loss["train"], stream="train", updates=self.updates, allow_input_downcast=True)
+        self.train = MWRAP.TheanoFunctionHandle("train", self, self.loss, stream="train", update=True, allow_input_downcast=True)
+        # self.train = MWRAP.TheanoFunctionHandle("train", self, self.loss["train"], stream="train", updates=self.updates, allow_input_downcast=True)
         self.test = MWRAP.TheanoFunctionHandle("test", self, self.loss["test"], stream="test", allow_input_downcast=True)
 
 class WeightBiasOutput_ABC(Output_ABC, WeightBias_ABC):
