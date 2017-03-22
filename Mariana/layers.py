@@ -201,8 +201,8 @@ class Layer_ABC(object) :
         propagateTest returns the outputs["test"], some decorators might not be applied.
         This is called after decorating"""
         self.propagate = {}
-        self.propagate["train"]=MWRAP.TheanoFunctionHandle("propagate", self, self.outputs["train"], stream="train", allow_input_downcast=True)
-        self.propagate["test"]=MWRAP.TheanoFunctionHandle("propagateTest", self, self.outputs["test"], stream="test", allow_input_downcast=True)
+        self.propagate["train"]=MWRAP.TheanoFunctionHandle("propagate", self, self.outputs, stream="train", allow_input_downcast=True)
+        self.propagate["test"]=MWRAP.TheanoFunctionHandle("propagateTest", self, self.outputs, stream="test", allow_input_downcast=True)
         
     def _parametersSanityCheck(self) :
         "perform basic parameter checks on layers, automatically called on initialization"
@@ -594,6 +594,7 @@ class Output_ABC(Layer_ABC) :
                 try :
                     for reg in l.abstractions["regularizations"] :
                         self.loss["train"] += reg.apply(l)
+                        # reg.apply(l, self.loss)
                 except AttributeError :
                     pass
         self._mustRegularize=False
@@ -615,7 +616,7 @@ class Output_ABC(Layer_ABC) :
 
         self.train = MWRAP.TheanoFunctionHandle("train", self, self.loss, stream="train", update=True, allow_input_downcast=True)
         # self.train = MWRAP.TheanoFunctionHandle("train", self, self.loss["train"], stream="train", updates=self.updates, allow_input_downcast=True)
-        self.test = MWRAP.TheanoFunctionHandle("test", self, self.loss["test"], stream="test", allow_input_downcast=True)
+        self.test = MWRAP.TheanoFunctionHandle("test", self, self.loss, stream="test", allow_input_downcast=True)
 
 class WeightBiasOutput_ABC(Output_ABC, WeightBias_ABC):
     """Generic output layer with weight and bias"""

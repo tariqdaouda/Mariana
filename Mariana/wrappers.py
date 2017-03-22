@@ -36,14 +36,13 @@ class UpdateStore(object):
 
 class Updates(object):
     """docstring for Updates"""
-    def __init__(self, output_layer, loss):
+    def __init__(self, output_layer, stream):
         super(Updates, self).__init__()
-        print "ssss"
         self.output_layers = [output_layer]
         # self.layers = [output_layer]
         self.layers.extend(output_layer.dependencies.values())
-        self.loss = loss
-
+        self.loss = 0
+        self.stream = stream
         self.store = UpdateStore()
 
     def add(self, updates) :
@@ -62,8 +61,10 @@ class Updates(object):
                     cute_name2 = "%s.%s" %(cute_name, gup_co.name)
                     store.add(gup_co.parameter, gup_co.update, gup_co.gradient, cute_name2)
 
+        self.loss = 0
         optimizers = {}
         for o in self.output_layers :
+            self.loss += o.cost[self.stream]
             optimizers[o] = o.abstractions["scenari"]
             for l in o.dependencies :
                 try :
@@ -74,7 +75,9 @@ class Updates(object):
         for o in self.output_layers :
             for l in o.dependencies :
                 optimizers[l] = optimizers[l.name].extend(l.abstractions["scenari"])
-        
+                for reg in l.abstractions["regularizations"] :
+                    self.loss += reg[self.stream]
+
         scCheck = set()
         for layer, scenari in optimizers.iteritems() :
             for sc in scenari :
@@ -126,7 +129,8 @@ class TheanoFunctionHandle(object) :
             return inputs
 
         self.name = name
-        self.updates = None
+        self.update = update
+        # self.updates = None
         self.layer = layer
         self.stream = stream
         self.theano_kwargs = theano_kwargs
@@ -140,7 +144,7 @@ class TheanoFunctionHandle(object) :
         self.theano_fct = None
 
     def hasUpdates(self) :
-        return self.updates is not None
+        return self.update
 
     def __add__(self, other) :
         if self.stream != other.stream :
@@ -160,15 +164,15 @@ class TheanoFunctionHandle(object) :
     def _develop(self) :
         if not self.theano_fct :
             self.theano_fct = TheanoFunction([self])
-            
+
     def __call__(self, *args, **kwargs) :
         self._develop()
         return self.theano_fct.run(*args, **kwargs)
 
-    def __getattr__(self, k) :
-        self._develop()
-        if hasattr(self.theano_fct, k) :
-            return getattr(self.theano_fct, k)
+    # def __getattr__(self, k) :
+    #     self._develop()
+    #     if hasattr(self.theano_fct, k) :
+    #         return getattr(self.theano_fct, k)
 
 class TheanoFunction(object) :
 
@@ -209,9 +213,10 @@ class TheanoFunction(object) :
                     
                 self.outputs["%s.%s" % (handle.layer.name, handle.name)] = handle.output
                 
+                # print handle.hasUpdates(), handle.updates, handle.layer
                 if handle.hasUpdates() :
                     if self.updates is None :
-                        self.updates = handle.updates
+                        self.updates = Updates(handle.layer, )
                     else :
                         self.updates.add(handle.updates)
 

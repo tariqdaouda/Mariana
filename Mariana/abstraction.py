@@ -7,7 +7,8 @@ class Abstraction_ABC(object):
     This class represents a layer modifier. This class must includes a list attribute **self.hyperParameters** containing the names of all attributes that must be considered
     as hyper-parameters.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, streams=[], *args, **kwargs):
+    	self.streams = set(streams)
         self.hyperParameters = []
         self.parameters = {}
 
