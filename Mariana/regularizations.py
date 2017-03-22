@@ -12,7 +12,8 @@ class SingleLayerRegularizer_ABC(Abstraction_ABC) :
     """An abstract regularization to be applied to a layer."""
 
     def __init__(self, streams=["train"], **kwargs):
-        super(Abstraction_ABC, self).__init__(streams=streams, **kwargs)
+        self.streams = streams
+        super(Abstraction_ABC, self).__init__(**kwargs)
         
     def apply(self, layer, variable) :
         """Apply to a layer and update networks's log"""
@@ -20,13 +21,12 @@ class SingleLayerRegularizer_ABC(Abstraction_ABC) :
         for k in self.hyperParameters :
             hyps[k] = getattr(self, k)
 
-        message = "%s uses %s regularization" % (layer.name, self.__class__.__name__)
-        layer.network.logLayerEvent(layer, message, hyps)
-        
         for s in self.streams :
-            variable[s] += self.getFormula(layer)
+            message = "%s uses %s regularization in stream: %s" % (layer.name, self.__class__.__name__, s)
+            layer.network.logLayerEvent(layer, message, hyps)
+            variable[s] += self.run(layer)
 
-    def getFormula(self, layer) :
+    def run(self, layer) :
         """Returns the expression to be added to the cost"""
         raise NotImplemented("Must be implemented in child")
 
@@ -43,7 +43,7 @@ class L1(SingleLayerRegularizer_ABC) :
         self.factor = factor
         self.hyperParameters = ["factor"]
 
-    def getFormula(self, layer) :
+    def run(self, layer) :
         return self.factor * ( abs(layer.parameters["W"]).sum() )
 
 class L2(SingleLayerRegularizer_ABC) :
@@ -58,7 +58,7 @@ class L2(SingleLayerRegularizer_ABC) :
         self.factor = factor
         self.hyperParameters = ["factor"]
 
-    def getFormula(self, layer) :
+    def run(self, layer) :
         return self.factor * ( (layer.parameters["W"] ** 2).sum() )
 
 class ActivationL1(SingleLayerRegularizer_ABC) :
@@ -77,5 +77,5 @@ class ActivationL1(SingleLayerRegularizer_ABC) :
         self.factor = factor
         self.hyperParameters = ["factor"]
 
-    def getFormula(self, layer) :
+    def run(self, layer) :
         return self.factor * ( abs(layer.outputs["train"]).sum() )

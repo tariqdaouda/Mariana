@@ -40,7 +40,7 @@ class Updates(object):
         super(Updates, self).__init__()
         self.output_layers = [output_layer]
         # self.layers = [output_layer]
-        self.layers.extend(output_layer.dependencies.values())
+        # self.layers.extend(output_layer.dependencies.values())
         self.loss = 0
         self.stream = stream
         self.store = UpdateStore()
@@ -64,19 +64,19 @@ class Updates(object):
         self.loss = 0
         optimizers = {}
         for o in self.output_layers :
-            self.loss += o.cost[self.stream]
+            self.loss += o.loss[self.stream]
             optimizers[o] = o.abstractions["scenari"]
-            for l in o.dependencies :
+            for l in o.dependencies.itervalues() :
                 try :
-                    optimizers[l].append(o.abstractions["scenari"])
+                    optimizers[l].extend(o.abstractions["scenari"])
                 except KeyError :
-                    optimizers[l] = [o.abstractions["scenari"]]
-
+                    optimizers[l] = list(o.abstractions["scenari"])
+                
         for o in self.output_layers :
-            for l in o.dependencies :
-                optimizers[l] = optimizers[l.name].extend(l.abstractions["scenari"])
+            for l in o.dependencies.itervalues() :
+                optimizers[l].extend(l.abstractions["scenari"])
                 for reg in l.abstractions["regularizations"] :
-                    self.loss += reg[self.stream]
+                    reg.apply(l, self.loss)
 
         scCheck = set()
         for layer, scenari in optimizers.iteritems() :
@@ -213,12 +213,11 @@ class TheanoFunction(object) :
                     
                 self.outputs["%s.%s" % (handle.layer.name, handle.name)] = handle.output
                 
-                # print handle.hasUpdates(), handle.updates, handle.layer
                 if handle.hasUpdates() :
                     if self.updates is None :
-                        self.updates = Updates(handle.layer, )
+                        self.updates = Updates(handle.layer, handle.stream)
                     else :
-                        self.updates.add(handle.updates)
+                        self.updates.add(Updates(handle.layer, handle.stream))
 
             if self.updates :
                 self.updates.compile()

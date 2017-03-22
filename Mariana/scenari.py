@@ -49,16 +49,15 @@ class LearningScenario_ABC(Abstraction_ABC):
             self.applyTo = applyTo
 
         self.freeParameters = OptimizerFreeResults()
-        self.hyperParameters = ["applyTo"]
+        self.hyperParameters = {
+        	"applyTo": applyTo
+        }
 
     def apply(self, layer, entity, paramName, loss) :
         """Apply to a layer and update networks's log"""
-        hyps = {}
-        for k in self.hyperParameters :
-            hyps[k] = getattr(self, k)
-
+        
         message = "%s uses optimizer %s of layer %s" % (entity, self.__class__.__name__, layer.name)
-        layer.network.logLayerEvent(layer, message, hyps)
+        layer.network.logLayerEvent(layer, message, self.hyperParameters)
 
         try:
             param = entity.getParameterDict()[paramName]
@@ -68,9 +67,9 @@ class LearningScenario_ABC(Abstraction_ABC):
         if self.applyTo is not None and paramName not in self.applyTo :
             return None
 
-        return self.getUpdates(param, loss, layer, paramName)
+        return self.run(param, loss, layer, paramName)
 
-    def getUpdates(self, param, loss, layer, paramName) :
+    def run(self, param, loss, layer, paramName) :
         """return the updates for the parameters of layer. Must be implemented in child"""
         raise NotImplemented("Must be implemented in child")
 
@@ -79,7 +78,7 @@ class Fixed(LearningScenario_ABC):
     def __init__(self, applyTo=None, **kwargs):
        super(Fixed, self).__init__(applyTo, **kwargs)
         
-    def getUpdates(self, param, *args, **kwargs) :
+    def run(self, param, *args, **kwargs) :
         ret = OptimizerResult(param, None, None)
         return ret
 
@@ -87,35 +86,35 @@ class GradientDescent(LearningScenario_ABC):
     "The GradientDescent scenario has a fixed learning rate."
     def __init__(self, lr, momentum = 0, reverse=False, **kwargs):
         super(GradientDescent, self).__init__(**kwargs)
-        self.lr = lr
-        self.momentum = momentum
-        self.reverse = reverse
-        self.hyperParameters.append("lr")
-        self.hyperParameters.append("momentum")
-        self.hyperParameters.append("reverse")
-
+        
+        self.addHyperParameters({
+        	"lr": lr,
+        	"momentum": momentum,
+        	"reverse": reverse
+        })
+        
         self.parameters = {}
 
-    def getUpdates(self, param, loss, layer, paramName) :
-        if self.momentum > 0 :
+    def run(self, param, loss, layer, paramName) :
+        if self.getHP("momentum") > 0 :
             gparam = tt.grad(loss, param)
             momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable, name="momentum.%s.%s" % (layer.name, paramName))
             
-            param_update = self.momentum * momentum_param + (1-self.momentum)*gparam
+            param_update = self.getHP("momentum") * momentum_param + (1-self.hps["momentum"])*gparam
             
-            if self.reverse :
-                momentum_update = param + self.lr * momentum_param
+            if self.getHP("reverse") :
+                momentum_update = param + self.getHP("lr") * momentum_param
             else :
-                momentum_update = param - self.lr * momentum_param
+                momentum_update = param - self.getHP("lr") * momentum_param
                     
             ret = OptimizerResult(param, param_update, gparam)
             ret.addCoParameter(momentum_param, "momentum", momentum_update, None)
         else :
             gparam = tt.grad(loss, param)
-            if self.reverse :
-                update = param +self.lr * gparam
+            if self.getHP("reverse") :
+                update = param + self.getHP("lr") * gparam
             else :
-                update = param -self.lr * gparam
+                update = param - self.getHP("lr") * gparam
             ret = OptimizerResult(param, update, gparam)
 
         return ret

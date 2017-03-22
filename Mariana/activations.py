@@ -6,18 +6,19 @@ __all__ = ["Activation_ABC", "Pass", "Sigmoid", "Tanh", "ReLU", "Softmax"]
 class Activation_ABC(Abstraction_ABC):
     """All activations must inherit from this class"""
 
-    def apply(self, layer, x, purpose) :
+    def apply(self, layer, x) :
         """Apply to a layer and update networks's log"""
         hyps = {}
         for k in self.hyperParameters :
             hyps[k] = getattr(self, k)
 
-        message = "%s uses activation %s for %s" % (layer.name, self.__class__.__name__, purpose)
+        message = "%s uses activation %s" % (layer.name, self.__class__.__name__)
         layer.network.logLayerEvent(layer, message, hyps)
-        return self.function(x)
+        for s in x.streams :
+            x[s] = self.run(x[s])
 
-    def function(self, x) :
-        """the actual activation function that will be applied to the neurones."""
+    def run(self, x) :
+        """the actual activation run that will be applied to the neurones."""
         raise NotImplemented("Must be implemented in child")
 
 class Pass(Activation_ABC):
@@ -27,7 +28,7 @@ class Pass(Activation_ABC):
     def __init__(self):
         Activation_ABC.__init__(self)
         
-    def function(self, x):
+    def run(self, x):
         return x
 
 class Sigmoid(Activation_ABC):
@@ -38,7 +39,7 @@ class Sigmoid(Activation_ABC):
     def __init__(self):
         Activation_ABC.__init__(self)
         
-    def function(self, x):
+    def run(self, x):
         return tt.nnet.sigmoid(x)
 
 class Tanh(Activation_ABC):
@@ -49,7 +50,7 @@ class Tanh(Activation_ABC):
     def __init__(self):
         Activation_ABC.__init__(self)
 
-    def function(self, x):
+    def run(self, x):
         return tt.tanh(x)
 
 class ReLU(Activation_ABC):
@@ -60,7 +61,7 @@ class ReLU(Activation_ABC):
     def __init__(self):
         Activation_ABC.__init__(self)
                 
-    def function(self, x):
+    def run(self, x):
         #do not replace by theano's relu. It works bad with nets that have multiple outputs
         return tt.maximum(0., x)
 
@@ -77,5 +78,5 @@ class Softmax(Activation_ABC):
         self.temperature = temperature
         self.scale = scale
 
-    def function(self, x):
+    def run(self, x):
         return self.scale * tt.nnet.softmax(x/self.temperature)

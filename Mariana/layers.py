@@ -193,8 +193,7 @@ class Layer_ABC(object) :
         self.outputs_preactivation["train"]=self.outputs["train"]
         self.outputs_preactivation["test"]=self.outputs["test"]
 
-        self.outputs["train"]=self.abstractions["activation"].apply(self, self.outputs_preactivation["train"], 'training')
-        self.outputs["test"]=self.abstractions["activation"].apply(self, self.outputs_preactivation["test"], 'testing')
+        self.abstractions["activation"].apply(self, self.outputs)
 
     def _setTheanoFunctions(self) :
         """Creates propagate/propagateTest theano function that returns the layer's outputs.
@@ -565,7 +564,7 @@ class Output_ABC(Layer_ABC) :
         self.cost=cost
         self.loss=None
         # self.updates=None
-        self._mustRegularize=True
+        # self._mustRegularize=True
         self.dependencies=None
 
     def _backTrckDependencies(self, force=False) :
@@ -584,20 +583,20 @@ class Output_ABC(Layer_ABC) :
             else:
                 self.dependencies=_bckTrk(self.dependencies, self)
 
-    def _applyRegularizations(self, force=False) :
-        """Defines the regularizations to be added to the cost"""
-        if self._mustRegularize or force :
-            self._backTrckDependencies()
-            for l in self.dependencies.itervalues() :
-                # for sc in self.abstractions["scenari"] :
-                    # l.pushLearningScenario(sc)
-                try :
-                    for reg in l.abstractions["regularizations"] :
-                        self.loss["train"] += reg.apply(l)
-                        # reg.apply(l, self.loss)
-                except AttributeError :
-                    pass
-        self._mustRegularize=False
+    # def _applyRegularizations(self, force=False) :
+    #     """Defines the regularizations to be added to the cost"""
+    #     if self._mustRegularize or force :
+    #         self._backTrckDependencies()
+    #         for l in self.dependencies.itervalues() :
+    #             # for sc in self.abstractions["scenari"] :
+    #                 # l.pushLearningScenario(sc)
+    #             try :
+    #                 for reg in l.abstractions["regularizations"] :
+    #                     self.loss["train"] += reg.apply(l)
+    #                     # reg.apply(l, self.loss)
+    #             except AttributeError :
+    #                 pass
+    #     self._mustRegularize=False
 
     def _setTheanoFunctions(self) :
         """
@@ -609,7 +608,7 @@ class Output_ABC(Layer_ABC) :
         self._backTrckDependencies()
         super(Output_ABC, self)._setTheanoFunctions()
         self.loss = MTYPES.Losses(self, self.cost, self.targets, self.outputs)
-        self._applyRegularizations()
+        # self._applyRegularizations()
         
         # if self.updates is None :
         #     self._setUpdates()
