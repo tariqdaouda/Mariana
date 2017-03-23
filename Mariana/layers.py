@@ -540,11 +540,6 @@ class WeightBias_ABC(Layer_ABC) :
         except AttributeError :
             raise ValueError("It looks like the network has not been initialized yet")
 
-class Hidden(WeightBias_ABC) :
-    "A hidden layer with weigth and bias"
-    def __init__(self, size, **kwargs) :
-        super(Hidden, self).__init__(size, layerTypes=[MSET.TYPE_HIDDEN_LAYER], **kwargs)
-
 class Output_ABC(Layer_ABC) :
     """The interface that every output layer should expose.
     If backTrckAll is set to True, the output layer will consider all layers of the network as its dependencies and update them when necessary.
