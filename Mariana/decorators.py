@@ -4,14 +4,9 @@ import theano.tensor as tt
 import Mariana.settings as MSET
 from Mariana.abstraction import Abstraction_ABC
 import Mariana.initializations as MI
+import Mariana.useful as MUSE
 
 __all__= ["Decorator_ABC", "BatchNormalization", "Center", "Normalize", "Mask", "RandomMask", "BinomialDropout", "Clip", "AdditiveGaussianNoise", "MultiplicativeGaussianNoise"]
-
-def iCast(thing) :
-    if thing.dtype.find("int") > -1 :
-        return tt.cast(thing, MSET.INTX)
-    else :
-        return tt.cast(thing, theano.config.floatX)
 
 class Decorator_ABC(Abstraction_ABC) :
     """A decorator is a modifier that is applied on a layer's output. They are always the last the abstraction to be applied."""
@@ -50,6 +45,7 @@ class Mask(Decorator_ABC):
         if stream in self.streams :
             layer.outputs[stream] = layer.outputs[stream] * self.mask
 
+#### NOT STREAMIFIED YET ##########
 class RandomMask(Decorator_ABC):
     """
     This decorator takes a list of masks and will randomly apply them to the outputs of the layer it runs.
@@ -96,7 +92,7 @@ class BinomialDropout(Decorator_ABC):
         rnd = tt.shared_randomstreams.RandomStreams()
         mask = rnd.binomial(n = 1, p = (1-self.ratio), size = outputs.shape)
         # cast to stay in GPU float limit
-        mask = iCast(mask)
+        mask = MUSE.iCast_theano(mask)
         return (outputs * mask)
 
     def run(self, layer) :

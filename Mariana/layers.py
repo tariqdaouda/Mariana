@@ -229,10 +229,6 @@ class Layer_ABC(object) :
         except AttributeError :
                 raise AttributeError("Attribute 'outputs' of layer '%s' is not defined. This attribute defines the train output of the layer, usually with regularizations" % self.name)
 
-    # def pushLearningScenario(self, sc) :
-    #     """Adds a new top optimizer"""
-    #     self.abstractions["scenari"].insert(0, sc)
-
     def _initA(self) :
         """Initialize the essential attributes of the layer such as: outputs and activations. This function is automatically called before train/test etc..."""
         if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.network.inConnections[self]) ) :
@@ -311,11 +307,6 @@ class Layer_ABC(object) :
                 pass
 
         object.__setattr__(self, k, v)
-    
-    # def __getattr__(self, k) :
-    #     net=object.__getattr__(self, "network")
-    #     net.init()
-    #     return object.__getattr__(self, k)
 
 class Input(Layer_ABC) :
     "An input layer"

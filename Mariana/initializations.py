@@ -15,8 +15,6 @@ __all__= [
     "SingleValue",
     "Normal",
     "Uniform",
-    "Sparse",
-    "Orthogonal",
     "FanInFanOut_ABC",
     "GlorotNormal",
     "GlorotUniform",
@@ -42,7 +40,7 @@ class Initialization_ABC(Abstraction_ABC) :
                 raise ValueError("Initialization has a wrong shape: %s, parameter shape is: %s " % (v.shape, layer.getParameterShape(self.getHP("parameter"))))
             v = MUSE.iCast_numpy(self.run(layer.getParameterShape(self.getHP("parameter"))))
             v = MUSE.sparsify(v, sparsity)
-            layer.initParameter( self.getHP("parameter"),  theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
+            layer.initParameter( self.getHP("parameter"), theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
         except Exception as e:
             message = "%s was *NOT* initialized using %s. Because: %s" % (layer.name, self.__class__.__name__, e.message)
             layer.network.logLayerEvent(layer, message, self.getHyperParameters())
@@ -80,7 +78,7 @@ class SingleValue(Initialization_ABC) :
 class Normal(Initialization_ABC):
     """
     Initializes using a random normal distribution.
-    **Small** uses my personal initialization than I find works very well in most cases with a uniform distribution, simply divides by the sum of the weights
+    **Small** uses my personal initialization than I find works very well in most cases with a uniform distribution, simply divides by the sum of the weights.
     """
     def __init__(self, std, mean, small=False):
         super(Normal, self).__init__()
@@ -159,7 +157,7 @@ class GlorotNormal(FanInFanOut_ABC) :
     Uses lasagne as backend.
     """ 
     def run(self, shape) :
-        return LI.GlorotNormal(gain = self.gain)
+        return LI.GlorotNormal(gain = self.gain).sample()
 
 class GlorotUniform(FanInFanOut_ABC) :
     """
@@ -167,7 +165,7 @@ class GlorotUniform(FanInFanOut_ABC) :
     Uses lasagne as backend.
     """ 
     def run(self, shape) :
-        return LI.GlorotUniform(gain = self.gain)
+        return LI.GlorotUniform(gain = self.gain).sample()
 
 class HeNormal(FanInFanOut_ABC) :
     """
@@ -176,7 +174,7 @@ class HeNormal(FanInFanOut_ABC) :
     On a Normal distribution, Uses lasagne as backend.
     """ 
     def run(self, shape) :
-        return LI.HeNormal(gain = self.gain)
+        return LI.HeNormal(gain = self.gain).sample()
 
 class HeUniform(FanInFanOut_ABC) :
     """
@@ -185,4 +183,4 @@ class HeUniform(FanInFanOut_ABC) :
     On a Uniform distribution, Uses lasagne as backend.
     """ 
     def run(self, shape) :
-        return LI.HeUniform(gain = self.gain)
+        return LI.HeUniform(gain = self.gain).sample()
