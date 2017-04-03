@@ -39,8 +39,6 @@ class Updates(object):
     def __init__(self, output_layer, stream):
         super(Updates, self).__init__()
         self.output_layers = [output_layer]
-        # self.layers = [output_layer]
-        # self.layers.extend(output_layer.dependencies.values())
         self.loss = 0
         self.stream = stream
         self.store = UpdateStore()
@@ -48,35 +46,44 @@ class Updates(object):
     def add(self, updates) :
         if updates :
             self.output_layers.extend(updates.output_layers)
-            # self.layers.extend(updates.layers)
             self.loss += updates.loss
 
     def compile(self) :
+        # def _apply(sc, store, layer, entity, param_name, cute_name, loss) :
+        #     res = sc.apply(layer, layer, param_name, loss)
+        #     if res is not None :
+        #         gup = res.parameter
+        #         store.add(gup.parameter, gup.update, gup.gradient, cute_name)
+        #         for gup_co in res.coParameters :
+        #             cute_name2 = "%s.%s" %(cute_name, gup_co.name)
+        #             store.add(gup_co.parameter, gup_co.update, gup_co.gradient, cute_name2)
         def _apply(sc, store, layer, entity, param_name, cute_name, loss) :
-            res = sc.apply(layer, layer, param_name, loss)
-            if res is not None :
-                gup = res.parameter
-                store.add(gup.parameter, gup.update, gup.gradient, cute_name)
-                for gup_co in res.coParameters :
-                    cute_name2 = "%s.%s" %(cute_name, gup_co.name)
-                    store.add(gup_co.parameter, gup_co.update, gup_co.gradient, cute_name2)
+            try :
+                previous = store[cute_name]
+            except KeyError :
+                previous = None
 
+            store[cute_name] = sc.apply(layer, entity, param_name, loss, previous)
+            
         self.loss = 0
         optimizers = {}
+        tmpStore = {}
         for o in self.output_layers :
             self.loss += o.loss[self.stream]
             optimizers[o] = o.abstractions["scenari"]
             for l in o.dependencies.itervalues() :
-                try :
-                    optimizers[l].extend(o.abstractions["scenari"])
-                except KeyError :
-                    optimizers[l] = list(o.abstractions["scenari"])
+                for sc in o.abstractions["scenari"] :
+                    if sc.inheritable :
+                        try :
+                            optimizers[l].append(sc)
+                        except IndexError :
+                            optimizers[l] = [sc]
                 
         for o in self.output_layers :
             for l in o.dependencies.itervalues() :
                 optimizers[l].extend(l.abstractions["scenari"])
                 for reg in l.abstractions["regularizations"] :
-                    reg.apply(l, self.loss)
+                    self.loss = reg.apply(l, self.loss)
 
         scCheck = set()
         for layer, scenari in optimizers.iteritems() :
@@ -89,7 +96,7 @@ class Updates(object):
 
                 for k in layer.getParameterNames() :
                     pname = "%s.%s" %(layer.name, k)
-                    _apply(sc, self.store, layer, layer, k, pname, self.loss)
+                    _apply(sc, tmpStore, layer, layer, k, pname, self.loss)
 
                 for abst in layer.abstractions :
                     try:
@@ -99,7 +106,15 @@ class Updates(object):
                     else :
                         for k in names:
                             pname = "%s.%s.%s" %(layer.name, abst.__class__.__name__, k)
-                            _apply(sc, self.store, layer, abst, k, pname, self.loss)
+                            _apply(sc, tmpStore, layer, abst, k, pname, self.loss)
+
+        for cute_name, res in tmpStore.iteritems() :
+            if res is not None :
+                gup = res.parameter
+                store.add(gup.parameter, gup.update, gup.gradient, cute_name)
+                for gup_co in res.coParameters :
+                    cute_name2 = "%s.%s" %(cute_name, gup_co.name)
+                    store.add(gup_co.parameter, gup_co.update, gup_co.gradient, cute_name)
 
 class TheanoFunctionHandle(object) :
     """
@@ -130,7 +145,6 @@ class TheanoFunctionHandle(object) :
 
         self.name = name
         self.update = update
-        # self.updates = None
         self.layer = layer
         self.stream = stream
         self.theano_kwargs = theano_kwargs
@@ -158,7 +172,6 @@ class TheanoFunctionHandle(object) :
         elif other.__class__ is not TheanoFunctionHandle :
             raise TypeError("Added value must be another valid function")
 
-        # print self, other
         return TheanoFunction([self, other])
 
     def _develop(self) :

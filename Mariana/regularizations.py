@@ -17,15 +17,14 @@ class SingleLayerRegularizer_ABC(Abstraction_ABC) :
         
     def apply(self, layer, variable) :
         """Apply to a layer and update networks's log"""
-        hyps = {}
-        for k in self.hyperParameters :
-            hyps[k] = getattr(self, k)
 
         for s in self.streams :
             message = "%s uses %s regularization in stream: %s" % (layer.name, self.__class__.__name__, s)
-            layer.network.logLayerEvent(layer, message, hyps)
+            layer.network.logLayerEvent(layer, message, self.getHyperParameters())
             variable[s] += self.run(layer)
 
+        return variable
+        
     def run(self, layer) :
         """Returns the expression to be added to the cost"""
         raise NotImplemented("Must be implemented in child")

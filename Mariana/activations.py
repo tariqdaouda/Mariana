@@ -8,12 +8,9 @@ class Activation_ABC(Abstraction_ABC):
 
     def apply(self, layer, x) :
         """Apply to a layer and update networks's log"""
-        hyps = {}
-        for k in self.hyperParameters :
-            hyps[k] = getattr(self, k)
-
+        
         message = "%s uses activation %s" % (layer.name, self.__class__.__name__)
-        layer.network.logLayerEvent(layer, message, hyps)
+        layer.network.logLayerEvent(layer, message, self.getHyperParameters())
         for s in x.streams :
             x[s] = self.run(x[s])
 
@@ -58,12 +55,13 @@ class ReLU(Activation_ABC):
     .. math::
 
         max(0, x)"""
-    def __init__(self):
+    def __init__(self, leakiness=0):
         Activation_ABC.__init__(self)
-                
+        self.setHP("leakiness", leakiness)
+
     def run(self, x):
-        #do not replace by theano's relu. It works bad with nets that have multiple outputs
-        return tt.maximum(0., x)
+        tt.nnet.relu(x, alpha=self.getHP("temperature"))
+        # return tt.maximum(0., x)
 
 class Softmax(Activation_ABC):
     """Softmax to get a probabilistic output
@@ -74,9 +72,8 @@ class Softmax(Activation_ABC):
     """
     def __init__(self, scale = 1, temperature = 1):
         Activation_ABC.__init__(self)
-        self.hyperParameters = ["temperature"]
-        self.temperature = temperature
-        self.scale = scale
+        self.setHP("temperature")
+        self.setHP("scale")
 
     def run(self, x):
-        return self.scale * tt.nnet.softmax(x/self.temperature)
+        return self.getHP("scale") * tt.nnet.softmax(x/self.getHP("temperature"))

@@ -3,7 +3,37 @@ import theano.tensor as tt
 from Mariana.abstraction import Abstraction_ABC
 from collections import OrderedDict
 
-__all__ = ["LearningScenario_ABC", "ParameterGradUpdates", "OptimizerResult", "Fixed", "GradientDescent"]
+__all__ = ["LearningScenario_ABC", "ParameterGradUpdates", "OptimizerFreeResults", "OptimizerResult", "Fixed", "GradientDescent"]
+
+class ConflictResolve(object):
+    """In Mariana scenari can be chained. The children of that class defines what to do in case of conflict"""
+    def __init__(self, previous, current, warning=False):
+        super(ConflictResolve, self).__init__()
+        self.previous = previous
+        self.current = current
+        self.warning
+
+    def apply(self) :
+        if self.warning :
+            raise Warning("Resolving conflict between scenari usingL %s" % self.__class__.__name__)
+
+    def resolve(self) :
+        raise NotImplemented("Should be implemented in child")
+
+class Overwrite(ConflictResolve):
+    """Overwrite the previous value"""
+    def resolve(self) :
+        return self.current
+
+class Ignore(ConflictResolve):
+    """Ignore the update and keep the previous value"""
+    def resolve(self) :
+        return self.previous
+
+class Die(ConflictResolve):
+    """No conflic resolve, crashes everything"""
+    def resolve(self) :
+        raise ValueError("This learning scenario is incompatible with previous ones")
 
 class ParameterGradUpdates(object):
     """docstring for ParameterGradUpdates"""
@@ -15,7 +45,7 @@ class ParameterGradUpdates(object):
         self.gradient = gradient
         
 class OptimizerFreeResults(object):
-    """use this a return object for an optimizer"""
+    """Parameters of a scenario that need to be updated"""
     def __init__(self):
         super(OptimizerFreeResults, self).__init__()
         self.parameters = []
@@ -26,9 +56,9 @@ class OptimizerFreeResults(object):
 
 class OptimizerResult(object):
     """use this a return object for an optimizer"""
-    def __init__(self, parameter, update, gradient):
+    def __init__(self, parameter, parameterName, update, gradient):
         super(OptimizerResult, self).__init__()
-        self.parameter = ParameterGradUpdates(parameter, "parameter", update, gradient)
+        self.parameter = ParameterGradUpdates(parameter, "parameterName", update, gradient)
         self.coParameters = []
    
     def addCoParameter(self, parameter, name, update, gradient) :
@@ -37,24 +67,25 @@ class OptimizerResult(object):
         
 class LearningScenario_ABC(Abstraction_ABC):
     """
-    This is the interface all scenari must expose. In order for the trainer/recorder to know which attributes are hyper-parameters,
-    this class must also include a list attribute **self.hyperParameters** containing the names of all attributes that must be considered
-    as hyper-parameters.
+    This is the interface all scenari must expose.
     """
-    def __init__(self, applyTo=None, *args, **kwargs) :
+    def __init__(self, applyTo=None, inheritable=True, conflictResolve=Die(), *args, **kwargs) :
         super(Abstraction_ABC, self).__init__(*args, **kwargs)
         if applyTo :
             self.applyTo = set(applyTo)
+            self.setHP("applyTo", applyTo)
         else :
             self.applyTo = applyTo
 
+        self.inheritable = inheritable
+        self.conflictResolve = conflictResolve
         self.freeParameters = OptimizerFreeResults()
-        self.hyperParameters = {
-        	"applyTo": applyTo
-        }
 
-    def apply(self, layer, entity, paramName, loss) :
+    def apply(self, layer, entity, paramName, loss, previous=None) :
         """Apply to a layer and update networks's log"""
+
+        if self.applyTo is not None and paramName not in self.applyTo :
+            return None
         
         message = "%s uses optimizer %s of layer %s" % (entity, self.__class__.__name__, layer.name)
         layer.network.logLayerEvent(layer, message, self.hyperParameters)
@@ -64,19 +95,19 @@ class LearningScenario_ABC(Abstraction_ABC):
         except :
             raise KeyError("%s has no parameter %s"%(entity, paramName))
 
-        if self.applyTo is not None and paramName not in self.applyTo :
-            return None
+        v = self.run(param, loss, more={"layer": layer, "paramName": paramName, "previous": previous, "entity": entity})
+        if previous :
+            return self.conflictResolve.apply(previous, v)
+        return v
 
-        return self.run(param, loss, layer, paramName)
-
-    def run(self, param, loss, layer, paramName) :
+    def run(self, param, loss, more={}) :
         """return the updates for the parameters of layer. Must be implemented in child"""
         raise NotImplemented("Must be implemented in child")
 
 class Fixed(LearningScenario_ABC):
     "No learning, the layer weights stay fixed"
-    def __init__(self, applyTo=None, **kwargs):
-       super(Fixed, self).__init__(applyTo, **kwargs)
+    def __init__(self, applyTo=None, inheritable=False, conflictResolve=Overwrite(), **kwargs):
+       super(Fixed, self).__init__(applyTo, inheritable, conflictResolve, **kwargs)
         
     def run(self, param, *args, **kwargs) :
         ret = OptimizerResult(param, None, None)
@@ -84,21 +115,22 @@ class Fixed(LearningScenario_ABC):
 
 class GradientDescent(LearningScenario_ABC):
     "The GradientDescent scenario has a fixed learning rate."
-    def __init__(self, lr, momentum = 0, reverse=False, **kwargs):
+    def __init__(self, lr, momentum=0, reverse=False, **kwargs):
+        """
+        use reverse = True for gradient ascent.
+        """
         super(GradientDescent, self).__init__(**kwargs)
         
-        self.addHyperParameters({
+        self.addHyperParameter({
         	"lr": lr,
         	"momentum": momentum,
         	"reverse": reverse
         })
         
-        self.parameters = {}
-
-    def run(self, param, loss, layer, paramName) :
+    def run(self, param, loss, more) :
         if self.getHP("momentum") > 0 :
             gparam = tt.grad(loss, param)
-            momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable, name="momentum.%s.%s" % (layer.name, paramName))
+            momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable, name="momentum.%s" % (more["paramName"]))
             
             param_update = self.getHP("momentum") * momentum_param + (1-self.hps["momentum"])*gparam
             
@@ -107,7 +139,7 @@ class GradientDescent(LearningScenario_ABC):
             else :
                 momentum_update = param - self.getHP("lr") * momentum_param
                     
-            ret = OptimizerResult(param, param_update, gparam)
+            ret = OptimizerResult(param, paramName, param_update, gparam)
             ret.addCoParameter(momentum_param, "momentum", momentum_update, None)
         else :
             gparam = tt.grad(loss, param)
@@ -115,6 +147,6 @@ class GradientDescent(LearningScenario_ABC):
                 update = param + self.getHP("lr") * gparam
             else :
                 update = param - self.getHP("lr") * gparam
-            ret = OptimizerResult(param, update, gparam)
+            ret = OptimizerResult(param, paramName, update, gparam)
 
         return ret

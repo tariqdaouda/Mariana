@@ -9,40 +9,51 @@ class Cost_ABC(Abstraction_ABC) :
     this class must also include a list attribute **self.hyperParameters** containing the names of all attributes that must be considered
     as hyper-parameters."""
 
-    def apply(self, layer, targets, outputs, purpose) :
+    def __init__(self, reverse=False, *args, **kwargs) :
+        """use reverse = True, to have the opposite of cost"""
+        super(Abstraction_ABC, self).__init__(*args, **kwargs)
+        self.hyperParameters = {
+            "reverse": reverse
+        }
+
+    def apply(self, layer, targets, outputs) :
         """Apply to a layer and update networks's log. Purpose is supposed to be a sting such as 'train' or 'test'"""
         hyps = {}
         for k in self.hyperParameters :
             hyps[k] = getattr(self, k)
         
-        message = "%s uses cost %s for %s" % (layer.name, self.__class__.__name__, purpose)
+        message = "%s uses cost %s" % (layer.name, self.__class__.__name__)
         layer.network.logLayerEvent(layer, message, hyps)
-        return self.costFct(targets, outputs)
 
-    def costFct(self, targets, outputs) :
+        if self.reverse :
+            return -self.run(targets, outputs)
+        else :
+            return self.run(targets, outputs)
+
+    def run(self, targets, outputs) :
         """The cost function. Must be implemented in child"""
         raise NotImplemented("Must be implemented in child")
 
 class Null(Cost_ABC) :
     """No cost at all"""
-    def costFct(self, targets, outputs) :
+    def run(self, targets, outputs) :
         return tt.sum(outputs*0 + targets*0)
 
 class NegativeLogLikelihood(Cost_ABC) :
     """For a probalistic output, works great with a softmax output layer"""
-    def costFct(self, targets, outputs) :
+    def run(self, targets, outputs) :
         cost = -tt.mean(tt.log(outputs)[tt.arange(targets.shape[0]), targets])
         return cost
 
 class MeanSquaredError(Cost_ABC) :
     """The all time classic"""
-    def costFct(self, targets, outputs) :
+    def run(self, targets, outputs) :
         cost = tt.mean((outputs - targets) ** 2)
         return cost
 
 class CategoricalCrossEntropy(Cost_ABC) :
     """Returns the average number of bits needed to identify an event."""
-    def costFct(self, targets, outputs) :
+    def run(self, targets, outputs) :
         cost = tt.mean( tt.nnet.categorical_crossentropy(outputs, targets) )
         return cost
         
@@ -52,6 +63,6 @@ class CrossEntropy(CategoricalCrossEntropy) :
 
 class BinaryCrossEntropy(Cost_ABC) :
     """Use this one for binary data"""
-    def costFct(self, targets, outputs) :
+    def run(self, targets, outputs) :
         cost = tt.mean( tt.nnet.binary_crossentropy(outputs, targets) )
         return cost

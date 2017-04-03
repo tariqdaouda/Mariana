@@ -2,18 +2,24 @@ import theano
 
 __all__ = ["Abstraction_ABC"]
 
+        
 class Abstraction_ABC(object):
     """
     This class represents a layer modifier. This class must includes a list attribute **self.hyperParameters** containing the names of all attributes that must be considered
     as hyper-parameters.
     """
     def __init__(self, *args, **kwargs):
+        super(Abstraction_ABC, self).__init__()
         self.hyperParameters = {}
         self.parameters = {}
 
     def addHyperParameters(self, dct) :
         """adds to the list of hyper params, dct must be a dict"""
         self.hyperParameters.update(dct)
+    
+    def getHyperParameters(self) :
+        """return a dictionary of thee hyper param"""
+        return self.hyperParameters
 
     def getHyperParameter(self, k) :
         """return the value of a hyper param"""
@@ -25,7 +31,7 @@ class Abstraction_ABC(object):
 
     def setHyperParameter(self, k, v) :
         """set the value of a hyper param"""
-        self.hyperParameters[k]
+        self.hyperParameters[k] = v
 
     def setHP(self, k, v) :
         """short hand for setHyperParameter"""
@@ -71,6 +77,5 @@ class Abstraction_ABC(object):
     #         res["hyperParameters"][h] = getattr(self, h)
         
     #     return res
-
     def __repr__(self) :
         return "< %s: %s >" % (self.__class__.__name__, self.hyperParameters)

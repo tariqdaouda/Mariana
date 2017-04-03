@@ -14,22 +14,16 @@ def iCast(thing) :
         return tt.cast(thing, theano.config.floatX)
 
 class Decorator_ABC(Abstraction_ABC) :
-    """A decorator is a modifier that is applied on a layer. They are always the last the abstraction to be applied and they can transform a layer in anyway they want."""
+    """A decorator is a modifier that is applied on a layer's output. They are always the last the abstraction to be applied."""
 
-    def __call__(self, **kwargs) :
-        self.decorate(**kwargs)
-
-    def apply(self, layer) :
+    def apply(self, layer, stream) :
         """Apply to a layer and update networks's log"""
-        hyps = {}
-        for k in self.hyperParameters :
-            hyps[k] = getattr(self, k)
+        
+        message = "%s is decorated by %s on stream %s" % (layer.name, self.__class__.__name__, stream)
+        layer.network.logLayerEvent(layer, message, self.getHyperParameters())
+        return self.run(layer)
 
-        message = "%s is decorated by %s" % (layer.name, self.__class__.__name__)
-        layer.network.logLayerEvent(layer, message, hyps)
-        return self.decorate(layer)
-
-    def decorate(self, layer) :
+    def run(self, layer, stream) :
         """The function that all decorator_ABCs must implement"""
         raise NotImplemented("This one should be implemented in child")
 
@@ -46,23 +40,19 @@ class Mask(Decorator_ABC):
     :param array/list mask: It should have the same dimensions as the layer's outputs.
 
     """
-    def __init__(self, mask, onTrain=True, onTest=False):
+    def __init__(self, mask, streams=["train"]):
         Decorator_ABC.__init__(self)
         self.mask = tt.cast(mask, theano.config.floatX)
-        self.onTrain = onTrain
-        self.onTest = onTest
-        self.hyperParameters.extend(["onTrain", "onTest"])
+        self.streams = set(self.streams)
+        self.setHP("streams", streams)
 
-    def decorate(self, layer) :
-        if self.onTrain :
-            layer.outputs["train"] = layer.outputs["train"] * self.mask
-        
-        if self.onTest :
-            layer.outputs["test"] = layer.outputs["test"] * self.mask
+    def run(self, layer, stream) :
+        if stream in self.streams :
+            layer.outputs[stream] = layer.outputs[stream] * self.mask
 
 class RandomMask(Decorator_ABC):
     """
-    This decorator takes a list of masks and will randomly apply them to the outputs of the layer it decorates.
+    This decorator takes a list of masks and will randomly apply them to the outputs of the layer it runs.
     Could be used as a fast approximation for dropout. 
     """
     def __init__(self, masks, onTrain=True, onTest=False, *args, **kwargs):
@@ -75,7 +65,7 @@ class RandomMask(Decorator_ABC):
             self.masks = theano.shared(numpy.asarray(masks, dtype=theano.config.floatX))
             self.hyperParameters.extend([])
 
-    def decorate(self, layer) :
+    def run(self, layer) :
         if self.nbMasks > 0 :
             rnd = tt.shared_randomstreams.RandomStreams()
             maskId = rnd.random_integers(low=0, high=self.nbMasks-1, ndim=1)
@@ -100,7 +90,7 @@ class BinomialDropout(Decorator_ABC):
         self.onTest = onTest
         self.hyperParameters.extend(["ratio", "onTrain", "onTest"])
 
-    def _decorate(self, outputs) :
+    def _run(self, outputs) :
         if self.ratio <= 0 :
             return outputs
         rnd = tt.shared_randomstreams.RandomStreams()
@@ -109,12 +99,12 @@ class BinomialDropout(Decorator_ABC):
         mask = iCast(mask)
         return (outputs * mask)
 
-    def decorate(self, layer) :
+    def run(self, layer) :
         if self.onTrain :
-            layer.outputs["train"] = self._decorate(layer.outputs["train"])
+            layer.outputs["train"] = self._run(layer.outputs["train"])
         
         if self.onTest :
-            layer.outputs["test"] = self._decorate(layer.outputs["test"])
+            layer.outputs["test"] = self._run(layer.outputs["test"])
 
 class Center(Decorator_ABC) :
     """Centers the outputs by substracting the mean"""
@@ -124,7 +114,7 @@ class Center(Decorator_ABC) :
         self.onTest = onTest
         self.hyperParameters.extend(["onTrain", "onTest"])
 
-    def decorate(self, layer) :
+    def run(self, layer) :
         if self.onTrain :
             layer.outputs["train"] = layer.outputs["train"]-tt.mean(layer.outputs["train"])
         if self.onTest :
@@ -144,7 +134,7 @@ class Normalize(Decorator_ABC) :
         self.onTest = onTest
         self.hyperParameters.extend(["onTrain", "onTest", "epsilon"])
 
-    def decorate(self, layer) :
+    def run(self, layer) :
         if self.onTrain :
             std = tt.sqrt( tt.var(layer.outputs["train"]) + self.espilon )
             layer.outputs["train"] = ( layer.outputs["train"]-tt.mean(layer.output) / std )
@@ -187,7 +177,7 @@ class BatchNormalization_deprecated_to_become_layer(Decorator_ABC):
     def getParameterShape(self, **kwargs) :
         return self.paramShape
 
-    def decorate(self, layer) :
+    def run(self, layer) :
         if not hasattr(layer, "batchnorm_W") or not hasattr(layer, "batchnorm_b") :
             self.paramShape = layer.getOutputShape()#(layer.nbOutputs, )
             self.WInitialization.initialize(self)
@@ -219,7 +209,7 @@ class Clip(Decorator_ABC):
         self.onTest = onTest
         self.hyperParameters.extend(["onTrain", "onTest"])
         
-    def decorate(self, layer) :
+    def run(self, layer) :
         if self.onTrain :
             layer.outputs["train"] = layer.outputs["train"].clip(self.lower, self.upper)
         if self.onTest :
@@ -236,17 +226,17 @@ class AdditiveGaussianNoise(Decorator_ABC):
         self.onTest = onTest
         Decorator_ABC.__init__(self, *args, **kwargs)
         
-    def _decorate(self, outputs, std) :
+    def _run(self, outputs, std) :
         rnd = tt.shared_randomstreams.RandomStreams()
         randomPick = rnd.normal(size = outputs.shape, avg=self.avg, std=std)
         return (outputs + randomPick)
     
-    def decorate(self, layer) :
+    def run(self, layer) :
         if self.std > 0 :
             if self.onTrain :
-                layer.outputs["train"] = self._decorate(layer.outputs["train"], self.std)
+                layer.outputs["train"] = self._run(layer.outputs["train"], self.std)
             if self.onTest :
-                layer.outputs["test"] = self._decorate(layer.outputs["test"], self.std)
+                layer.outputs["test"] = self._run(layer.outputs["test"], self.std)
 
 class MultiplicativeGaussianNoise(Decorator_ABC):
     """Multiply gaussian noise to the output of the layer"""
@@ -259,14 +249,14 @@ class MultiplicativeGaussianNoise(Decorator_ABC):
         self.onTest = onTest
         Decorator_ABC.__init__(self, *args, **kwargs)
         
-    def _decorate(self, outputs, std) :
+    def _run(self, outputs, std) :
         rnd = tt.shared_randomstreams.RandomStreams()
         randomPick = rnd.normal(size = outputs.shape, avg=self.avg, std=std)
         return (outputs * randomPick)
 
-    def decorate(self, layer) :
+    def run(self, layer) :
         if self.std > 0 :
             if self.onTrain :
-                layer.outputs["train"] = self._decorate(layer.outputs["train"], self.std)
+                layer.outputs["train"] = self._run(layer.outputs["train"], self.std)
             if self.onTest :
-                layer.outputs["test"] = self._decorate(layer.outputs["test"], self.std)
+                layer.outputs["test"] = self._run(layer.outputs["test"], self.std)
