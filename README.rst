@@ -12,21 +12,46 @@
 MARIANA: The Cutest Deep Learning Framework
 =============================================
 
-As neural nets increase in complexity they also become harder to write and harder to teach. Our hypothesis is that these difficulties stem from the absence of a language that elegantly describe neural networks. Mariana (named after the deepest place on earth, the Mariana trench) is an attempt to create such a language within python. That being said, you can also call it an *Extendable Python Machine Learning Framework build on top of Theano that focuses on ease of use*.
+Mariana's goal is to create a **powerful language** through which complex deep neural networks can be meaningfully expressed and easily manipulated. It's here to empower **researchers**, **teachers** and **students**, while greatly facilitating **AI technology transfer** into other domains.
 
 **It looks like this:**
 
 .. code:: python
 
+	import Mariana.layers as ML
+	import Mariana.scenari as MS
+	import Mariana.costs as MC
+	import Mariana.activations as MA
+	import Mariana.regularizations as MR
+
+	import Mariana.settings as MSET
+
+	MSET.VERBOSE = False
+
 	ls = MS.GradientDescent(lr = 0.01)
 	cost = MC.NegativeLogLikelihood()
 
-	inp = ML.Input(28*28, name = "inputLayer")
-	h1 = ML.Hidden(300, activation = MA.ReLU(), regularizations = [ MR.L1(0.0001) ])
-	h2 = ML.Hidden(300, activation = MA.ReLU(), regularizations = [ MR.L1(0.0001) ])
-	o = ML.SoftmaxClassifier(9, learningScenario = ls, costObject = cost)
+	inp = ML.Input(28*28, name = "InputLayer")
+	h1 = ML.Hidden(300, activation = MA.ReLU(), name = "Hidden1", regularizations = [ MR.L1(0.0001) ])
+	h2 = ML.Hidden(300, activation = MA.ReLU(), name = "Hidden2", regularizations = [ MR.L1(0.0001) ])
+	o = ML.SoftmaxClassifier(10, learningScenario = ls, costObject = cost, name = "Probabilities")
 
-	MLP = inp > h1 > h2 > o
+	#A composite for concatenating outputs
+	concat = ML.Composite(name = "SkipConnection")
+
+	#Connection layers
+	inp > h1 > h2
+	inp > concat
+	h2 > concat
+
+	MLP_skip = concat > o
+
+	#Visualizing
+	MLP_skip.saveHTML("mySkipMLP")
+
+It also supports **multiple inputs, outputs, forks** and they work exactly like this example with a **skip**. Just create layers and connect them as you wich (avoid recurrences though, they are not yet supported). You can then export your complex creations into neat HTML files and use them to awe strike your collegues. See further down to discover how you can train your creations.
+
+.. image:: http://bioinfo.iric.ca/~daoudat/Mariana/_static/MLP_skip.png
 
 ph'nglui mglw'nafh Cthulhu R'lyeh wgah'nagl fhtagn
 
@@ -166,7 +191,7 @@ Training, Testing and Propagating:
 	ae = inp > h > o
 
 	#tied weights, we need to force the initialisation of the weight first
-	ae.init()
+	ae.initParameters()
 	o.W = h.W.T
 
 Another way is to use the Autoencode layer as output::
@@ -245,18 +270,6 @@ Mariana allows you to clone layers so you can train a model, extract one of it's
 .. code:: python
 
   h2 = h.clone()
-
-You can also transform an output layer into a hidden layer, that you can include afterwards in an other model.
-
-.. code:: python
-
-  h3 = o.toHidden()
-
-And a hidden layer to an output layer using:
-
-.. code:: python
-
-  o = h.toOutput(ML.Regression, costObject = cost, learningScenario = ls)
 
 Visualizing networks
 ====================
