@@ -74,6 +74,7 @@ class Series(Dataset_ABC) :
                 if len(v) != self.length :
                     raise ValueError("All lists must have the same length, previous list had a length of '%s', list '%s' has a length of '%s" % (self.length, k, len(v)))
             self.lists[k] = numpy.asarray(v)
+        self.lists["ids"] = numpy.arange(self.length)
 
     def reroll(self) :
         """Does nothing"""
