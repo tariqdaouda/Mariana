@@ -354,7 +354,8 @@ class Embedding(Layer_ABC) :
         if size is not None :
             self.nbInputs=size
             self.nbOutputs=self.nbDimentions*self.nbInputs    
- 
+        print self.nbOutputs
+        
     def _femaleConnect(self, layer) :
         self.types=[MSET.TYPE_HIDDEN_LAYER]
         if not hasattr(self, "nbInputs") or self.nbInputs is None :
