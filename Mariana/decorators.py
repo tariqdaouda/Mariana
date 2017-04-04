@@ -184,7 +184,7 @@ class BatchNormalization(Decorator_ABC):
     def initParameter(self, parameter, value) :
         setattr(self, parameter, value)
 
-    def getParameterShape(self, **kwargs) :
+    def getParameterShape(self, *args, **kwargs) :
         return self.paramShape
 
     def decorate(self, layer) :
