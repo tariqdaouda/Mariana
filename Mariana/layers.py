@@ -327,7 +327,7 @@ class Embedding(Layer_ABC) :
     """Embeddings are learned representations of the inputs that are much loved in NLP.
     This layer will take care of creating the embeddings and optimizing them. It can either be used as an input layer or as hidden layer"""
 
-    def __init__(self, nbDimentions, dictSize, zeroForNull=False, size=None, initializations=[MI.SmallUniformEmbeddings()], **kwargs) :
+    def __init__(self, nbDimentions, dictSize, size=None, zeroForNull=False, initializations=[MI.SmallUniformEmbeddings()], **kwargs) :
         """
         :param int nbDimentions: the number of dimentions in wich to encode each word.
         :param int dictSize: the total number of words.
@@ -354,7 +354,6 @@ class Embedding(Layer_ABC) :
         if size is not None :
             self.nbInputs=size
             self.nbOutputs=self.nbDimentions*self.nbInputs    
-        print self.nbOutputs
         
     def _femaleConnect(self, layer) :
         self.types=[MSET.TYPE_HIDDEN_LAYER]
