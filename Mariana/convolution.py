@@ -296,6 +296,11 @@ class Convolution2D(ConvLayer_ABC, ML.Hidden) :
         self.pooler = pooler
         self.nbFlatOutputs = None
 
+        self.parameters = {
+            "W": None,
+            "b": None
+        }
+
     def _femaleConnect(self, layer) :
         try :
             if self.nbInputChannels is None :
@@ -345,14 +350,14 @@ class Convolution2D(ConvLayer_ABC, ML.Hidden) :
         if self.filterWidth > self.inputWidth :
             raise ValueError("Filter width for '%s' cannot be bigger than its input width: '%s' > '%s'" % (self.name, self.filterWidth, self.inputWidth))
 
-        self.convolution = conv.conv2d( input = self.inputs, filters = self.W, filter_shape = self.getParameterShape('W') )
+        self.convolution = conv.conv2d( input = self.inputs, filters = self.parameters["W"], filter_shape = self.getParameterShape('W') )
         self.pooled = self.pooler.apply(self)
         self.nbFlatOutputs = self.nbChannels * self.height * self.width
 
-        if self.b is None:
+        if self.parameters["b"] is None:
             MI.ZeroBias().apply(self)
     
-        self.b = self.b.dimshuffle('x', 0, 'x', 'x')
+        self.parameters["b"] = self.parameters["b"].dimshuffle('x', 0, 'x', 'x')
 
-        self.outputs = self.pooled + self.b
-        self.testOutputs = self.pooled + self.b
+        self.outputs = self.pooled + self.parameters["b"]
+        self.testOutputs = self.pooled + self.parameters["b"]

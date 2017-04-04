@@ -24,18 +24,15 @@ class Layer_ABC(object) :
         import inspect
         
         obj=super(Layer_ABC, cls).__new__(cls, *args, **kwargs)
-        argNames=inspect.getargspec(obj.__init__)[0][1:] #remove self
-
-        finalArgs={}
-        for aname, arg in zip(argNames, args) :
-            finalArgs[aname]=arg
-
+        # argNames=inspect.getargspec(obj.__init__)[0][1:] #remove self
+        
+        finalKwargs={}
         for k, v in kwargs.iteritems() :
-            finalArgs[k]=v
+            finalKwargs[k]=v
 
         obj.creationArguments={
-            "args": [], #not used, mainly here for back compatibility
-            "kwargs": finalArgs,
+            "args": args,
+            "kwargs": finalKwargs,
         }
 
         return obj
@@ -88,11 +85,13 @@ class Layer_ABC(object) :
         self._mustReset=True
         self._decorating=False
 
+        self.parameters = {}
+
     def getParameterDict(self) :
         """returns the layer's parameters as dictionary"""
         from theano.compile import SharedVariable
         res={}
-        for k, v in self.__dict__.iteritems() :
+        for k, v in self.parameters.iteritems() :
             if isinstance(v, SharedVariable) :
                 res[k]=v
         return res
@@ -117,8 +116,7 @@ class Layer_ABC(object) :
         """Returns a free layer with the same parameters."""
         creationArguments=dict(self.creationArguments["kwargs"])
         creationArguments.update(kwargs)
-        # print self, creationArguments
-        newLayer=self.__class__(**creationArguments)
+        newLayer=self.__class__(*self.creationArguments["args"], **creationArguments)
         
         for k, v in self.getParameterDict().iteritems() :
             setattr(newLayer, k, v)
@@ -153,8 +151,11 @@ class Layer_ABC(object) :
 
     def initParameter(self, parameter, value) :
         """Initialize a parameter, raise value error if already initialized"""
-        if not hasattr(self, parameter) or getattr(self, parameter) is None :
-            setattr(self, parameter, value)
+        if parameter not in self.parameters :
+            raise ValueError("Layer '%s' has no parameter '%s'. Add it to self.parameters dict and give it a None value." % (self.name, parameter) )
+            
+        if self.parameters[parameter] is None:
+            self.parameters[parameter] = value
         else :
             raise ValueError("Parameter '%s' of layer '%s' has already been initialized" % (parameter, self.name) )
 
@@ -163,7 +164,7 @@ class Layer_ABC(object) :
         if parameter not in self.getParameterDict().keys() :
             raise ValueError("Parameter '%s' has not been initialized as parameter of layer '%s'" % (parameter, self.name) )
         else :
-            setattr(self, parameter, value)
+            self.parameters[parameter] = value
 
     #theano hates abstract methods defined with a decorator
     def _setOutputs(self) :
@@ -198,13 +199,6 @@ class Layer_ABC(object) :
         # self.propagate_preAct=MWRAP.TheanoFunction("propagate_preAct", self, [("outputs", self.preactivation_outputs)], allow_input_downcast=True)
         # self.propagateTest_preAct=MWRAP.TheanoFunction("propagateTest_preAct", self, [("outputs", self.preactivation_testOutputs)], allow_input_downcast=True)
 
-    # def _setCustomTheanoFunctions(self) :
-    #     """This is where you should put the definitions of your custom theano functions. Theano functions
-    #     must be declared as self attributes using a wrappers.TheanoFunction object, cf. wrappers documentation.
-    #     This is called just before _whateverLastInit.
-    #     """
-    #     pass
-
     def _parametersSanityCheck(self) :
         "perform basic parameter checks on layers, automatically called on initialization"
         for k, v in self.getParameterDict().iteritems() :
@@ -234,26 +228,14 @@ class Layer_ABC(object) :
     def _initA(self) :
         """Initialize the essential attributes of the layer such as: outputs and activations. This function is automatically called before train/test etc..."""
         if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.network.inConnections[self]) ) :
-            # try :
             self._whateverFirstInit()
             self._parametersSanityCheck()
             self._initParameters()
             self._setOutputs()
+            self._decorate()
             self._outputsSanityCheck()
             self._activate()
-            # except Exception as e:
-                # raise e
-                # raise LayerInitException(self, e)
             
-            # self._listRegularizations()
-            # self._decorate()
-            # self._setTheanoFunctions()
-            # self._setCustomTheanoFunctions()
-            # self._whateverLastInit()
-
-            # if self.outputs is None :
-                # raise ValueError("Invalid layer '%s' has no defined outputs" % self.name)
-
             for l in self.network.outConnections[self] :
                 l._registerInput(self)
                 l._initA()
@@ -261,16 +243,10 @@ class Layer_ABC(object) :
 
     def _initB(self) :
         """Initialize the fancy attributes of the layer such as: regularizers, decorators and theano functions. This function is automatically called before train/test etc..."""
-        # try :
         self._listRegularizations()
-        self._decorate()
         self._setTheanoFunctions()
-        # self._setCustomTheanoFunctions()
         self._whateverLastInit()
-        # except Exception as e:
-            # raise
-            # raise LayerInitException(self, e)
-
+        
     def _maleConnect(self, layer) :
         """What happens to A when A > B"""
         pass
@@ -282,10 +258,9 @@ class Layer_ABC(object) :
     def connect(self, layer) :
         """Connect the layer to another one. Using the '>' operator to connect two layers actually calls this function.
         This function returns the resulting network"""
-        self.network.merge(self, layer)
-
         self._maleConnect(layer)
         layer._femaleConnect(self)
+        self.network.merge(self, layer)
 
         return self.network
 
@@ -333,34 +308,61 @@ class Layer_ABC(object) :
     #     net.init()
     #     return object.__getattr__(self, k)
 
-class Embedding(Layer_ABC) :
-    """This input layer will take care of creating the embeddings and training them. Embeddings are learned representations
-    of the inputs that are much loved in NLP."""
+class Input(Layer_ABC) :
+    "An input layer"
+    def __init__(self, size, name=None, **kwargs) :
+        super(Input, self).__init__(size, layerTypes=[MSET.TYPE_INPUT_LAYER], name=name, **kwargs)
+        self.nbInputs=size
+        self.inputs=tt.matrix(name="inp_"+self.name)
 
-    def __init__(self, size, nbDimentions, dictSize, zeroForNull=False, initializations=[MI.SmallUniformEmbeddings()], **kwargs) :
+    def _setOutputs(self) :
+        "initializes the output to be the same as the inputs"
+        self.outputs=self.inputs
+        self.testOutputs=self.inputs
+
+    def _femaleConnect(self, *args) :
+        raise ValueError("Nothing can be connected to an input layer")
+
+class Embedding(Layer_ABC) :
+    """Embeddings are learned representations of the inputs that are much loved in NLP.
+    This layer will take care of creating the embeddings and optimizing them. It can either be used as an input layer or as hidden layer"""
+
+    def __init__(self, nbDimentions, dictSize, size=None, zeroForNull=False, initializations=[MI.SmallUniformEmbeddings()], **kwargs) :
         """
-        :param int size: the size of the input vector (if your input is a sentence this should be the number of words in it).
         :param int nbDimentions: the number of dimentions in wich to encode each word.
         :param int dictSize: the total number of words.
         :param bool zeroForNull: if True the dictionnary will be augmented by one elements at te begining (index=0) whose parameters will always be vector of zeros. This can be used to selectively mask some words in the input, but keep in mind that the index for the first word is moved to one.
+        :param int size: the size of the input vector (if your input is a sentence this should be the number of words in it). You don't have to provide a value in the embedding layer is a hidden layer
         
         """
 
-        super(Embedding, self).__init__(size, layerTypes=[MSET.TYPE_INPUT_LAYER],  initializations=initializations, **kwargs)
+        super(Embedding, self).__init__(size, layerTypes=[MSET.TYPE_INPUT_LAYER], initializations=initializations, **kwargs)
 
         self.zeroForNull=zeroForNull
 
         self.dictSize=dictSize
         self.nbDimentions=nbDimentions
 
-        self.nbInputs=size
-        self.nbOutputs=self.nbDimentions*self.nbInputs
+        self.parameters={
+            "embeddings":None,
+            "fullEmbeddings":None
+        }
 
-        self.embeddings=None
-        self.fullEmbeddings=None
-
-        self.inputs=tt.imatrix(name="embInp_" + self.name)
-
+        self.inputs=None
+        self.testInputs=None
+        
+        if size is not None :
+            self.nbInputs=size
+            self.nbOutputs=self.nbDimentions*self.nbInputs    
+        
+    def _femaleConnect(self, layer) :
+        self.types=[MSET.TYPE_HIDDEN_LAYER]
+        if not hasattr(self, "nbInputs") or self.nbInputs is None :
+            self.nbInputs=layer.nbOutputs
+            self.nbOutputs=self.nbDimentions*self.nbInputs
+        elif self.nbInputs != layer.nbOutputs :
+            raise ValueError("All layers connected to '%s' must have the same number of outputs. Got: %s, previously had: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
+    
     def getParameterShape(self, param) :
         if param == "embeddings" :
             return (self.dictSize, self.nbDimentions)
@@ -372,47 +374,49 @@ class Embedding(Layer_ABC) :
 
         :param list idxs: if provided will return the embeddings only for those indexes
         """
-        if not self.fullEmbeddings :
+        if not self.parameters["fullEmbeddings"] :
             raise ValueError("It looks like the network has not been initialized yet. Try calling self.network.init() first.")
 
         try :
-            fct=self.fullEmbeddings.get_value
+            fct=self.parameters["fullEmbeddings"].get_value
         except AttributeError :
-            fct=self.fullEmbeddings.eval
+            fct=self.parameters["fullEmbeddings"].eval
 
         if idxs :
             return fct()[idxs]
         return fct()
 
     def _setOutputs(self) :
+        if len(self.network.inConnections[self]) == 0 :
+            if self.inputs is None :
+                self.inputs=tt.imatrix(name="embInp_" + self.name)
+                self.testInputs=self.inputs
+        else :
+            for layer in self.network.inConnections[self] :
+                if layer.outputs.dtype.find("int") != 0 :
+                    outs=tt.cast(layer.outputs, dtype=MSET.INTX)
+                    testOuts=tt.cast(layer.testOutputs, dtype=MSET.INTX)
+                else :
+                    outs=layer.outputs
+                    testOuts=layer.testOutputs
+
+                if self.inputs is None :   
+                    self.inputs=outs
+                    self.testInputs=testOuts
+                else :
+                    self.inputs+=outs
+                    self.testInputs+=testOuts
+
         if self.zeroForNull :
             self.null=numpy.zeros((1, self.nbDimentions))
-            self.fullEmbeddings=tt.concatenate( [self.null, self.embeddings], axis=0 )
+            self.parameters["fullEmbeddings"]=tt.concatenate( [self.null, self.parameters["embeddings"]], axis=0)
         else :
-            self.fullEmbeddings=self.embeddings
-            del(self.embeddings)
+            self.parameters["fullEmbeddings"]=self.parameters["embeddings"]
+            del(self.parameters["embeddings"])
 
-        self.preOutputs=self.fullEmbeddings[self.inputs]
-
+        self.preOutputs=self.parameters["fullEmbeddings"][self.inputs]
         self.outputs=self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
-        self.testOutputs=self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
-
-class Input(Layer_ABC) :
-    "An input layer"
-    def __init__(self, size, name=None, **kwargs) :
-        super(Input, self).__init__(size, layerTypes=[MSET.TYPE_INPUT_LAYER], name=name, **kwargs)
-        # self.kwargs=kwargs
-        self.nbInputs=size
-
-        self.inputs=tt.matrix(name="inp_"+self.name)
-
-    def _setOutputs(self) :
-        "initializes the output to be the same as the inputs"
-        self.outputs=self.inputs
-        self.testOutputs=self.inputs
-
-    def _femaleConnect(self, *args) :
-        raise ValueError("Nothing can be connected into an input layer")
+        self.testOutputs=self.preOutputs.reshape((self.testInputs.shape[0], self.nbOutputs))
 
 class Composite(Layer_ABC):
     """A Composite layer concatenates the outputs of several other layers
@@ -427,12 +431,6 @@ class Composite(Layer_ABC):
     def __init__(self, name=None, **kwargs):
         super(Composite, self).__init__(layerTypes=[MSET.TYPE_HIDDEN_LAYER], size=None, name=name, **kwargs)
 
-    # def _femaleConnect(self, layer) :
-    #     if self.nbInputs is None :
-    #         self.nbInputs=0
-    #     self.nbInputs += layer.nbOutputs
-    #     self.nbOutputs=self.nbInputs
-    
     def _setShape(self) :
         """set the number of inputs and outputs"""
         self.nbInputs=0
@@ -475,14 +473,10 @@ class WeightBias_ABC(Layer_ABC) :
     def __init__(self, size, layerTypes, initializations=[MI.SmallUniformWeights(), MI.ZeroBias()], **kwargs) :
         super(WeightBias_ABC, self).__init__(size, layerTypes=layerTypes, initializations=initializations, **kwargs)
         self.testInputs=None
-        self.W=None
-        self.b=None
-
-    # def _femaleConnect(self, layer) :
-    #     if self.nbInputs is None :
-    #         self.nbInputs=layer.nbOutputs
-    #     elif self.nbInputs != layer.nbOutputs :
-    #         raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
+        self.parameters={
+            "W": None,
+            "b": None
+        }
 
     def _setShape(self) :
         """defines the number of inputs"""
@@ -512,13 +506,13 @@ class WeightBias_ABC(Layer_ABC) :
         self.outputs=self.inputs
         self.testOutputs=self.testInputs
         
-        if self.W is not None:
-            self.outputs=tt.dot(self.inputs, self.W)
-            self.testOutputs=tt.dot(self.testInputs, self.W)
+        if self.parameters["W"] is not None:
+            self.outputs=tt.dot(self.inputs, self.parameters["W"])
+            self.testOutputs=tt.dot(self.testInputs, self.parameters["W"])
             
-        if self.b is not None:
-            self.outputs=self.outputs + self.b
-            self.testOutputs=self.testOutputs + self.b
+        if self.parameters["b"] is not None:
+            self.outputs=self.outputs + self.parameters["b"]
+            self.testOutputs=self.testOutputs + self.parameters["b"]
 
     def getParameterShape(self, param) :
         if param == "W" :
@@ -531,14 +525,14 @@ class WeightBias_ABC(Layer_ABC) :
     def getW(self) :
         """Return the weight values"""
         try :
-            return self.W.get_value()
+            return self.parameters["W"].get_value()
         except AttributeError :
             raise ValueError("It looks like the network has not been initialized yet")
 
     def getb(self) :
         """Return the bias values"""
         try :
-            return self.b.get_value()
+            return self.parameters["b"].get_value()
         except AttributeError :
             raise ValueError("It looks like the network has not been initialized yet")
 
@@ -591,8 +585,12 @@ class Output_ABC(Layer_ABC) :
         Defines the costs to be applied.
         There are 2: the training cost (self.cost) and test cost (self.testCost), that has no regularizations.
          """
+        # print "training"
         self.cost=self.costObject.apply(self, self.targets, self.outputs, "training")
+        # theano.printing.debugprint(self.cost)
+        # print "testing"
         self.testCost=self.costObject.apply(self, self.targets, self.testOutputs, "testing")
+        # theano.printing.debugprint(self.testCost)
 
     def _applyRegularizations(self, force=False) :
         """Defines the regularizations to be added to the cost"""
@@ -652,7 +650,7 @@ class Output_ABC(Layer_ABC) :
 
         if self.cost is None or self.testCost is None :
             self._setCosts()
-
+        # theano.printing.debugprint(self.cost)
         self.train=MWRAP.TheanoFunction("train", self, [("score", self.cost)], { "targets" : self.targets }, updates=self.updates, allow_input_downcast=True)
         self.test=MWRAP.TheanoFunction("test", self, [("score", self.testCost)], { "targets" : self.targets }, allow_input_downcast=True)
 
@@ -705,16 +703,16 @@ class Output_ABC(Layer_ABC) :
 
 class WeightBiasOutput_ABC(Output_ABC, WeightBias_ABC):
     """Generic output layer with weight and bias"""
-    def __init__(self, nbOutputs, costObject, learningScenario, activation, **kwargs):
-        super(WeightBiasOutput_ABC, self).__init__(size=nbOutputs, costObject=costObject, learningScenario=learningScenario, activation=activation, **kwargs)
+    def __init__(self, size, costObject, learningScenario, activation, **kwargs):
+        super(WeightBiasOutput_ABC, self).__init__(size=size, costObject=costObject, learningScenario=learningScenario, activation=activation, **kwargs)
 
     def _setOutputs(self) :
         WeightBias_ABC._setOutputs(self)
  
 class SoftmaxClassifier(WeightBiasOutput_ABC) :
     """A softmax (probabilistic) Classifier"""
-    def __init__(self, nbOutputs, costObject, learningScenario, temperature=1, **kwargs) :
-        super(SoftmaxClassifier, self).__init__(nbOutputs, costObject=costObject, learningScenario=learningScenario, activation=MA.Softmax(temperature=temperature), **kwargs)
+    def __init__(self, size, costObject, learningScenario, temperature=1, **kwargs) :
+        super(SoftmaxClassifier, self).__init__(size, costObject=costObject, learningScenario=learningScenario, activation=MA.Softmax(temperature=temperature), **kwargs)
         self.targets=tt.ivector(name="targets_" + self.name)
 
     def _setCustomTheanoFunctions(self) :
@@ -743,8 +741,8 @@ class SoftmaxClassifier(WeightBiasOutput_ABC) :
 
 class Regression(WeightBiasOutput_ABC) :
     """For regressions, works great with a mean squared error cost"""
-    def __init__(self, nbOutputs, activation, learningScenario, costObject, name=None, **kwargs) :
-        super(Regression, self).__init__(nbOutputs, activation=activation, learningScenario=learningScenario, costObject=costObject, name=name, **kwargs)
+    def __init__(self, size, activation, learningScenario, costObject, name=None, **kwargs) :
+        super(Regression, self).__init__(size, activation=activation, learningScenario=learningScenario, costObject=costObject, name=name, **kwargs)
         self.targets=tt.matrix(name="targets")
 
 class Autoencode(WeightBiasOutput_ABC) :

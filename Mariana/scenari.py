@@ -52,6 +52,7 @@ class GradientDescent(LearningScenario_ABC):
 
  	def getUpdates(self, layer, cost) :
  		updates = []
+ 		# print layer.getParameters()
  		for param in layer.getParameters() :
 			gparam = tt.grad(cost, param)
  			updates.append((param, param - self.lr * gparam))

@@ -4,6 +4,11 @@ CHANGELOG
 1.0.3rc:
 --------
 
+* bug fix: decorators now can intelligently cast ints and floats
+* bug fix: fixed misplaced decorators
+* Brand new awesome learning encapsulation paradygm, that is way more flexible and powerfull. Arbitrary infos such as weights means, maxes etc... can now be logged and saved on any type of device.
+* Layers can have multiple types (INPUT, HIDDEN, OUTPUT)
+* Embedding layares can now be hidden layers as well as inputs
 * Null cost redefined as a function of outputs and targets
 * GeometricalEarlyStopping can now work descending (default) or ascending
 * Better abstraction of saving criteria

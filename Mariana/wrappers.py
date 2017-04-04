@@ -5,8 +5,6 @@ import sys
 import Mariana.candies as MCAN
 import Mariana.settings as MSET
 
-DEVICE_IS_GPU = (theano.config.device.find("gpu") > -1)
-
 class TheanoFunction(object) :
     """
     This class encapsulates a Theano function.
@@ -24,18 +22,17 @@ class TheanoFunction(object) :
         :param list updates: list of tuples (shared variable, symbolic expression of the update to be applied to it)
         :param dict \*\*kwargs: additional arguments to passed to the real theano function underneath
         """
-        def _bckTrckInputs(startLayer, inputs = OrderedDict(), inpSet = set()) :
-            # if len(startLayer.network.inConnections[startLayer]) == 0 :
+        def _bckTrckInputs(startLayer, inputs = OrderedDict(), inpSet = set()) :     
             if MSET.TYPE_INPUT_LAYER in startLayer.types :
                 inpOut = startLayer.inputs
                 if inpOut not in inpSet :
                     inputs[startLayer.name] = inpOut
                     inpSet.add(inpOut)
-            else :
-                for layer in startLayer.network.inConnections[startLayer] :
-                    _bckTrckInputs(layer, inputs, inpSet)
+            
+            for layer in startLayer.network.inConnections[startLayer] :
+                _bckTrckInputs(layer, inputs, inpSet)
+            
             return inputs, inpSet
-
 
         self.cast_warning_told = False
 
@@ -70,11 +67,11 @@ class TheanoFunction(object) :
                 kwUpdates[k] = v
 
         self.updates = kwUpdates.items()
-        # print self.name, self.inputs, layer
+        # print self.name, self.inputs, layer, self.output_expressions
         self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.output_expressions.values(), updates = self.updates, **kwargs)
 
         warningMsg = False
-        if DEVICE_IS_GPU :
+        if MSET.DEVICE_IS_GPU :
             device = "GPU"
             msg = "I will use the [-%s-] to run function '%s' of layer '%s'!" % (device, name, layer.name)
             if str(self.getToposort()).find("float64") > -1:

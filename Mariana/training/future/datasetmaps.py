@@ -75,7 +75,7 @@ class Series(Dataset_ABC) :
                     raise ValueError("All lists must have the same length, previous list had a length of '%s', list '%s' has a length of '%s" % (self.length, k, len(v)))
             self.lists[k] = numpy.asarray(v)
         self.lists["ids"] = numpy.arange(self.length)
-                
+
     def reroll(self) :
         """Does nothing"""
         pass
@@ -258,9 +258,14 @@ class ClassSets(Dataset_ABC) :
 class DatasetMapper(object):
     """a DatasetMapper maps Input and Output layer to the data they must receive.
     It's much less complicated than it sounds cf. doc for map(), you can ignore the others.
-    The DatasetMapper is intended to be used with a Trainer"""
+    The DatasetMapper is intended to be used with a Trainer
 
-    def __init__(self):
+    :param miniBatchSize: Size of miniBatches, use None for the complete dataset
+    :param rerollFreq:How many epochs before internally shuffling the subsets). Freq=10 means 1 reroll each 10 epochs. Use a None to prevent rerolls
+
+    """
+
+    def __init__(self, runFunctionName, miniBatchSize=None, rerollFreq=1):
         self.datasets = set()
         self.maps = {}
         self.layersByName = {}
@@ -269,21 +274,16 @@ class DatasetMapper(object):
         self.minLength = float('inf')
         self.minFullLength = float('inf')
 
-        self.commitNumber = 0
-        self.rerollFreq = 1
+        self.miniBatchSize = miniBatchSize
+        if miniBatchSize is None :
+            self.rerollFreq = None
+        else :
+            self.rerollFreq = rerollFreq
 
-    def setRerollFrequency(self, freq) :
-        """How many epochs before internally shuffling the subsets). Freq=10 means 1 reroll each 10 commits. Use a None to prevent rerolls"""
-        self.rerollFreq = freq
-
-    def commit(self) :
-        """internally shuffle subsets periodically according to reroll frequency. This is called once by the trainer at each epoch"""
-        if self.rerollFreq is None or ( self.rerollFreq > 0 and self.commitNumber%self.rerollFreq == 0 ) :
-            self.reroll()
-            if self.rerollFreq is None :
-                self.rerollFreq = -1
-            
-        self.commitNumber += 1
+        self.epochNumber = 0
+        self.batchNumber = 0
+        self.runFunctionName = runFunctionName
+        self.runFunction = None
 
     def mapInput(self, layer, setHandle) :
         """
@@ -311,6 +311,9 @@ class DatasetMapper(object):
         if setHandle.dataset.getFullLength() < self.minFullLength : 
             self.minFullLength = setHandle.dataset.getFullLength()
 
+        if self.runFunction is None :
+            self.runFunction = getattr(layer.network, self.runFunctionName)
+
     def mapOutput(self, layer, setHandle, inputName = 'targets') :
         """
         Maps an input or an output layer to Dataset's subset::
@@ -329,7 +332,7 @@ class DatasetMapper(object):
         """
         import Mariana.settings as MSET
         
-        if MSET.TYPE_OUTPUT_LAYER not in layer.types:
+        if MSET.TYPE_OUTPUT_LAYER not in layer.types :
             raise ValueError("%s is not an output layer (type: %s)" % (layer.name, layer.types))
 
         self.outputLayers.append(layer)
@@ -348,10 +351,41 @@ class DatasetMapper(object):
         if setHandle.dataset.getFullLength() < self.minFullLength : 
             self.minFullLength = setHandle.dataset.getFullLength()
 
-    def reroll(self) :
-        """rerolls all datasets"""
-        for d in self.datasets :
-            d.reroll()
+        if self.runFunction is None :
+            self.runFunction = getattr(layer.network, self.runFunctionName)
+            
+    def reroll(self, force=False) :
+        """internally shuffle subsets periodically according to reroll frequency. This is called once by the trainer at each epoch"""
+        if force or ( self.rerollFreq is not None and self.epochNumber%self.rerollFreq == 0 ):
+            for d in self.datasets :
+                d.reroll()
+
+    def next(self, layerList=None, strict=False) :
+        """returns the next batch of data
+        
+        :param list layerList: The list of layers for which to return data. If None, will return for all layers.
+        :param bool strict: Will raise a KeyError exception if a layer from the list has no associated map, default behaviour is to ignore it.
+
+        """
+        if self.miniBatchSize is None :
+            if self.batchNumber > 0 :
+                self.batchNumber = 0
+                self.epochNumber += 1
+                self.reroll()
+                raise StopIteration("That was the last batch")
+
+            batch = self.getAll(layerList, strict)
+        else :
+            try :
+                batch = self.getBatch(self.batchNumber*self.miniBatchSize, self.miniBatchSize, layerList, strict)
+            except IndexError :
+                self.batchNumber = 0
+                self.epochNumber += 1
+                self.reroll()
+                raise StopIteration("That was the last batch")
+                
+        self.batchNumber += 1
+        return batch
 
     def getBatch(self, i, size, layerList=None, strict=False) :
         """
@@ -362,7 +396,7 @@ class DatasetMapper(object):
         :param list layerList: The list of layers for which to return data. If None, will return for all layers.
         :param bool strict: Will raise a KeyError exception if a layer from the list has no associated map, default behaviour is to ignore it.
         """
-        if i > self.minLength :
+        if i >= self.minLength :
             raise IndexError("index i '%s', out of range '%s'" % (i, size))
 
         res = {}
@@ -415,4 +449,7 @@ class DatasetMapper(object):
 
     def __len__(self) :
         return self.minLength
+
+    def __iter__(self):
+        return self
 

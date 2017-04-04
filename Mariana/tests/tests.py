@@ -48,6 +48,7 @@ class MLPTests(unittest.TestCase):
         self.xor_outs = numpy.array(self.xor_outs)
         for i in xrange(1000) :
             mlp.train(o, inp = self.xor_ins, targets = self.xor_outs )
+            # print mlp.propagateTest(o, inp = self.xor_ins)
 
         return mlp
 
@@ -67,7 +68,7 @@ class MLPTests(unittest.TestCase):
         self.assertEqual(mlp.classify( o, inp = [ self.xor_ins[3] ] )["class"], 0 )
 
     # @unittest.skip("skipping")
-    def test_save_load_pickle(self) :
+    def test_save_load(self) :
         import os
         import Mariana.network as MN
 
@@ -175,12 +176,11 @@ class MLPTests(unittest.TestCase):
         self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[2] ] )["class"], 1 )
         self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[3] ] )["class"], 0 )
 
-
     # @unittest.skip("skipping")
     def test_multiinputs(self) :
         ls = MS.GradientDescent(lr = 0.1)
 
-        inpA = ML.Embedding(2, 2, 2, name="IA")
+        inpA = ML.Embedding(size=2, nbDimentions=2, dictSize=2, name="IA")
         inpB = ML.Input(2, name="IB")
         inpNexus = ML.Composite(name = "InputNexus")
 
@@ -209,7 +209,7 @@ class MLPTests(unittest.TestCase):
         ls = MS.GradientDescent(lr = 0.5)
         cost = MC.NegativeLogLikelihood()
 
-        emb = ML.Embedding(1, 2, len(data), learningScenario = ls, name="emb")
+        emb = ML.Embedding(size=1, nbDimentions=2, dictSize=len(data), learningScenario = ls, name="emb")
         o = ML.SoftmaxClassifier(2, learningScenario = MS.Fixed(), costObject = cost, name = "out")
         net = emb > o
         

@@ -3,7 +3,6 @@ import numpy
 from collections import OrderedDict
 import theano.tensor as tt
 
-import Mariana.network as MNET
 import Mariana.training.recorders as MREC
 import Mariana.training.stopcriteria as MSTOP
 import Mariana.candies as MCAN
@@ -139,7 +138,7 @@ class Trainer_ABC(object) :
             f = open(filename + ".store.pkl", "wb")
             cPickle.dump(self.store, f)
             f.close()
-
+            
         except KeyboardInterrupt :
             if not self.saveIfMurdered :
                 raise
@@ -364,7 +363,7 @@ class DefaultTrainer(Trainer_ABC) :
             setHPs(l, "learningScenario", hyperParameters)
             setHPs(l, "decorators", hyperParameters)
             setHPs(l, "activation", hyperParameters)
-            if l.type == MNET.TYPE_OUTPUT_LAYER :
+            if MSET.TYPE_OUTPUT_LAYER in l.types :
                 setHPs(l, "costObject", hyperParameters)
 
         legend.extend(hyperParameters.keys())
@@ -405,6 +404,10 @@ class DefaultTrainer(Trainer_ABC) :
                     else :
                         raise ValueError("Unknown map name: '%s'" % mapName)
                     
+                    # import numpy
+                    # inputs = [numpy.arange(model["Sequence"].nbInputs)+1]
+                    # print model.propagate("Sequence", Sequence=inputs)
+
                     scores = _trainTest(
                         aMap,
                         modelFct,
