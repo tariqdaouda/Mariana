@@ -177,7 +177,7 @@ class MLPTests(unittest.TestCase):
         self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[3] ] )["class"], 0 )
 
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_multiinputs(self) :
         ls = MS.GradientDescent(lr = 0.1)
 
@@ -201,7 +201,7 @@ class MLPTests(unittest.TestCase):
         m = inpNexus > h1 > o
         m.init()
 
-    # @unittest.skip("skipping")
+    @unittest.skip("skipping")
     def test_embedding(self) :
         """the first 3 and the last 3 should be diametrically opposed"""
         data = [[0], [1], [2], [3], [4], [5]]
