@@ -1,3 +1,6 @@
+import Mariana.useful as MUSE
+import theano
+
 class Variable(object):
     """docstring for Variable"""
     def __init__(self, variable_type = None, streams=["train", "test"], *theano_args, **theano_kwargs):
@@ -27,6 +30,39 @@ class Inputs(Variable):
 
 class Targets(Variable):
     """docstring for Input"""
+
+class Parameter(object):
+    """docstring for Parameter"""
+    def __init__(self, name, tags=["regularizable"]):
+        super(Parameter, self).__init__()
+        self.name = name
+        self.tags = set(tags)
+
+    def init(self, v) :
+        self.value = theano.shared(value = MUSE.iCast_numpy(v), name = self.name)
+
+    def update(self, v) :
+        if v.shape != self.getShape() :
+            print Warning("Update has a different shape: %s -> %s" %(self.shape, v.shape))
+        self.value.set_value(MUSE.iCast_numpy(v))
+
+    def getValue(self, v) :
+        return self.get_value()
+
+    def getShape(self) :
+        return self.getValue().shape
+
+    def hasTag(self, tag) :
+        return tag in self.tags
+
+    def addTag(self, tag) :
+        self.tags.add(tag)
+
+    def removeTag(self, tag) :
+        self.tags.remove(tag)
+
+    def __repr__(self) :
+        return "< Parameter: %s, %s>" % (self.name, self.shape)
 
 class Losses(object):
     """docstring for Losses"""
