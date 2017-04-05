@@ -3,7 +3,7 @@ import theano
 
 class Variable(object):
     """docstring for Variable"""
-    def __init__(self, variable_type = None, streams=["train", "test"], *theano_args, **theano_kwargs):
+    def __init__(self, streams=["train", "test"], variable_type = None, *theano_args, **theano_kwargs):
         super(Variable, self).__init__()
         self.streams = streams
         self.variables = {}
@@ -33,18 +33,22 @@ class Targets(Variable):
 
 class Parameter(object):
     """docstring for Parameter"""
-    def __init__(self, name, tags=["regularizable"]):
+    def __init__(self, name, tags={"regularizable": True}):
         super(Parameter, self).__init__()
         self.name = name
-        self.tags = set(tags)
+        self.tags = tags
+        self.value = None
 
-    def init(self, v) :
-        self.value = theano.shared(value = MUSE.iCast_numpy(v), name = self.name)
-
-    def update(self, v) :
-        if v.shape != self.getShape() :
-            print Warning("Update has a different shape: %s -> %s" %(self.shape, v.shape))
-        self.value.set_value(MUSE.iCast_numpy(v))
+    def hasValue(self) :
+        return self.value is not None
+    
+    def setValue(self, v, forceReset=False) :
+        if self.value is None or forceReset :
+            self.value = theano.shared(value = MUSE.iCast_numpy(v), name = self.name)
+        else :
+            if v.shape != self.getShape() :
+                print Warning("Update has a different shape: %s -> %s" %(self.shape, v.shape))
+            self.value.set_value(MUSE.iCast_numpy(v))
 
     def getValue(self, v) :
         return self.get_value()
@@ -55,11 +59,14 @@ class Parameter(object):
     def hasTag(self, tag) :
         return tag in self.tags
 
-    def addTag(self, tag) :
-        self.tags.add(tag)
+    def getTag(self, tag) :
+        return self.tags[tag]
+
+    def setTag(self, tag, value = True) :
+        self.tags[tag]
 
     def removeTag(self, tag) :
-        self.tags.remove(tag)
+        del self.tags[tag]
 
     def __repr__(self) :
         return "< Parameter: %s, %s>" % (self.name, self.shape)

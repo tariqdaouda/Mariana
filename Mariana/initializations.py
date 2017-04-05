@@ -40,7 +40,9 @@ class Initialization_ABC(Abstraction_ABC) :
                 raise ValueError("Initialization has a wrong shape: %s, parameter shape is: %s " % (v.shape, layer.getParameterShape(self.getHP("parameter"))))
             v = MUSE.iCast_numpy(self.run(layer.getParameterShape(self.getHP("parameter"))))
             v = MUSE.sparsify(v, sparsity)
-            layer.initParameter( self.getHP("parameter"), theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
+            # layer.initParameter( self.getHP("parameter"), theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
+            layer.getParameter(self.parameter).setValue(v)
+
         except Exception as e:
             message = "%s was *NOT* initialized using %s. Because: %s" % (layer.name, self.__class__.__name__, e.message)
             layer.network.logLayerEvent(layer, message, self.getHyperParameters())
@@ -64,6 +66,7 @@ class HardSet(Initialization_ABC) :
         self.hyperParameters = ["parameter"]
 
     def run(self, shape) :
+        return self.value
 
 class SingleValue(Initialization_ABC) :
     """Initialize to a given value"""
@@ -130,14 +133,13 @@ class FanInFanOut_ABC(Initialization_ABC) :
         self.gain = None
 
     def _getGain(activation) :
-    """returns the gain with respesct to an activation function"""
-
-    if activation.__class__ is MA.ReLU :
-        if activation.leakiness == 0 :
-            return numpy.sqrt(2)
-        else :
-            return numpy.sqrt(2/(1+activation.leakiness**2))
-    return 1.0
+        """returns the gain with respesct to an activation function"""
+        if activation.__class__ is MA.ReLU :
+            if activation.leakiness == 0 :
+                return numpy.sqrt(2)
+            else :
+                return numpy.sqrt(2/(1+activation.leakiness**2))
+        return 1.0
 
     def apply(self, layer) :
         import Mariana.activations as MA
@@ -153,7 +155,6 @@ class FanInFanOut_ABC(Initialization_ABC) :
 class GlorotNormal(FanInFanOut_ABC) :
     """
     Initialization strategy introduced by Glorot et al. 2010 on a Normal distribution.
-    If you use tanh() as activation try this one first.
     Uses lasagne as backend.
     """ 
     def run(self, shape) :
@@ -162,6 +163,7 @@ class GlorotNormal(FanInFanOut_ABC) :
 class GlorotUniform(FanInFanOut_ABC) :
     """
     Initialization strategy introduced by Glorot et al. 2010 on a Uniform distribution.
+    If you use tanh() as activation try this one first.
     Uses lasagne as backend.
     """ 
     def run(self, shape) :

@@ -1,7 +1,7 @@
 from abc import ABCMeta#, abstractmethod
 from collections import OrderedDict
 
-import theano, numpy, time
+import theano, numpy, time, uuid
 import theano.tensor as tt
 
 import Mariana.activations as MA
@@ -38,7 +38,7 @@ class Layer_ABC(object) :
         return obj
 
     def __init__(self,
-        size,
+        # size,
         layerTypes,
         activation=MA.Pass(),
         regularizations=[],
@@ -47,11 +47,10 @@ class Layer_ABC(object) :
         decorators=[],
         name=None
     ):
-
         self.isLayer=True
 
         #a unique tag associated to the layer
-        self.appelido=numpy.random.random()
+        self.appelido=str(uuid.uuid1())
 
         if name is not None :
             self.name=name
@@ -60,10 +59,10 @@ class Layer_ABC(object) :
 
         self.types=layerTypes
 
-        self.nbInputs=None
+        # self.nbInputs=None
         self.inputs=MTYPES.Variable()
 
-        self.nbOutputs=size
+        # self.nbOutputs=size
         self.outputs=MTYPES.Variable()
         self.outputs_preactivation=MTYPES.Variable()
 
@@ -72,7 +71,7 @@ class Layer_ABC(object) :
             "regularizations": regularizations,
             "decorators": decorators,
             "initializations": initializations,
-            "scenari": learningScenari,
+            "learningScenari": learningScenari,
         }
         self.parameters = {}
         
@@ -94,6 +93,9 @@ class Layer_ABC(object) :
                 res[k]=v
         return res
 
+    def getParameter(self, pname) :
+        return self.parameters[pname]
+
     def getParameters(self) :
         """returns the layer's parameters"""
         return self.getParameterDict().values()
@@ -108,7 +110,8 @@ class Layer_ABC(object) :
 
     def getOutputShape(self):
         """returns the shape of the outputs"""
-        return (self.nbOutputs, )
+        raise NotImplemented("Should be implemented in child")        
+        # return (self.nbOutputs, )
 
     def clone(self, **kwargs) :
         """Returns a free layer with the same parameters."""
@@ -142,37 +145,36 @@ class Layer_ABC(object) :
     def _initParameters(self, forceReset=False) :
         """creates the parameters if necessary (self._mustRest == True)"""
         self._setShape()
-        if self._mustReset or forceReset :        
+        if seld_mustReset or forceReset :        
             for init in self.abstractions["initializations"] :
                 init.apply(self)
-        self._mustReset=False
+        self._mustReset=F
 
-    def initParameter(self, parameter, value) :
-        """Initialize a parameter, raise value error if already initialized"""
-        # print self, parameter
-        if parameter not in self.parameters :
-            raise ValueError("Layer '%s' has no parameter '%s'. Add it to self.parameters dict and give it a None value." % (self.name, parameter) )
+    # def initParameter(self, parameter, value) :
+    #     """Initialize a parameter, raise value error if already initialized"""
+    #     if parameter not in self.parameters :
+    #         raise ValueError("Layer '%s' has no parameter '%s'. Add it to self.parameters dict and give it a None value." % (self.name, parameter) )
             
-        if self.parameters[parameter] is None:
-            self.parameters[parameter] = value
-        else :
-            raise ValueError("Parameter '%s' of layer '%s' has already been initialized" % (parameter, self.name) )
+    #     if self.parameters[parameter] is None:
+    #         self.parameters[parameter] = value
+    #     else :
+    #         raise ValueError("Parameter '%s' of layer '%s' has already been initialized" % (parameter, self.name) )
 
-    def updateParameter(self, parameter, value) :
-        """Update the value of an already initialized parameter. Raise value error if the parameter has not been initialized"""
-        if parameter not in self.getParameterDict().keys() :
-            raise ValueError("Parameter '%s' has not been initialized as parameter of layer '%s'" % (parameter, self.name) )
-        else :
-            self.parameters[parameter] = value
+    # def updateParameter(self, parameter, value) :
+    #     """Update the value of an already initialized parameter. Raise value error if the parameter has not been initialized"""
+    #     if parameter not in self.getParameterDict().keys() :
+    #         raise ValueError("Parameter '%s' has not been initialized as parameter of layer '%s'" % (parameter, self.name) )
+    #     else :
+    #         self.parameters[parameter] = value
 
     #theano hates abstract methods defined with a decorator
     def _setInputs(self) :
-        """Sets the inputs to the layer. Default behaviour is concatenation"""
-        self.nbInputs=0
+        """Sets the inputs to the layer. Default behaviour is concatenation on axis 1"""
+        # self.nbInputs=0
         outs=[]
         testOuts=[]
         for l in self.network.inConnections[self] :
-            self.nbInputs += l.nbOutputs  
+            # self.nbInputs += l.nbOutputs  
             outs.append(l.outputs["train"])
             testOuts.append(l.outputs["test"])
         
@@ -312,9 +314,16 @@ class Input(Layer_ABC) :
     "An input layer"
     def __init__(self, size, name=None, **kwargs) :
         super(Input, self).__init__(size, layerTypes=[MSET.TYPE_INPUT_LAYER], name=name, **kwargs)
-        self.nbInputs=size
+        if isinstance(size, int) :
+            self.shape = (size, )
+        else :
+            self.shape = tuple(size)
+
         self.inputs=MTYPES.Inputs(tt.matrix, name="Inp_%s" % self.name)
     
+    def getOutputShape(self) :
+        return self.shape
+
     def _setInputs(self) :
         pass
 
@@ -477,23 +486,27 @@ class Pass(Layer_ABC) :
 class WeightBias_ABC(Layer_ABC) :
     """A layer with weigth and bias. If would like to disable either one of them do not provide an initialization"""
 
-    def __init__(self, size, layerTypes, initializations=[MI.SmallUniformWeights(), MI.ZeroBias()], **kwargs) :
-        super(WeightBias_ABC, self).__init__(size, layerTypes=layerTypes, initializations=initializations, **kwargs)
-        self.inputs["test"]=None
+    def __init__(self, size, layerTypes, initializations=[MI.GlorotNormal('W'), MI.SingleValue('b', 0)], **kwargs) :
+        super(WeightBias_ABC, self).__init__(layerTypes=layerTypes, initializations=initializations, **kwargs)
+        # self.inputs["test"]=None
         self.parameters={
-            "W": None,
-            "b": None
+            "W": MTYPES.Parameter("%s.W" % (self.name)),
+            "b": MTYPES.Parameter("%s.b" % (self.name))
         }
+        self.nbOutputs = size
 
     def _setShape(self) :
         """defines the number of inputs"""
         self.nbInputs=None
         for layer in self.network.inConnections[self] :
+            s = 1
+            for d in l.getOutputShape() :
+                s *= d
+
             if self.nbInputs is None :
-                self.nbInputs=layer.nbOutputs
+                self.nbInputs = s
             else :
-                self.nbInputs += layer.nbOutputs
-                # raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
+                self.nbInputs += s
 
     def _setOutputs(self) :
         """Defines, self.outputs["train"] and self.outputs["test"]"""
@@ -541,8 +554,8 @@ class Output_ABC(Layer_ABC) :
         * test: returns the cost, ignores trainOnly decoartors
         """
 
-    def __init__(self, size, cost, backTrckAll=False, **kwargs) :
-        super(Output_ABC, self).__init__(size, layerTypes=[MSET.TYPE_OUTPUT_LAYER], **kwargs)
+    def __init__(self, cost, backTrckAll=False, **kwargs) :
+        super(Output_ABC, self).__init__(layerTypes=[MSET.TYPE_OUTPUT_LAYER], **kwargs)
         self.targets=MTYPES.Targets()
         self.dependencies=OrderedDict()
         self.backTrckAll=backTrckAll
