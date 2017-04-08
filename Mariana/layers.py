@@ -156,6 +156,7 @@ class Layer_ABC(object) :
             
         if self.parameters[parameter] is None:
             self.parameters[parameter] = value
+            # print parameter, self.parameters[parameter].get_value().shape
         else :
             raise ValueError("Parameter '%s' of layer '%s' has already been initialized" % (parameter, self.name) )
 
@@ -407,13 +408,14 @@ class Embedding(Layer_ABC) :
                     self.inputs+=outs
                     self.testInputs+=testOuts
 
-        if self.zeroForNull :
-            self.null=numpy.zeros((1, self.nbDimentions))
-            self.parameters["fullEmbeddings"]=tt.concatenate( [self.null, self.parameters["embeddings"]], axis=0)
-        else :
-            self.parameters["fullEmbeddings"]=self.parameters["embeddings"]
-            del(self.parameters["embeddings"])
-
+        if self.parameters["fullEmbeddings"] is None : 
+            if self.zeroForNull :
+                self.null=numpy.zeros((1, self.nbDimentions))
+                self.parameters["fullEmbeddings"]=tt.concatenate( [self.null, self.parameters["embeddings"]], axis=0)
+            else :
+                self.parameters["fullEmbeddings"]=self.parameters["embeddings"]
+                del(self.parameters["embeddings"])
+        
         self.preOutputs=self.parameters["fullEmbeddings"][self.inputs]
         self.outputs=self.preOutputs.reshape((self.inputs.shape[0], self.nbOutputs))
         self.testOutputs=self.preOutputs.reshape((self.testInputs.shape[0], self.nbOutputs))

@@ -349,11 +349,11 @@ class Network(object) :
 
         for l in expandedLayers.itervalues() :
             for k, v in model["layers"][l.name]["parameters"].iteritems() :
-                # print l, k, v.get_value()
                 try:
                     l.updateParameter(k, v)
                 except :
                     l.initParameter(k, v)
+                    # print l, k, v.get_value().shape
             l._mustReset = False
            
         for l1, l2 in model["edges"] :
