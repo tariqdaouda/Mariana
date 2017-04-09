@@ -311,15 +311,22 @@ class Layer_ABC(object) :
         object.__setattr__(self, k, v)
 
 class Input(Layer_ABC) :
-    "An input layer"
-    def __init__(self, size, name=None, **kwargs) :
-        super(Input, self).__init__(size, layerTypes=[MSET.TYPE_INPUT_LAYER], name=name, **kwargs)
-        if isinstance(size, int) :
-            self.shape = (size, )
+    """"General representation of an input layer for creating taylored input layers on the fly.
+    This one is not abstract an can instanciated wthout risk.
+    
+    :param int/tuple shape: the shape of the input, can be a int if its just to specify a number of units
+    :param dtype: the numpy data type 
+    """
+    def __init__(self, shape, name=None, dtype=theano.config.floatX,  **kwargs) :
+        super(Input, self).__init__(layerTypes=[MSET.TYPE_INPUT_LAYER], name=name, **kwargs)
+        
+        if isinstance(shape, int) :
+            self.shape = (shape, 1)
         else :
-            self.shape = tuple(size)
+            self.shape = tuple(shape)
 
-        self.inputs=MTYPES.Inputs(tt.matrix, name="Inp_%s" % self.name)
+        self.broadcastable = [s == 1 for s in self.shape]
+        self.inputs=MTYPES.Inputs(tt.TensorType, name="Inp_%s" % self.name, broadcastable=self.broadcastable)
     
     def getOutputShape(self) :
         return self.shape
