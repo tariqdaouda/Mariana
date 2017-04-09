@@ -314,17 +314,17 @@ class Input(Layer_ABC) :
     """"General representation of an input layer for creating taylored input layers on the fly.
     This one is not abstract an can instanciated wthout risk.
     
-    :param int/tuple shape: the shape of the input, can be a int if its just to specify a number of units
+    :param int/tuple shape: the shape of the layer, can be a int if its just to specify a number of units. Do not add the minibatch to the shape. Mariana is smart enough to add it for you.
     :param dtype: the numpy data type 
     """
     def __init__(self, shape, name=None, dtype=theano.config.floatX,  **kwargs) :
         super(Input, self).__init__(layerTypes=[MSET.TYPE_INPUT_LAYER], name=name, **kwargs)
         
         if isinstance(shape, int) :
-            self.shape = (shape, 1)
+            self.shape = (1, shape)
         else :
-            self.shape = tuple(shape)
-
+            self.shape = tuple([1].extend(list(shape)))
+        
         self.broadcastable = [s == 1 for s in self.shape]
         self.inputs=MTYPES.Inputs(tt.TensorType, name="Inp_%s" % self.name, broadcastable=self.broadcastable)
     
@@ -346,7 +346,7 @@ class Embedding(Layer_ABC) :
     """Embeddings are learned representations of the inputs that are much loved in NLP.
     This layer will take care of creating the embeddings and optimizing them. It can either be used as an input layer or as hidden layer"""
 
-    def __init__(self, nbDimentions, dictSize, zeroForNull=False, size=None, initializations=[MI.SmallUniformEmbeddings()], **kwargs) :
+    def __init__(self, nbDimentions, dictSize, zeroForNull=False, initializations=[MI.Uniform('embeddings', small=True)], **kwargs) :
         """
         :param int nbDimentions: the number of dimentions in wich to encode each word.
         :param int dictSize: the total number of words.
@@ -355,7 +355,7 @@ class Embedding(Layer_ABC) :
         
         """
 
-        super(Embedding, self).__init__(size, layerTypes=[MSET.TYPE_INPUT_LAYER], initializations=initializations, **kwargs)
+        super(Embedding, self).__init__(size, layerTypes=[MSET.TYPE_HIDDEN_LAYER], initializations=initializations, **kwargs)
 
         self.zeroForNull=zeroForNull
 
@@ -369,11 +369,7 @@ class Embedding(Layer_ABC) :
 
         self.inputs["train"]=None
         self.inputs["test"]=None
-        
-        if size is not None :
-            self.nbInputs=size
-            self.nbOutputs=self.nbDimentions*self.nbInputs    
- 
+      
     def _femaleConnect(self, layer) :
         self.types=[MSET.TYPE_HIDDEN_LAYER]
         if not hasattr(self, "nbInputs") or self.nbInputs is None :
