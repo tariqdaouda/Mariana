@@ -48,7 +48,7 @@ class Layer_ABC(object) :
         name=None
     ):
         self.isLayer=True
-
+        
         #a unique tag associated to the layer
         self.appelido=str(uuid.uuid1())
 
@@ -108,11 +108,6 @@ class Layer_ABC(object) :
         """Should return the shape of the parameter. This has to be implemented in order for the initializations to work (and maybe some other stuff as well)"""
         raise NotImplemented("Should be implemented in child")
 
-    def getOutputShape(self):
-        """returns the shape of the outputs"""
-        raise NotImplemented("Should be implemented in child")        
-        # return (self.nbOutputs, )
-
     def clone(self, **kwargs) :
         """Returns a free layer with the same parameters."""
         creationArguments=dict(self.creationArguments["kwargs"])
@@ -138,50 +133,22 @@ class Layer_ABC(object) :
         whatever post-action you want performed on the layer post normal initialization"""
         pass
     
-    def _setShape(self) :
-        """last chance to define the layer's shape before parameter initialization"""
-        pass
-
+    def getShape(self) :
+        """returns the shape of the layer"""
+        raise NotImplemented("Should be implemented in child")        
+        
     def _initParameters(self, forceReset=False) :
         """creates the parameters if necessary (self._mustRest == True)"""
-        self._setShape()
         if seld_mustReset or forceReset :        
             for init in self.abstractions["initializations"] :
                 init.apply(self)
-        self._mustReset=F
+        self._mustReset=False
 
-    # def initParameter(self, parameter, value) :
-    #     """Initialize a parameter, raise value error if already initialized"""
-    #     if parameter not in self.parameters :
-    #         raise ValueError("Layer '%s' has no parameter '%s'. Add it to self.parameters dict and give it a None value." % (self.name, parameter) )
-            
-    #     if self.parameters[parameter] is None:
-    #         self.parameters[parameter] = value
-    #     else :
-    #         raise ValueError("Parameter '%s' of layer '%s' has already been initialized" % (parameter, self.name) )
-
-    # def updateParameter(self, parameter, value) :
-    #     """Update the value of an already initialized parameter. Raise value error if the parameter has not been initialized"""
-    #     if parameter not in self.getParameterDict().keys() :
-    #         raise ValueError("Parameter '%s' has not been initialized as parameter of layer '%s'" % (parameter, self.name) )
-    #     else :
-    #         self.parameters[parameter] = value
-
-    #theano hates abstract methods defined with a decorator
-    def _setInputs(self) :
+    def setInputs(self) :
         """Sets the inputs to the layer. Default behaviour is concatenation on axis 1"""
-        # self.nbInputs=0
-        outs=[]
-        testOuts=[]
-        for l in self.network.inConnections[self] :
-            # self.nbInputs += l.nbOutputs  
-            outs.append(l.outputs["train"])
-            testOuts.append(l.outputs["test"])
-        
-        self.inputs["train"]=tt.concatenate( outs, axis=1 )
-        self.inputs["test"]=tt.concatenate( testOuts, axis=1 )
+        pass
 
-    def _setOutputs(self) :
+    def setOutputs(self) :
         """Defines the outputs and outputs["test"] of the layer before the application of the activation function. This function is called by _init() ans should be written in child."""
         raise NotImplemented("Should be implemented in child")
 
@@ -235,10 +202,10 @@ class Layer_ABC(object) :
         """Initialize the essential attributes of the layer such as: outputs and activations. This function is automatically called before train/test etc..."""
         if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.network.inConnections[self]) ) :
             self._whateverFirstInit()
-            self._setInputs()
+            self.setInputs()
             self._parametersSanityCheck()
             self._initParameters()
-            self._setOutputs()
+            self.setOutputs()
             self._decorate()
             self._outputsSanityCheck()
             self._activate()
@@ -254,19 +221,19 @@ class Layer_ABC(object) :
         self._setTheanoFunctions()
         self._whateverLastInit()
         
-    def _maleConnect(self, layer) :
+    def maleConnect(self, layer) :
         """What happens to A when A > B"""
         pass
 
-    def _femaleConnect(self, layer) :
+    def femaleConnect(self, layer) :
         """What happens to B when A > B"""
         pass
 
     def connect(self, layer) :
         """Connect the layer to another one. Using the '>' operator to connect two layers actually calls this function.
         This function returns the resulting network"""
-        self._maleConnect(layer)
-        layer._femaleConnect(self)
+        self.maleConnect(layer)
+        layer.femaleConnect(self)
         self.network.merge(self, layer)
 
         return self.network
@@ -328,18 +295,15 @@ class Input(Layer_ABC) :
         self.broadcastable = [s == 1 for s in self.shape]
         self.inputs=MTYPES.Inputs(tt.TensorType, name="Inp_%s" % self.name, broadcastable=self.broadcastable)
     
-    def getOutputShape(self) :
+    def getShape(self) :
         return self.shape
 
-    def _setInputs(self) :
-        pass
-
-    def _setOutputs(self) :
+    def setOutputs(self) :
         "initializes the output to be the same as the inputs"
         self.outputs["train"]=self.inputs["train"]
         self.outputs["test"]=self.inputs["test"]
 
-    def _femaleConnect(self, *args) :
+    def femaleConnect(self, *args) :
         raise ValueError("Nothing can be connected to an input layer")
 
 class Embedding(Layer_ABC) :
@@ -363,120 +327,82 @@ class Embedding(Layer_ABC) :
         self.nbDimentions=nbDimentions
 
         self.parameters={
-            "embeddings":None,
-            "fullEmbeddings":None
+            "embeddings":MTYPES.Parameter(name="%s.%s" % (self.name, embeddings)),
         }
 
-        self.inputs["train"]=None
-        self.inputs["test"]=None
-      
-    def _femaleConnect(self, layer) :
-        self.types=[MSET.TYPE_HIDDEN_LAYER]
-        if not hasattr(self, "nbInputs") or self.nbInputs is None :
-            self.nbInputs=layer.nbOutputs
-            self.nbOutputs=self.nbDimentions*self.nbInputs
-        elif self.nbInputs != layer.nbOutputs :
-            raise ValueError("All layers connected to '%s' must have the same number of outputs. Got: %s, previously had: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
-    
-    def getParameterShape(self, param) :
-        if param == "embeddings" :
-            return (self.dictSize, self.nbDimentions)
+        self.inputs=MTYPES.Variable()
+
+    def femaleConnect(self, layer) :
+        if self.nbInputs is not None :
+            raise ValueError("Only one layer can be connected to an embedding layer")
+        s = layer.getShape()
+        
+        if len(s) != 2 :
+            raise ValueError("Input layer must be a vector, got %s dimentions" % len(s))
+        self.nbInputs = s[1]
+
+    def getShape(self) :
+        return (1, self.nbInputs * self.nbDimentions)
+
+    def setInputs(self) :
+        inpLayer = self.network.inConnections[self][0]
+        if inpLayer.outputs["train"].dtype.find("int") != 0 :
+            self.inputs["train"] = tt.cast(inpLayer.outputs["train"], dtype=MSET.INTX)
+            self.inputs["test"] = tt.cast(inpLayer.outputs["test"], dtype=MSET.INTX)
         else :
-            raise ValueError("Unknown parameter: %s" % param)
-
-    def _setInputs(self) :
-        if len(self.network.inConnections[self]) > 0 :
-            super(Embedding, _setInputs)._setInputs()
-
-    def getEmbeddings(self, idxs=None) :
-        """returns the embeddings.
-
-        :param list idxs: if provided will return the embeddings only for those indexes
-        """
-        if not self.parameters["fullEmbeddings"] :
-            raise ValueError("It looks like the network has not been initialized yet. Try calling self.network.init() first.")
-
-        try :
-            fct=self.parameters["fullEmbeddings"].get_value
-        except AttributeError :
-            fct=self.parameters["fullEmbeddings"].eval
-
-        if idxs :
-            return fct()[idxs]
-        return fct()
-
-    def _setOutputs(self) :
-        if len(self.network.inConnections[self]) == 0 :
-            if self.inputs["train"] is None :
-                self.inputs["train"]=tt.imatrix(name="embInp_" + self.name)
-                self.inputs["test"]=self.inputs["train"]
-        else :
-            for layer in self.network.inConnections[self] :
-                if layer.outputs["train"].dtype.find("int") != 0 :
-                    outs=tt.cast(layer.outputs["train"], dtype=MSET.INTX)
-                    testOuts=tt.cast(layer.outputs["test"], dtype=MSET.INTX)
-                else :
-                    outs=layer.outputs["train"]
-                    testOuts=layer.outputs["test"]
-
-                if self.inputs["train"] is None :   
-                    self.inputs["train"]=outs
-                    self.inputs["test"]=testOuts
-                else :
-                    self.inputs["train"]+=outs
-                    self.inputs["test"]+=testOuts
-
+            self.inputs["train"] = inpLayer.outputs["train"]
+            self.inputs["test"] = inpLayer.outputs["test"]
+        
+    def setOutputs(self) :
         if self.zeroForNull :
             self.null=numpy.zeros((1, self.nbDimentions))
-            self.parameters["fullEmbeddings"]=tt.concatenate( [self.null, self.parameters["embeddings"]], axis=0)
-        else :
-            self.parameters["fullEmbeddings"]=self.parameters["embeddings"]
-            del(self.parameters["embeddings"])
-
+            embs = self.parameters["embeddings"].getValue()
+            self.parameters["embeddings"].setValue( tt.concatenate( [self.null, embs], axis=0) )
+       
         self.preOutputs=self.parameters["fullEmbeddings"][self.inputs["train"]]
         self.outputs["train"]=self.preOutputs.reshape((self.inputs["train"].shape[0], self.nbOutputs))
         self.outputs["test"]=self.preOutputs.reshape((self.inputs["test"].shape[0], self.nbOutputs))
 
-class Addition(Layer_ABC):
-    """Adds up the values of all afferent layers"""
+# class Addition(Layer_ABC):
+#     """Adds up the values of all afferent layers"""
 
-    def __init__(self, name=None, **kwargs):
-        super(Addition, self).__init__(layerTypes=[MSET.TYPE_HIDDEN_LAYER], size=None, name=name, **kwargs)
+#     def __init__(self, name=None, **kwargs):
+#         super(Addition, self).__init__(layerTypes=[MSET.TYPE_HIDDEN_LAYER], size=None, name=name, **kwargs)
 
-    def _femaleConnect(self, layer) :
-        if self.nbInputs is None :
-            self.nbInputs=layer.nbOutputs
-        elif self.nbInputs != layer.nbOutputs :
-            raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
-        self.nbOutputs=layer.nbOutputs
+#     def femaleConnect(self, layer) :
+#         if self.nbInputs is None :
+#             self.nbInputs=layer.nbOutputs
+#         elif self.nbInputs != layer.nbOutputs :
+#             raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
+#         self.nbOutputs=layer.nbOutputs
 
-    def _setInputs(self) :
-        """set the number of inputs and outputs"""
-        inputs = 0
-        testInputs = 0
-        for l in self.network.inConnections[self] :
-            inputs += l.outputs["train"]
-            testInputs += l.outputs["test"]
+#     def setInputs(self) :
+#         """set the number of inputs and outputs"""
+#         inputs = 0
+#         testInputs = 0
+#         for l in self.network.inConnections[self] :
+#             inputs += l.outputs["train"]
+#             testInputs += l.outputs["test"]
 
-        self.inputs["train"] = inputs
-        self.inputs["test"] = testInputs
+#         self.inputs["train"] = inputs
+#         self.inputs["test"] = testInputs
 
-    def _setOutputs(self) :
-        self.outputs["train"]=self.inputs["train"]
-        self.outputs["test"]=self.inputs["test"]
+#     def setOutputs(self) :
+#         self.outputs["train"]=self.inputs["train"]
+#         self.outputs["test"]=self.inputs["test"]
 
 class Pass(Layer_ABC) :
     def __init__(self, name=None, **kwargs):
         super(Pass, self).__init__(layerTypes=[MSET.TYPE_HIDDEN_LAYER], size=None, name=name, **kwargs)
 
-    def _femaleConnect(self, layer) :
+    def femaleConnect(self, layer) :
         if self.nbInputs is None :
             self.nbInputs=layer.nbOutputs
         elif self.nbInputs != layer.nbOutputs :
             raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
         self.nbOutputs=layer.nbOutputs
 
-    def _setOutputs(self) :
+    def setOutputs(self) :
         for layer in self.network.inConnections[self] :
             if self.inputs["train"] is None :
                 self.inputs["train"]=layer.outputs["train"]
@@ -498,7 +424,7 @@ class WeightBias_ABC(Layer_ABC) :
         }
         self.nbOutputs = size
 
-    def _setShape(self) :
+    def getShape(self) :
         """defines the number of inputs"""
         self.nbInputs=None
         for layer in self.network.inConnections[self] :
@@ -511,7 +437,7 @@ class WeightBias_ABC(Layer_ABC) :
             else :
                 self.nbInputs += s
 
-    def _setOutputs(self) :
+    def setOutputs(self) :
         """Defines, self.outputs["train"] and self.outputs["test"]"""
 
         self.outputs["train"]=self.inputs["train"]
@@ -624,8 +550,8 @@ class WeightBiasOutput_ABC(Output_ABC, WeightBias_ABC):
     def __init__(self, size, cost, learningScenari, activation, **kwargs):
         super(WeightBiasOutput_ABC, self).__init__(size=size, cost=cost, learningScenari=learningScenari, activation=activation, **kwargs)
 
-    def _setOutputs(self) :
-        WeightBias_ABC._setOutputs(self)
+    def setOutputs(self) :
+        WeightBias_ABC.setOutputs(self)
  
 class SoftmaxClassifier(WeightBiasOutput_ABC) :
     """A softmax (probabilistic) Classifier"""

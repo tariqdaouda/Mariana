@@ -13,6 +13,14 @@ class Variable(object):
             else :
                 self.variables[f] = None
 
+        self.dtype = self.variables[f].dtype
+
+    def getValue(self, stream) :
+        return self[stream].get_value()
+
+    def setValue(self, stream, value) :
+        self[stream].set_value(value)
+
     def __getitem__(self, flow) :
         try :
             return self.variables[flow]
@@ -50,8 +58,11 @@ class Parameter(object):
                 print Warning("Update has a different shape: %s -> %s" %(self.shape, v.shape))
             self.value.set_value(MUSE.iCast_numpy(v))
 
-    def getValue(self, v) :
+    def getValue(self) :
         return self.get_value()
+
+    def evaluate(self, *args, **kwargs) :
+        return self.get_value(args, kwargs)
 
     def getShape(self) :
         return self.getValue().shape

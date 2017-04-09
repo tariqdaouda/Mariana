@@ -5,12 +5,14 @@ import theano.tensor as tt
 import Mariana.settings as MSET
 
 def iCast_theano(thing) :
+    """intelligently cast ints and floats into the corresct datatypes (for theano variables)"""
     if thing.dtype.find("int") > -1 :
         return tt.cast(thing, MSET.INTX)
     else :
         return tt.cast(thing, theano.config.floatX)
 
 def iCast_numpy(thing) :
+    """intelligently cast ints and floats into the corresct datatypes (for numpy variables)"""
     if thing.dtype.find("int") > -1 :
         return numpy.asarray(thing, dtype=MSET.INTX)
     else :
