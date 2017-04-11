@@ -55,13 +55,27 @@ class Scores(object) :
 class SavingRule_ABC(object):
 	"""Abstraction for saving rules"""
 
-	def __init__(self, *args, **kwargs) :
-		pass
+	def __init__(self, epochStart=0, savePeriod=1) :
+		self.epochStart = epochStart
+		self.savePeriod = savePeriod
+
+		self.currentSavePeriod = 0
 
 	def _shouldISave(self, recorder) :
 		"""This is the function that is called by the recorder. If sets self.recorder to 'recorder' and then calls self.shouldISave()"""
 		self.recorder = recorder
-		return self.shouldISave(recorder)
+
+		if recorder.epoch >= self.epochStart :
+			if not self.shouldISave(recorder) :
+				return False
+
+			self.currentSavePeriod += 1
+			if (self.currentSavePeriod % self.savePeriod == 0) :
+				return True
+			else :
+				return False
+		else :
+			return False
 
 	def shouldISave(self, recorder) :
 		"""The function that defines when a save should be performed"""
@@ -86,7 +100,8 @@ class SaveMin(SavingRule_ABC) :
 	:param string outputName: The name of the output layer to consider (you can also give the layer object)
 	:param string functionName: The function of the output layer to consider usually "test".
 	"""
-	def __init__(self, mapName, outputName, functionName) :
+	def __init__(self, mapName, outputName, functionName, *args, **kwargs) :
+		super(SaveMin, self).__init__(*args, **kwargs)
 		self.mapName = mapName
 		if type(outputName) is types.StringType :
 			self.outputName = outputName
@@ -114,7 +129,8 @@ class SaveMax(SavingRule_ABC) :
 	:param string functionName: The function of the output layer to consider usually "test".
 	"""
 
-	def __init__(self, mapName, outputName, functionName) :
+	def __init__(self, mapName, outputName, functionName, *args, **kwargs) :
+		super(SaveMax, self).__init__(*args, **kwargs)
 		self.mapName = mapName
 		if type(outputName) is types.StringType :
 			self.outputName = outputName
@@ -138,13 +154,13 @@ class SavePeriod(SavingRule_ABC) :
 	
 	:param boolean distinct: If False, each new save will overwrite the previous one.
 	"""
-	def __init__(self, period, distinct) :
-		SavingRule_ABC(self)
+	def __init__(self, period, distinct, *args, **kwargs) :
+		super(SavePeriod, self).__init__(savePeriod=period, **kwargs)
 		self.distinct = distinct
-		self.period = period
-
+	
 	def shouldISave(self, recorder) :
-		return (recorder.epoch % self.period) == 0
+		return True
+		# return (recorder.epoch % self.period) == 0
 
 	def getFilename(self, recorder) :
 		if self.distinct :
@@ -242,7 +258,7 @@ class GGPlot2(Recorder_ABC):
 
 		self.trainerStore = store
 		self.epoch = store["runInfos"]["epoch"]
-
+		self.runtime_min = store["runInfos"]["runtime_min"]
 		if self.printRate > 0 and (self.length%self.printRate) == 0:
 			self.printCurrentState()
 
@@ -253,7 +269,7 @@ class GGPlot2(Recorder_ABC):
 	def printCurrentState(self) :
 		"""prints the current state stored in the recorder"""
 		if self.length > 0 :
-			print "\n==>rec: ggplot2, epoch %s, commit %s, pid: %s:" % (self.epoch, self.length, os.getpid())
+			print "\n==>rec: ggplot2, epoch %s, runtime %s(mins) commit %s, pid: %s:" % (self.epoch, self.runtime_min, self.length, os.getpid())
 			for mapName, outs in self.scores.currentScores.iteritems() :
 				print "  |-%s set" % mapName
 				for outputName, fs in outs.iteritems() :

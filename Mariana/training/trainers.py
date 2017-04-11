@@ -351,7 +351,7 @@ class DefaultTrainer(Trainer_ABC) :
         if trainingOrder not in self.trainingOrdersHR:
             raise ValueError("Unknown training order: %s" % trainingOrder)
 
-        legend = ["name", "epoch", "runtime(min)", "training_order"]
+        legend = ["name", "epoch", "runtime_min", "training_order"]
         legend.extend(moreHyperParameters.keys())
         hyperParameters = OrderedDict()
         for l in model.layers.itervalues() :
