@@ -3,35 +3,45 @@ import theano
 
 class Variable(object):
     """docstring for Variable"""
-    def __init__(self, streams=["train", "test"], variable_type = None, *theano_args, **theano_kwargs):
+    def __init__(self, variableType=None, streams=["train", "test"], *theano_args, **theano_kwargs):
         super(Variable, self).__init__()
         self.streams = streams
         self.variables = {}
-        for f in streams :
-            if variable_type is not None:
-                self.variables[f] = variable_type(*theano_args, **theano_kwargs)
-            else :
-                self.variables[f] = None
-
+        self.variableType = variableType
+        if variableType :
+            self.set(variableType, *theano_args, **theano_kwargs)
+        else :
+            self.dtype = None
+            for f in self.streams :
+                self.variables[f] = None    
+    
+    def set(self, variableType, *theano_args, **theano_kwargs) :
+        self.variableType = variableType
+        for f in self.streams :
+            self.variables[f] = variableType(*theano_args, **theano_kwargs)
         self.dtype = self.variables[f].dtype
-
+    
     def getValue(self, stream) :
+        v = self[stream]
+        if v is None :
+            raise ValueError("Variable has an empty value for stream: %s" % stream)
+
         return self[stream].get_value()
 
     def setValue(self, stream, value) :
         self[stream].set_value(value)
 
-    def __getitem__(self, flow) :
+    def __getitem__(self, stream) :
         try :
-            return self.variables[flow]
+            return self.variables[stream]
         except KeyError :
-            raise KeyError("There is no flow by the name of: '%s'" % f)
+            raise KeyError("There is no stream by the name of: '%s'" % f)
     
-    def __setitem__(self, flow, newVal) :
+    def __setitem__(self, stream, newVal) :
         try :
-            self.variables[flow] = newVal
+            self.variables[stream] = newVal
         except KeyError :
-            raise KeyError("There is no flow by the name of: '%s'" % f)
+            raise KeyError("There is no stream by the name of: '%s'" % f)
 
 class Inputs(Variable):
     """docstring for Input"""
@@ -47,6 +57,9 @@ class Parameter(object):
         self.tags = tags
         self.value = None
 
+    def __call__(self) :
+        return self.value
+
     def hasValue(self) :
         return self.value is not None
     
@@ -55,14 +68,11 @@ class Parameter(object):
             self.value = theano.shared(value = MUSE.iCast_numpy(v), name = self.name)
         else :
             if v.shape != self.getShape() :
-                print Warning("Update has a different shape: %s -> %s" %(self.shape, v.shape))
+                print("Warning update has a different shape: %s -> %s" %(self.shape, v.shape))
             self.value.set_value(MUSE.iCast_numpy(v))
 
     def getValue(self) :
-        return self.get_value()
-
-    def evaluate(self, *args, **kwargs) :
-        return self.get_value(args, kwargs)
+        return self.value.get_value()
 
     def getShape(self) :
         return self.getValue().shape
@@ -80,7 +90,7 @@ class Parameter(object):
         del self.tags[tag]
 
     def __repr__(self) :
-        return "< Parameter: %s, %s>" % (self.name, self.shape)
+        return "< Parameter: %s, %s>" % (self.name, self.getShape())
 
 class Losses(object):
     """docstring for Losses"""
@@ -95,7 +105,7 @@ class Losses(object):
 
         self.store = {}
         for k in self.streams :
-            self.store[k] = self.cost.apply(self.layer, self.targets[k], self.outputs[k], k)
+            self.store[k] = self.cost.apply(self.layer, self.targets[k], self.outputs[k])
 
     def __getitem__(self, k) :
         return self.store[k]

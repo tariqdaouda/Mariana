@@ -139,58 +139,58 @@ class Normalize(Decorator_ABC) :
             std = tt.sqrt( tt.var(layer.outputs["test"]) + self.espilon )
             layer.outputs["test"] = ( layer.outputs["test"]-tt.mean(layer.outputs["test"]) ) / std
 
-class BatchNormalization_deprecated_to_become_layer(Decorator_ABC):
-    """Applies Batch Normalization to the outputs of the layer.
-    Implementation according to Sergey Ioffe and Christian Szegedy (http://arxiv.org/abs/1502.03167)
+# class BatchNormalization_deprecated_to_become_layer(Decorator_ABC):
+#     """Applies Batch Normalization to the outputs of the layer.
+#     Implementation according to Sergey Ioffe and Christian Szegedy (http://arxiv.org/abs/1502.03167)
     
-        .. math::
+#         .. math::
 
-            W * ( inputs - mean(mu) )/( std(inputs) ) + b
+#             W * ( inputs - mean(mu) )/( std(inputs) ) + b
 
-        Where W and b are learned and std stands for the standard deviation. The mean and the std are computed accross the whole minibatch.
+#         Where W and b are learned and std stands for the standard deviation. The mean and the std are computed accross the whole minibatch.
 
-        :param float epsilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
-        :param initialization WInitialization: How to initizalise the weights. This decorator is smart enough to use layer initializations.
-        :param initialization bInitialization: Same for bias
-    """
+#         :param float epsilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
+#         :param initialization WInitialization: How to initizalise the weights. This decorator is smart enough to use layer initializations.
+#         :param initialization bInitialization: Same for bias
+#     """
 
-    def __init__(self, WInitialization=MI.SmallUniformWeights(), bInitialization=MI.ZeroBias(), epsilon=1e-6, onTrain=True, onTest=True) :
-        Decorator_ABC.__init__(self)
-        self.epsilon = epsilon
-        self.WInitialization = WInitialization
-        self.bInitialization = bInitialization
-        self.W = None
-        self.b = None
-        self.paramShape = None
+#     def __init__(self, WInitialization=MI.SmallUniformWeights(), bInitialization=MI.ZeroBias(), epsilon=1e-6, onTrain=True, onTest=True) :
+#         Decorator_ABC.__init__(self)
+#         self.epsilon = epsilon
+#         self.WInitialization = WInitialization
+#         self.bInitialization = bInitialization
+#         self.W = None
+#         self.b = None
+#         self.paramShape = None
 
-        self.onTrain = onTrain
-        self.onTest = onTest
-        self.hyperParameters.extend(["onTrain", "onTest", "epsilon"])
+#         self.onTrain = onTrain
+#         self.onTest = onTest
+#         self.hyperParameters.extend(["onTrain", "onTest", "epsilon"])
 
-    def initParameter(self, parameter, value) :
-        setattr(self, parameter, value)
+#     def initParameter(self, parameter, value) :
+#         setattr(self, parameter, value)
 
-    def getParameterShape(self, **kwargs) :
-        return self.paramShape
+#     def getParameterShape(self, **kwargs) :
+#         return self.paramShape
 
-    def run(self, layer) :
-        if not hasattr(layer, "batchnorm_W") or not hasattr(layer, "batchnorm_b") :
-            self.paramShape = layer.getOutputShape()#(layer.nbOutputs, )
-            self.WInitialization.initialize(self)
-            self.bInitialization.initialize(self)
+#     def run(self, layer) :
+#         if not hasattr(layer, "batchnorm_W") or not hasattr(layer, "batchnorm_b") :
+#             self.paramShape = layer.getOutputShape()#(layer.nbOutputs, )
+#             self.WInitialization.initialize(self)
+#             self.bInitialization.initialize(self)
 
-            layer.batchnorm_W = self.W
-            layer.batchnorm_b = self.b
+#             layer.batchnorm_W = self.W
+#             layer.batchnorm_b = self.b
 
-            if self.onTrain :
-                mu = tt.mean(layer.outputs["train"])
-                sigma = tt.sqrt( tt.var(layer.outputs["train"]) + self.epsilon )
-                layer.outputs["train"] = layer.batchnorm_W * ( (layer.outputs["train"] - mu) / sigma ) + layer.batchnorm_b
+#             if self.onTrain :
+#                 mu = tt.mean(layer.outputs["train"])
+#                 sigma = tt.sqrt( tt.var(layer.outputs["train"]) + self.epsilon )
+#                 layer.outputs["train"] = layer.batchnorm_W * ( (layer.outputs["train"] - mu) / sigma ) + layer.batchnorm_b
 
-            if self.onTest :
-                mu = tt.mean(layer.outputs["test"])
-                sigma = tt.sqrt( tt.var(layer.outputs["test"]) + self.epsilon )
-                layer.outputs["test"] = layer.batchnorm_W * ( (layer.outputs["test"] - mu) / sigma ) + layer.batchnorm_b
+#             if self.onTest :
+#                 mu = tt.mean(layer.outputs["test"])
+#                 sigma = tt.sqrt( tt.var(layer.outputs["test"]) + self.epsilon )
+#                 layer.outputs["test"] = layer.batchnorm_W * ( (layer.outputs["test"] - mu) / sigma ) + layer.batchnorm_b
 
 class Clip(Decorator_ABC):
     """Clips the neurone activations, preventing them to go beyond the specified range"""

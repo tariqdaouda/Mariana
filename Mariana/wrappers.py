@@ -70,18 +70,18 @@ class Updates(object):
         tmpStore = {}
         for o in self.output_layers :
             self.loss += o.loss[self.stream]
-            optimizers[o] = o.abstractions["scenari"]
+            optimizers[o] = o.abstractions["learningScenari"]
             for l in o.dependencies.itervalues() :
-                for sc in o.abstractions["scenari"] :
+                for sc in o.abstractions["learningScenari"] :
                     if sc.inheritable :
                         try :
                             optimizers[l].append(sc)
-                        except IndexError :
+                        except KeyError :
                             optimizers[l] = [sc]
                 
         for o in self.output_layers :
             for l in o.dependencies.itervalues() :
-                optimizers[l].extend(l.abstractions["scenari"])
+                optimizers[l].extend(l.abstractions["learningScenari"])
                 for reg in l.abstractions["regularizations"] :
                     self.loss = reg.apply(l, self.loss)
 

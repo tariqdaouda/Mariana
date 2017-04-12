@@ -72,8 +72,8 @@ class Softmax(Activation_ABC):
     """
     def __init__(self, scale = 1, temperature = 1):
         Activation_ABC.__init__(self)
-        self.setHP("temperature")
-        self.setHP("scale")
+        self.setHP("temperature", temperature)
+        self.setHP("scale", scale)
 
     def run(self, x):
         return self.getHP("scale") * tt.nnet.softmax(x/self.getHP("temperature"))

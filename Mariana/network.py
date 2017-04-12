@@ -60,8 +60,8 @@ class Network(object) :
     
         self.edges = OrderedDict()
         
-        self.outConnections = {}
-        self.inConnections = {}
+        self.outConnections = OrderedDict()
+        self.inConnections = OrderedDict()
 
         self.parameters = []
 
@@ -189,17 +189,20 @@ class Network(object) :
         for l in newLayers :
             l.network = self
 
-        self.inputs = OrderedDict()
-        self.outputs = OrderedDict()
+        # self.inputs = OrderedDict()
+        # self.outputs = OrderedDict()
         for name, layer in self.layers.iteritems() :
-            if MSET.TYPE_INPUT_LAYER in layer.types:
-                self.inputs[layer.name] = layer
-                self.logNetworkEvent("Registering Input layer %s" % (layer.name))
-            if MSET.TYPE_OUTPUT_LAYER in layer.types :
-                self.outputs[layer.name] = layer
-                self.logNetworkEvent("Registering Output layer %s" % (layer.name))
-            if MSET.TYPE_HIDDEN_LAYER in layer.types :
-                self.logNetworkEvent("Registering Hidden layer %s" % (layer.name))
+            self.logNetworkEvent("Registering layer %s" % (layer.name))
+
+        # for name, layer in self.layers.iteritems() :
+        #     if MSET.TYPE_INPUT_LAYER in layer.types:
+        #         self.inputs[layer.name] = layer
+        #         self.logNetworkEvent("Registering Input layer %s" % (layer.name))
+        #     if MSET.TYPE_OUTPUT_LAYER in layer.types :
+        #         self.outputs[layer.name] = layer
+        #         self.logNetworkEvent("Registering Output layer %s" % (layer.name))
+        #     if MSET.TYPE_HIDDEN_LAYER in layer.types :
+        #         self.logNetworkEvent("Registering Hidden layer %s" % (layer.name))
 
     def initParameters(self, forceReset = False) :
         """Initializes the parameters of all layers but does nothing else.
@@ -216,6 +219,13 @@ class Network(object) :
 
     def init(self, forceInit=False) :
         "Initialiases the network by initialising every layer."
+        for layer in self.layers.itervalues() :
+            layer._setTypes()
+            if MSET.TYPE_INPUT_LAYER in layer.types:
+                self.inputs[layer.name] = layer
+            if MSET.TYPE_OUTPUT_LAYER in layer.types:
+                self.outputs[layer.name] = layer
+
         if self._mustInit or forceInit :
             self.logNetworkEvent("Initialization begins!")
             print("\n" + MSET.OMICRON_SIGNATURE)

@@ -1,6 +1,7 @@
 import Mariana.settings as MSET
 import Mariana.useful as MUSE
 from Mariana.abstraction import Abstraction_ABC
+import Mariana.activations as MA
 
 import lasagne.init as LI
 
@@ -30,23 +31,23 @@ class Initialization_ABC(Abstraction_ABC) :
     """
 
     def __init__(self, parameter, sparsity=0., *args, **kwargs):
-        super(ClassName, self).__init__(*args, **kwargs)
+        super(Initialization_ABC, self).__init__(*args, **kwargs)
         self.setHP("parameter", parameter)
+        self.setHP("sparsity", sparsity)
         
     def apply(self, layer) :
         message = "%s was initialized using %s" % (layer.name, self.__class__.__name__)
-        try :
-            if (v.shape != layer.getParameterShape(self.getHP("parameter"))) :
-                raise ValueError("Initialization has a wrong shape: %s, parameter shape is: %s " % (v.shape, layer.getParameterShape(self.getHP("parameter"))))
-            v = MUSE.iCast_numpy(self.run(layer.getParameterShape(self.getHP("parameter"))))
-            v = MUSE.sparsify(v, sparsity)
-            # layer.initParameter( self.getHP("parameter"), theano.shared(value = v, name = "%s_%s" % (layer.name, self.parameter) ) )
-            layer.getParameter(self.parameter).setValue(v)
+        # try :
+        v = MUSE.iCast_numpy(self.run(layer.getParameterShape(self.getHP("parameter"))))
+        if (v.shape != layer.getParameterShape(self.getHP("parameter"))) :
+            raise ValueError("Initialization has a wrong shape: %s, parameter shape is: %s " % (v.shape, layer.getParameterShape(self.getHP("parameter"))))
+        v = MUSE.sparsify(v, self.getHP("sparsity"))
+        layer.getParameter(self.getHP("parameter")).setValue(v)
 
-        except Exception as e:
-            message = "%s was *NOT* initialized using %s. Because: %s" % (layer.name, self.__class__.__name__, e.message)
-            layer.network.logLayerEvent(layer, message, self.getHyperParameters())
-            raise e
+        # except Exception as e:
+        #     message = "%s was *NOT* initialized using %s. Because: %s" % (layer.name, self.__class__.__name__, e.message)
+        #     layer.network.logLayerEvent(layer, message, self.getHyperParameters())
+        #     raise e
         
     def run(self, shape) :
         """The function that all Initialization_ABCs must implement"""
@@ -55,12 +56,19 @@ class Initialization_ABC(Abstraction_ABC) :
 class Identity(Initialization_ABC) :
     """Identity matrix. Its your job to make sure that the parameter is a square matrix"""
     def run(self, shape) :
+        sv = None
+        for s in shape :
+            if not sv :
+                sv = s
+            elif sv != s :
+                raise ValueError("Shape must be square, got: %s" % shape)
+
         v = numpy.identity(shape, dtype = theano.config.floatX)
 
 class HardSet(Initialization_ABC) :
     """Sets the parameter to value. It's your job to make sure that the shape is correct"""
     def __init__(self, parameter, value, *args, **kwargs) :
-        Initialization_ABC.__init__(self, *args, **kwargs)
+        super(HardSet, self).__init__(*args, **kwargs)
         self.parameter = parameter
         self.value = numpy.asarray(value, dtype=theano.config.floatX)
         self.hyperParameters = ["parameter"]
@@ -83,8 +91,8 @@ class Normal(Initialization_ABC):
     Initializes using a random normal distribution.
     **Small** uses my personal initialization than I find works very well in most cases with a uniform distribution, simply divides by the sum of the weights.
     """
-    def __init__(self, std, mean, small=False):
-        super(Normal, self).__init__()
+    def __init__(self, parameter, std, mean, small=False, *args, **kwargs):
+        super(Normal, self).__init__(parameter, *args, **kwargs)
         self.setHP("std", std)
         self.setHP("mean", mean)
         self.setHP("small", small)
@@ -100,8 +108,8 @@ class Uniform(Initialization_ABC):
     Initializes using a uniform distribution
     **Small** uses my personal initialization than I works very well in most cases, simply divides by the sum of the weights.
     """
-    def __init__(self, low, high, small=False):
-        super(Uniform, self).__init__()
+    def __init__(self, parameter, low=0, high=1, small=False, *args, **kwargs):
+        super(Uniform, self).__init__(parameter, *args, **kwargs)
         self.setHP("low", low)
         self.setHP("high", high)
     
@@ -132,7 +140,7 @@ class FanInFanOut_ABC(Initialization_ABC) :
         self.setHP("forceGain", forceGain)
         self.gain = None
 
-    def _getGain(activation) :
+    def _getGain(self, activation) :
         """returns the gain with respesct to an activation function"""
         if activation.__class__ is MA.ReLU :
             if activation.leakiness == 0 :
@@ -158,7 +166,7 @@ class GlorotNormal(FanInFanOut_ABC) :
     Uses lasagne as backend.
     """ 
     def run(self, shape) :
-        return LI.GlorotNormal(gain = self.gain).sample()
+        return LI.GlorotNormal(gain = self.gain).sample(shape)
 
 class GlorotUniform(FanInFanOut_ABC) :
     """
@@ -167,7 +175,7 @@ class GlorotUniform(FanInFanOut_ABC) :
     Uses lasagne as backend.
     """ 
     def run(self, shape) :
-        return LI.GlorotUniform(gain = self.gain).sample()
+        return LI.GlorotUniform(gain = self.gain).sample(shape)
 
 class HeNormal(FanInFanOut_ABC) :
     """
@@ -176,7 +184,7 @@ class HeNormal(FanInFanOut_ABC) :
     On a Normal distribution, Uses lasagne as backend.
     """ 
     def run(self, shape) :
-        return LI.HeNormal(gain = self.gain).sample()
+        return LI.HeNormal(gain = self.gain).sample(shape)
 
 class HeUniform(FanInFanOut_ABC) :
     """
@@ -185,4 +193,4 @@ class HeUniform(FanInFanOut_ABC) :
     On a Uniform distribution, Uses lasagne as backend.
     """ 
     def run(self, shape) :
-        return LI.HeUniform(gain = self.gain).sample()
+        return LI.HeUniform(gain = self.gain).sample(shape)

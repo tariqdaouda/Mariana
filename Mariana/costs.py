@@ -11,21 +11,16 @@ class Cost_ABC(Abstraction_ABC) :
 
     def __init__(self, reverse=False, *args, **kwargs) :
         """use reverse = True, to have the opposite of cost"""
-        super(Abstraction_ABC, self).__init__(*args, **kwargs)
-        self.hyperParameters = {
-            "reverse": reverse
-        }
+        super(Cost_ABC, self).__init__(*args, **kwargs)
+        self.setHP("reverse", reverse)
 
     def apply(self, layer, targets, outputs) :
         """Apply to a layer and update networks's log. Purpose is supposed to be a sting such as 'train' or 'test'"""
-        hyps = {}
-        for k in self.hyperParameters :
-            hyps[k] = getattr(self, k)
-        
-        message = "%s uses cost %s" % (layer.name, self.__class__.__name__)
-        layer.network.logLayerEvent(layer, message, hyps)
 
-        if self.reverse :
+        message = "%s uses cost %s" % (layer.name, self.__class__.__name__)
+        layer.network.logLayerEvent(layer, message, self.getHyperParameters())
+
+        if self.getHP("reverse") :
             return -self.run(targets, outputs)
         else :
             return self.run(targets, outputs)

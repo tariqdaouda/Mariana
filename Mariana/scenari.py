@@ -7,32 +7,32 @@ __all__ = ["LearningScenario_ABC", "ParameterGradUpdates", "OptimizerFreeResults
 
 class ConflictResolve(object):
     """In Mariana scenari can be chained. The children of that class defines what to do in case of conflict"""
-    def __init__(self, previous, current, warning=False):
+    def __init__(self, warning=False):
         super(ConflictResolve, self).__init__()
-        self.previous = previous
-        self.current = current
-        self.warning
+        self.warning=warning
 
-    def apply(self) :
+    def apply(self, previous, current) :
         if self.warning :
-            raise Warning("Resolving conflict between scenari usingL %s" % self.__class__.__name__)
+            print("Resolving conflict between scenari using %s" % self.__class__.__name__)
+        
+        return self.resolve(previous, current)
 
-    def resolve(self) :
+    def resolve(self, previous, current) :
         raise NotImplemented("Should be implemented in child")
 
 class Overwrite(ConflictResolve):
     """Overwrite the previous value"""
-    def resolve(self) :
-        return self.current
+    def resolve(self, previous, current) :
+        return current
 
 class Ignore(ConflictResolve):
     """Ignore the update and keep the previous value"""
-    def resolve(self) :
-        return self.previous
+    def resolve(self, previous, current) :
+        return previous
 
 class Die(ConflictResolve):
     """No conflic resolve, crashes everything"""
-    def resolve(self) :
+    def resolve(self, previous, current) :
         raise ValueError("This learning scenario is incompatible with previous ones")
 
 class ParameterGradUpdates(object):
@@ -70,7 +70,7 @@ class LearningScenario_ABC(Abstraction_ABC):
     This is the interface all scenari must expose.
     """
     def __init__(self, applyTo=None, inheritable=True, conflictResolve=Die(), *args, **kwargs) :
-        super(Abstraction_ABC, self).__init__(*args, **kwargs)
+        super(LearningScenario_ABC, self).__init__(*args, **kwargs)
         if applyTo :
             self.applyTo = set(applyTo)
             self.setHP("applyTo", applyTo)
@@ -121,7 +121,7 @@ class GradientDescent(LearningScenario_ABC):
         """
         super(GradientDescent, self).__init__(**kwargs)
         
-        self.addHyperParameter({
+        self.addHyperParameters({
         	"lr": lr,
         	"momentum": momentum,
         	"reverse": reverse
