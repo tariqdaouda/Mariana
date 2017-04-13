@@ -4,6 +4,7 @@ from collections import OrderedDict
 import theano, numpy, time, uuid
 import theano.tensor as tt
 
+import Mariana.abstraction as MABS
 import Mariana.activations as MA
 import Mariana.initializations as MI
 import Mariana.settings as MSET
@@ -15,7 +16,12 @@ import Mariana.candies as MCAN
 
 __all__=["Layer_ABC", "DenseOutput_ABC", "Dense", "Output_ABC", "Input", "Hidden", "Addition", "Embedding", "SoftmaxClassifier", "Regression", "Autoencode"]
 
-class Layer_ABC(object) :
+class ClassName(object):
+    """docstring for ClassName"""
+    def __init__(self, arg):
+        self.arg = arg
+        
+class Layer_ABC(MABS.Abstraction_ABC) :
     "The interface that every layer should expose"
 
     __metaclass__=ABCMeta
@@ -37,17 +43,8 @@ class Layer_ABC(object) :
 
         return obj
 
-    def __init__(self,
-        # size,
-        # layerTypes,
-        activation=MA.Pass(),
-        regularizations=[],
-        initializations=[],
-        learningScenari=[],
-        decorators=[],
-        name=None,
-        maxInConnections=1
-    ):
+    def __init__(self, activation=MA.Pass(), regularizations=[], initializations=[], learningScenari=[], decorators=[], name=None, maxInConnections=1):
+        super(Layer_ABC, self).__init__()
         # self.isLayer=True
         self.maxInConnections=maxInConnections
 
@@ -72,7 +69,6 @@ class Layer_ABC(object) :
             "initializations": initializations,
             "learningScenari": learningScenari,
         }
-        self.parameters = {}
         
         self.network=MNET.Network()
         self.network._addLayer(self)
@@ -83,25 +79,20 @@ class Layer_ABC(object) :
         self._mustReset=True
         self._decorating=False
 
-    def getParameterDict(self) :
-        """returns the layer's parameters as dictionary"""
-        from theano.compile import SharedVariable
-        res={}
-        for k, v in self.parameters.iteritems() :
-            if isinstance(v, SharedVariable) :
-                res[k]=v
-        return res
+    # def getParameters(self) :
+    #     """returns the layer's parameters as dictionary"""
+    #     return self.parameters
 
-    def getParameter(self, pname) :
-        return self.parameters[pname]
+    # def getParameter(self, pname) :
+    #     return self.parameters[pname]
 
-    def getParameters(self) :
-        """returns the layer's parameters"""
-        return self.getParameterDict().values()
+    # def getParameters(self) :
+    #     """returns the layer's parameters"""
+    #     return self.getParameters().values()
 
-    def getParameterNames(self) :
-        """returns the layer's parameters names"""
-        return self.getParameterDict().keys()
+    # def getParameterNames(self) :
+    #     """returns the layer's parameters names"""
+    #     return self.getParameters().keys()
 
     def getParameterShape_abs(self, param) :
         """Should return the shape of the parameter. This has to be implemented in order for the initializations to work (and maybe some other stuff as well)"""
@@ -113,7 +104,7 @@ class Layer_ABC(object) :
         creationArguments.update(kwargs)
         newLayer=self.__class__(*self.creationArguments["args"], **creationArguments)
         
-        for k, v in self.getParameterDict().iteritems() :
+        for k, v in self.getParameters().iteritems() :
             setattr(newLayer, k, v)
             newLayer._mustReset=False
         return newLayer
@@ -185,16 +176,13 @@ class Layer_ABC(object) :
         
     def _parametersSanityCheck(self) :
         "perform basic parameter checks on layers, automatically called on initialization"
-        for k, v in self.getParameterDict().iteritems() :
-            try :
-                if None in self.getParameterShape(k) :
-                    raise ValueError("Parameter '%s' of layer '%s' has invalid shape %s. That can cause initializations to crash." % (k, self.name, self.getParameterShape(k)))
-            except :
-                message="Warning! Unable to get shape of parameter '%s' of layer '%s'. That can cause initializations to crash." % (k, self.name)
-                self.network.logLayerEvent(self, message, {})
-                if MSET.VERBOSE :
-                    print(message)
-
+        for k, v in self.parameters.iteritems() :
+            if v is None :
+                raise ValueError("Parameter '%s' of layer '%s' has invalid value %s" % (k, self.name, self.getParameterShape(k)))
+        
+            if None in self.getParameterShape(k) :
+                raise ValueError("Parameter '%s' of layer '%s' has invalid shape %s. That can cause initializations to crash." % (k, self.name, self.getParameterShape(k)))
+        
     def _outputsSanityCheck(self) :
         "perform basic output checks on layers, automatically called on initialization"
         for s in self.outputs.streams :
@@ -352,12 +340,10 @@ class Embedding(Layer_ABC) :
 
         self.zeroForNull=zeroForNull
 
-        self.dictSize=dictSize
-        self.nbDimentions=nbDimentions
+        self.setHP("dictSize", dictSize)
+        self.setHP("nbDimentions", nbDimentions)
 
-        self.parameters={
-            "embeddings":MTYPES.Parameter(name="%s.%s" % (self.name, embeddings)),
-        }
+        self.setP("embeddings", MTYPES.Parameter(name="%s.%s" % (self.name, "embeddings")))
 
         self.inputs=MTYPES.Variable()
 
@@ -437,11 +423,12 @@ class Dense(Layer_ABC) :
         # super(Dense, self).__init__(layerTypes=[MSET.TYPE_HIDDEN_LAYER], initializations=initializations, **kwargs)
         super(Dense, self).__init__(initializations=initializations, **kwargs)
         # self.inputs["test"]=None
-        self.parameters={
+        self.addParameters({
             "W": MTYPES.Parameter("%s.W" % (self.name)),
             "b": MTYPES.Parameter("%s.b" % (self.name))
-        }
-        self.nbUnits = nbUnits
+        })
+
+        self.setHP("nbUnits", nbUnits)
         self.nbInputs=None
 
     def femaleConnect(self, layer) :

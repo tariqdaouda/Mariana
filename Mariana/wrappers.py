@@ -67,7 +67,6 @@ class Updates(object):
             
         self.loss = 0
         optimizers = {}
-        tmpStore = {}
         for o in self.output_layers :
             self.loss += o.loss[self.stream]
             optimizers[o] = o.abstractions["learningScenari"]
@@ -86,6 +85,7 @@ class Updates(object):
                     self.loss = reg.apply(l, self.loss)
 
         scCheck = set()
+        tmpStore = {}
         for layer, scenari in optimizers.iteritems() :
             for sc in scenari :
                 if sc not in scCheck :
@@ -94,27 +94,27 @@ class Updates(object):
                         self.store.add(gup_free.parameter, gup_free.update, gup_free.gradient, pname)
                     scCheck.add(sc)
 
-                for k in layer.getParameterNames() :
+                for k in layer.parameters.iterkeys() :
                     pname = "%s.%s" %(layer.name, k)
                     _apply(sc, tmpStore, layer, layer, k, pname, self.loss)
 
                 for abst in layer.abstractions :
                     try:
-                        names = abst.getParameterNames()
+                        names = abst.parameter.keys()
                     except Exception as e:
                         pass
                     else :
                         for k in names:
                             pname = "%s.%s.%s" %(layer.name, abst.__class__.__name__, k)
                             _apply(sc, tmpStore, layer, abst, k, pname, self.loss)
-
+        
         for cute_name, res in tmpStore.iteritems() :
             if res is not None :
                 gup = res.parameter
-                store.add(gup.parameter, gup.update, gup.gradient, cute_name)
+                self.store.add(gup.parameter, gup.update, gup.gradient, cute_name)
                 for gup_co in res.coParameters :
                     cute_name2 = "%s.%s" %(cute_name, gup_co.name)
-                    store.add(gup_co.parameter, gup_co.update, gup_co.gradient, cute_name)
+                    self.store.add(gup_co.parameter, gup_co.update, gup_co.gradient, cute_name)
 
 class TheanoFunctionHandle(object) :
     """
@@ -182,10 +182,10 @@ class TheanoFunctionHandle(object) :
         self._develop()
         return self.theano_fct.run(*args, **kwargs)
 
-    # def __getattr__(self, k) :
-    #     self._develop()
-    #     if hasattr(self.theano_fct, k) :
-    #         return getattr(self.theano_fct, k)
+    def __getattr__(self, k) :
+        self._develop()
+        if hasattr(self.theano_fct, k) :
+            return getattr(self.theano_fct, k)
 
 class TheanoFunction(object) :
 

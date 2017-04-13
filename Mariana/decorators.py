@@ -2,20 +2,20 @@ import numpy
 import theano
 import theano.tensor as tt
 import Mariana.settings as MSET
-from Mariana.abstraction import Abstraction_ABC
+import Mariana.abstraction as MABS
 import Mariana.initializations as MI
 import Mariana.useful as MUSE
 
 __all__= ["Decorator_ABC", "BatchNormalization", "Center", "Normalize", "Mask", "RandomMask", "BinomialDropout", "Clip", "AdditiveGaussianNoise", "MultiplicativeGaussianNoise"]
 
-class Decorator_ABC(Abstraction_ABC) :
+class Decorator_ABC(MABS.ApplyAbstraction_ABC) :
     """A decorator is a modifier that is applied on a layer's output. They are always the last the abstraction to be applied."""
 
     def apply(self, layer, stream) :
         """Apply to a layer and update networks's log"""
         
         message = "%s is decorated by %s on stream %s" % (layer.name, self.__class__.__name__, stream)
-        layer.network.logLayerEvent(layer, message, self.getHyperParameters())
+        layer.network.logLayerEvent(layer, message, self.hyperParameters)
         return self.run(layer)
 
     def run(self, layer, stream) :

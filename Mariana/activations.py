@@ -1,16 +1,16 @@
 import theano.tensor as tt
-from Mariana.abstraction import Abstraction_ABC
+import Mariana.abstraction as MABS
 
 __all__ = ["Activation_ABC", "Pass", "Sigmoid", "Tanh", "ReLU", "Softmax"]
 
-class Activation_ABC(Abstraction_ABC):
+class Activation_ABC(MABS.ApplyAbstraction_ABC):
     """All activations must inherit from this class"""
 
     def apply(self, layer, x) :
         """Apply to a layer and update networks's log"""
         
         message = "%s uses activation %s" % (layer.name, self.__class__.__name__)
-        layer.network.logLayerEvent(layer, message, self.getHyperParameters())
+        layer.network.logLayerEvent(layer, message, self.hyperParameters)
         for s in x.streams :
             x[s] = self.run(x[s])
 
@@ -76,4 +76,4 @@ class Softmax(Activation_ABC):
         self.setHP("scale", scale)
 
     def run(self, x):
-        return self.getHP("scale") * tt.nnet.softmax(x/self.getHP("temperature"))
+        return self.scale * tt.nnet.softmax(x/self.temperature)

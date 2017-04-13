@@ -72,9 +72,13 @@ class Parameter(object):
             self.value.set_value(MUSE.iCast_numpy(v))
 
     def getValue(self) :
+        if self.value is None :
+            return None
         return self.value.get_value()
 
     def getShape(self) :
+        if self.value is None :
+            return None
         return self.getValue().shape
 
     def hasTag(self, tag) :

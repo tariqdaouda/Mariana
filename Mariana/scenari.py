@@ -1,7 +1,9 @@
 import theano, numpy
 import theano.tensor as tt
-from Mariana.abstraction import Abstraction_ABC
 from collections import OrderedDict
+
+import Mariana.abstraction as MABS
+
 
 __all__ = ["LearningScenario_ABC", "ParameterGradUpdates", "OptimizerFreeResults", "OptimizerResult", "Fixed", "GradientDescent"]
 
@@ -65,7 +67,7 @@ class OptimizerResult(object):
         param = ParameterGradUpdates(parameter, name, update, gradient)
         self.coParameters.append(param)
         
-class LearningScenario_ABC(Abstraction_ABC):
+class LearningScenario_ABC(MABS.ApplyAbstraction_ABC):
     """
     This is the interface all scenari must expose.
     """
@@ -91,7 +93,7 @@ class LearningScenario_ABC(Abstraction_ABC):
         layer.network.logLayerEvent(layer, message, self.hyperParameters)
 
         try:
-            param = entity.getParameterDict()[paramName]
+            param = entity.parameters[paramName]
         except :
             raise KeyError("%s has no parameter %s"%(entity, paramName))
 
@@ -128,25 +130,25 @@ class GradientDescent(LearningScenario_ABC):
         })
         
     def run(self, param, loss, more) :
-        if self.getHP("momentum") > 0 :
-            gparam = tt.grad(loss, param)
+        if self.momentum > 0 :
+            gparam = tt.grad(loss, param())
             momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable, name="momentum.%s" % (more["paramName"]))
             
-            param_update = self.getHP("momentum") * momentum_param + (1-self.hps["momentum"])*gparam
+            param_update = self.momentum * momentum_param + (1-self.hps["momentum"])*gparam
             
-            if self.getHP("reverse") :
-                momentum_update = param + self.getHP("lr") * momentum_param
+            if self.reverse :
+                momentum_update = param + self.lr * momentum_param
             else :
-                momentum_update = param - self.getHP("lr") * momentum_param
+                momentum_update = param - self.lr * momentum_param
                     
-            ret = OptimizerResult(param, paramName, param_update, gparam)
+            ret = OptimizerResult(param, more["paramName"], param_update, gparam)
             ret.addCoParameter(momentum_param, "momentum", momentum_update, None)
         else :
-            gparam = tt.grad(loss, param)
-            if self.getHP("reverse") :
-                update = param + self.getHP("lr") * gparam
+            gparam = tt.grad(loss, param())
+            if self.reverse:
+                update = param() + self.lr * gparam
             else :
-                update = param - self.getHP("lr") * gparam
-            ret = OptimizerResult(param, paramName, update, gparam)
+                update = param() - self.lr * gparam
+            ret = OptimizerResult(param(), more["paramName"], update, gparam)
 
         return ret

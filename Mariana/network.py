@@ -73,7 +73,7 @@ class Network(object) :
         "Adds a log event to self.log. Entity can be anything hashable, Message should be a string and parameters and dict: param_name => value"
         import time, types
         assert type(message) is types.StringType
-        assert type(parameters) is types.DictType
+        assert (type(parameters) is types.DictType) or isinstance(parameters, OrderedDict)
             
         entry = {
             "date": time.ctime(),
@@ -89,9 +89,6 @@ class Network(object) :
 
     def logLayerEvent(self, layer, message, parameters = {}) :
         "Adds a log event to self.log. Message should be a string and parameters and dict: param_name => value"
-        import time, types
-        assert type(message) is types.StringType
-        assert type(parameters) is types.DictType
         self.logEvent(layer.name, message, parameters)
 
     def printLog(self) :
@@ -240,7 +237,7 @@ class Network(object) :
     
             for l in self.layers.itervalues() :
                 l._initB()
-                self.parameters.extend(l.getParameters())
+                self.parameters.extend(l.parameters.values())
     
             for o in self.layers.itervalues() :
                 for k, v in o.__dict__.iteritems() :

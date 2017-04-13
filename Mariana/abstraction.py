@@ -1,6 +1,6 @@
-import theano
+from collections import OrderedDict
 
-__all__ = ["Abstraction_ABC"]
+__all__ = ["Abstraction_ABC", "ApplyAbstraction_ABC"]
 
         
 class Abstraction_ABC(object):
@@ -10,61 +10,36 @@ class Abstraction_ABC(object):
     """
     def __init__(self, *args, **kwargs):
         super(Abstraction_ABC, self).__init__()
-        self.hyperParameters = {}
-        self.parameters = {}
+        self.hyperParameters = OrderedDict()
+        self.parameters = OrderedDict()
 
     def addHyperParameters(self, dct) :
         """adds to the list of hyper params, dct must be a dict"""
         self.hyperParameters.update(dct)
     
-    def getHyperParameters(self) :
-        """return a dictionary of thee hyper param"""
-        return self.hyperParameters
-
-    def getHyperParameter(self, k) :
-        """return the value of a hyper param"""
-        return self.hyperParameters[k]
-
-    def getHP(self, k) :
-        """short hand for getHyperParameter"""
-        return self.getHyperParameter(k)
-
-    def setHyperParameter(self, k, v) :
-        """set the value of a hyper param"""
-        self.hyperParameters[k] = v
+    def addParameters(self, dct) :
+        self.parameters.update(dct)
 
     def setHP(self, k, v) :
-        """short hand for setHyperParameter"""
-        self.setHyperParameter(k, v)
+        """sets a single hyper parameter"""
+        self.hyperParameters[k] = v
 
-    def apply(self, layer, *args, **kwargs) :
-        """Apply to a layer, basically logs stuff and then calls run"""
-        raise NotImplemented("Must be implemented in child")
-    
-    def run(self, *args, **kwargs) :
-        """the actual worker function that does whaters the abstraction is supposed to do"""
-        raise NotImplemented("Must be implemented in child")
-
-    def getParameterDict(self) :
-        """returns the layer's parameters as dictionary"""
-        from theano.compile import SharedVariable
-        res={}
-        for k, v in self.parameters.iteritems() :
-            if isinstance(v, SharedVariable) :
-                res[k]=v
-        return res
-
-    def getParameters(self) :
-        """returns the layer's parameters"""
-        return self.getParameterDict().values()
-
-    def getParameterNames(self) :
-        """returns the layer's parameters names"""
-        return self.getParameterDict().keys()
+    def setP(self, k, v) :
+        """sets a single parameter"""
+        self.parameter[k] = v
 
     def getParameterShape(self, param) :
         """Should return the shape of the parameter. This has to be implemented in order for the initializations to work (and maybe some other stuff as well)"""
         raise NotImplemented("Should be implemented in child")
+
+    def __getattr__(self, k) :
+        hps = object.__getattribute__(self, "hyperParameters")
+        ps = object.__getattribute__(self, "parameters")
+        if k in hps :
+            return hps[k]
+        if k in ps :
+            return ps[k]
+        raise AttributeError("Abstraction of Class '%s' has no attribute '%s'" % (self.__class__.__name__, k))
 
     # def toJson(self) :
     #     """A json representation of the object"""
@@ -79,3 +54,13 @@ class Abstraction_ABC(object):
     #     return res
     def __repr__(self) :
         return "< %s: %s >" % (self.__class__.__name__, self.hyperParameters)
+
+
+class ApplyAbstraction_ABC(Abstraction_ABC):
+    def apply(self, layer, *args, **kwargs) :
+        """Apply to a layer, basically logs stuff and then calls run"""
+        raise NotImplemented("Must be implemented in child")
+    
+    def run(self, *args, **kwargs) :
+        """the actual worker function that does whaters the abstraction is supposed to do"""
+        raise NotImplemented("Must be implemented in child")
