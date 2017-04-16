@@ -75,7 +75,7 @@ class LasagneLayer(ML.Layer_ABC) :
         self.lasagneHyperParameters = lasagneHyperParameters
         
         if "nonlinearity" in self.lasagneHyperParameters :
-            raise IAmAnnoyed("There's an 'nonlinearity' argument in the hyperParameters. Use activation = <...>. Just likw you would do for a normal layer.")
+            raise IAmAnnoyed("There's an 'nonlinearity' argument in the hyperParameters. Use activation = <...>. Just like you would do for any other layer.")
         
         if "incoming" in self.lasagneHyperParameters :
             raise IAmAnnoyed("There's an 'incoming' argument in the hyperParameters. Don't tell me how to do my job!")
