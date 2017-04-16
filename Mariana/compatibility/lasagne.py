@@ -2,7 +2,10 @@ from collections import OrderedDict
 import Mariana.layers as ML
 import Mariana.custom_types as MTYPES
 
+__all__=["LasagneLayer", "LasagneStreamedLayer", "IAmAnnoyed"]
+
 class IAmAnnoyed(Exception) :
+    """What Mariana raises when you annoy her"""
     def __init__(self, msg) :
         self.message = msg
 
@@ -13,7 +16,7 @@ class IAmAnnoyed(Exception) :
         return self.message
 
 class LasagneStreamedLayer(object):
-    """docstring for LasagneStreamedLayer"""
+    """Wraps lasagne layers to give them a stream interface"""
     def __init__(self, shape, streams, lasagneLayerCls, hyperParameters, initParameters, lasagneKwargs={}):
         super(LasagneStreamedLayer, self).__init__()
         self.streams = streams

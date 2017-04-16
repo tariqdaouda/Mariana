@@ -6,8 +6,11 @@ import Mariana.candies as MCAN
 import Mariana.settings as MSET
 import Mariana.custom_types as MTYPES
 
+__all__=["UpdateStore", "Updates", "TheanoFunctionHandle", "TheanoFunction"]
+
+
 class UpdateStore(object):
-    """docstring for UpdateStore"""
+    """Stores gradients and updates for parameters in convenient interface"""
     def __init__(self):
         super(UpdateStore, self).__init__()
         self.names = {
@@ -35,7 +38,7 @@ class UpdateStore(object):
             self.names["gradients"][parameter] = name
 
 class Updates(object):
-    """docstring for Updates"""
+    """Derives the updates for a theano function"""
     def __init__(self, output_layer, stream):
         super(Updates, self).__init__()
         self.output_layers = [output_layer]
@@ -43,13 +46,16 @@ class Updates(object):
         self.stream = stream
         self.store = UpdateStore()
 
-    def add(self, updates) :
+    def merge(self, updates) :
+        """Merge tow updates by combining their outputs and adding theirs losses"""
+        if not isinstance(updates, self.__class__) :
+            raise ValueError("Parameter must be an instance of '%s" % self.__class__.__name__)
         if updates :
             self.output_layers.extend(updates.output_layers)
             self.loss += updates.loss
 
     def compile(self) :
-        
+        """Derive the updates and gradients for every parameter in the network"""
         def _apply(sc, store, layer, entity, param_name, cute_name, loss) :
             try :
                 previous = store[cute_name]
@@ -119,18 +125,17 @@ class Updates(object):
 
 class TheanoFunctionHandle(object) :
     """
-    This class encapsulates a Theano function.
-    TheanoFunction objects should be defined as self attributes in the setCustomTheanoFunctions() function of output layers.
-    It will also generate custom error messages whose verbosity depends on Mariana.settings.VERBOSE. Set it to False to get quieter
-    error messages.
+    This a description of a theano function. It is used as a reference for just-in-time compilation of theano functions.
+    TheanoFunctionHandle can be added to each other to create complex rich functions.
     """
 
     def __init__(self, name, layer, output, stream, update=False, **theano_kwargs) :
         """
-        :param Output layer: the output layer the function should be applied to
-        :param list updates: boolean defining if updates should be applied
+        :param str name: The name of the function used to identify its return value 
+        :param output: The theano expression to be returned
+        :parama stream: Usually something like "train" or "test". Defines if regularizations and decorators should be applied
+        :parama bool update: Should it update the parameters when called
         :param dict \*\*theano_kwargs: additional arguments to passed to the real theano function underneath
-        :parama stream: usually something like "train" or "test". Defines if regularizations and decorators should be applied
         """
         super(TheanoFunctionHandle, self).__init__()
         
@@ -159,9 +164,11 @@ class TheanoFunctionHandle(object) :
         self.theano_fct = None
 
     def hasUpdates(self) :
+        """returns True if the function updates the parameters, False other wise."""
         return self.update
 
     def __add__(self, other) :
+        """Add to handle together using the '+' operator. Losses will be added up and updates will be merged"""
         if self.stream != other.stream :
             raise TypeError("All functions must be in the same stream %s != %s" %(self.stream, other.stream))
         
@@ -176,20 +183,25 @@ class TheanoFunctionHandle(object) :
         return TheanoFunction([self, other])
 
     def _develop(self) :
+        """Compile the inner theano function"""
         if not self.theano_fct :
             self.theano_fct = TheanoFunction([self])
 
     def __call__(self, *args, **kwargs) :
+        """Call the inner theano functiom"""
         self._develop()
         return self.theano_fct.run(*args, **kwargs)
 
     def __getattr__(self, k) :
+        """return the theano function attributes"""
         self._develop()
         if hasattr(self.theano_fct, k) :
             return getattr(self.theano_fct, k)
 
 class TheanoFunction(object) :
-
+    """
+    This class encapsulates a just-in-time compiled Theano function.
+    """
     def __init__(self, theano_handles) :
         super(TheanoFunction, self).__init__()
 
@@ -203,13 +215,15 @@ class TheanoFunction(object) :
         self.updates = None
             
     def isCompiled(self) :
+        """Has the compildation already happend?"""
         return self.theano_fct is not None
 
     def _addHandle(self, theano_handle) :
+        """Add a handle to the current definition. Losses will be added up and updates will be merged"""
         self.theano_handles.append(theano_handle)
     
     def _compile(self):
-
+        """Compile the function just-in-time according the definitions given by the handles."""
         if not self.isCompiled() :
             self.inputs = OrderedDict()
             self.outputs = OrderedDict()
@@ -231,7 +245,7 @@ class TheanoFunction(object) :
                     if self.updates is None :
                         self.updates = Updates(handle.layer, handle.stream)
                     else :
-                        self.updates.add(Updates(handle.layer, handle.stream))
+                        self.updates.merge(Updates(handle.layer, handle.stream))
 
             if self.updates :
                 self.updates.compile()
@@ -251,6 +265,7 @@ class TheanoFunction(object) :
             self.results = OrderedDict()
 
     def _parseInputs(self, inputs = {}) :
+        """parse the inputs to the function and tells you if there's anything missing, in a friendly and human readable way"""
         nbArgs = 0
         fct_inputs = OrderedDict()
         for param, pname in self.fct_inputs_varToName.iteritems() :
@@ -270,6 +285,7 @@ class TheanoFunction(object) :
         return fct_inputs
 
     def run(self, inputs = {}) :
+        """run the function and return the results"""
         self._compile()
         fct_inputs = self._parseInputs(inputs)
 
@@ -281,6 +297,7 @@ class TheanoFunction(object) :
         return self.results
 
     def getGradients(self, inputs={}) :
+        """return the gradients that would be performed"""
         self._compile()
         if not self.updates :
             raise TypeError("Function has no updates, cannot have gradients")
@@ -297,6 +314,7 @@ class TheanoFunction(object) :
         return results
         
     def getUpdates(self, inputs={}) :
+        """return the updates that would be performed"""
         self._compile()
         if not self.updates :
             raise TypeError("Function has no updates")
@@ -330,6 +348,7 @@ class TheanoFunction(object) :
         d3v.d3viz(self.theano_fct, filename)
 
     def __call__(self, *args, **kwargs) :
+        """a convenient alias to run()"""
         return self.run(*args, **kwargs)
 
     def __repr__(self) :
