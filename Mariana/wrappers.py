@@ -47,10 +47,10 @@ class Updates(object):
         self.store = UpdateStore()
 
     def merge(self, updates) :
-        """Merge tow updates by combining their outputs and adding theirs losses"""
-        if not isinstance(updates, self.__class__) :
-            raise ValueError("Parameter must be an instance of '%s" % self.__class__.__name__)
-        if updates :
+        """Merge tow updates by combining their outputs and adding theirs losses. Must be None or another Updates instance"""
+        if updates is None :
+            if not isinstance(updates, self.__class__) :
+                raise ValueError("Parameter must be an instance of '%s" % self.__class__.__name__)
             self.output_layers.extend(updates.output_layers)
             self.loss += updates.loss
 
@@ -213,6 +213,8 @@ class TheanoFunction(object) :
         self.inputs = None
         self.outputs = None
         self.updates = None
+    
+        self.perfomUpdates = None
             
     def isCompiled(self) :
         """Has the compildation already happend?"""
@@ -224,6 +226,8 @@ class TheanoFunction(object) :
     
     def _compile(self):
         """Compile the function just-in-time according the definitions given by the handles."""
+        self.perfomUpdates = False
+
         if not self.isCompiled() :
             self.inputs = OrderedDict()
             self.outputs = OrderedDict()
@@ -242,16 +246,18 @@ class TheanoFunction(object) :
                 self.outputs["%s.%s" % (handle.layer.name, handle.name)] = handle.output
                 
                 if handle.hasUpdates() :
-                    if self.updates is None :
-                        self.updates = Updates(handle.layer, handle.stream)
-                    else :
-                        self.updates.merge(Updates(handle.layer, handle.stream))
+                    self.perfomUpdates = True
 
+                if self.updates is None :
+                    self.updates = Updates(handle.layer, handle.stream)
+                else :
+                    self.updates.merge(Updates(handle.layer, handle.stream))
+
+            updates = {}
             if self.updates :
                 self.updates.compile()
-                updates = self.updates.store.updates
-            else :
-                updates = {}
+                if self.perfomUpdates :
+                    updates = self.updates.store.updates
             
             self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs.values(), updates = updates, **self.theano_kwargs)
 
