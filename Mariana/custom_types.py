@@ -63,14 +63,30 @@ class Parameter(object):
     def hasValue(self) :
         return self.value is not None
     
-    def setValue(self, v, forceReset=False) :
-        if self.value is None or forceReset :
-            self.value = theano.shared(value = MUSE.iCast_numpy(v), name = self.name)
+    def setValue(self, value, forceCast = True) :
+        if isinstance(value, theano.Variable) :
+            if forceCast :
+                v = MUSE.iCast_theano(value)
+            else :
+                v = value
         else :
-            if v.shape != self.getShape() :
-                print("Warning update has a different shape: %s -> %s" %(self.shape, v.shape))
-            self.value.set_value(MUSE.iCast_numpy(v))
+            if forceCast :
+                v = theano.shared(value = MUSE.iCast_numpy(value), name = self.name)
+            else :
+                v = theano.shared(value = value, name = self.name)
 
+        self.value = v
+
+    def updateValue(self, value, forceCast=False) :
+        if forceCast :
+            v = theano.shared(value = MUSE.iCast_numpy(value), name = self.name)
+        else :
+            v = value
+
+        if v.shape != self.getShape() :
+            print("Warning update has a different shape: %s -> %s" %(self.shape, v.shape))
+        self.value.set_value(v)
+    
     def getValue(self) :
         if self.value is None :
             return None

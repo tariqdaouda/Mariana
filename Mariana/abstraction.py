@@ -26,7 +26,7 @@ class Abstraction_ABC(object):
 
     def setP(self, k, v) :
         """sets a single parameter"""
-        self.parameter[k] = v
+        self.parameters[k] = v
 
     def getParameterShape(self, param) :
         """Should return the shape of the parameter. This has to be implemented in order for the initializations to work (and maybe some other stuff as well)"""
@@ -57,6 +57,16 @@ class Abstraction_ABC(object):
 
 
 class ApplyAbstraction_ABC(Abstraction_ABC):
+
+    def set(self, layer) :
+        """Last setup before apply, default: does nothing"""
+        pass
+
+    def _apply(self, layer, *args, **kwargs) :
+        """does self.set() + self.apply()"""
+        self.set(layer)
+        self.apply(layer, *args, **kwargs)
+
     def apply(self, layer, *args, **kwargs) :
         """Apply to a layer, basically logs stuff and then calls run"""
         raise NotImplemented("Must be implemented in child")

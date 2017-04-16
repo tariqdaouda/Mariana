@@ -43,7 +43,7 @@ class Layer_ABC(MABS.Abstraction_ABC) :
 
         return obj
 
-    def __init__(self, activation=MA.Pass(), regularizations=[], initializations=[], learningScenari=[], decorators=[], name=None, maxInConnections=1):
+    def __init__(self, activation=MA.Pass(), regularizations=[], initializations=[], learningScenari=[], decorators=[], name=None, maxInConnections=1, streams=["train", "test"]):
         super(Layer_ABC, self).__init__()
         # self.isLayer=True
         self.maxInConnections=maxInConnections
@@ -56,11 +56,12 @@ class Layer_ABC(MABS.Abstraction_ABC) :
         else :
             self.name="%s_%s" %(self.__class__.__name__, self.appelido)
 
-        self.types=None
+        # self.types=None #input or output layer, automatically derived from inputs and tragets
 
-        self.inputs=MTYPES.Variable()
-        self.outputs=MTYPES.Variable()
-        self.outputs_preactivation=MTYPES.Variable()
+        self.streams = streams
+        self.inputs=MTYPES.Variable(streams = streams)
+        self.outputs=MTYPES.Variable(streams = streams)
+        self.outputs_preactivation=MTYPES.Variable(streams = streams)
 
         self.abstractions={
             "activation": activation,
@@ -143,12 +144,17 @@ class Layer_ABC(MABS.Abstraction_ABC) :
         """creates the parameters if necessary (self._mustRest == True)"""
         if self._mustReset or forceReset :        
             for init in self.abstractions["initializations"] :
-                init.apply(self)
+                init._apply(self)
         self._mustReset=False
 
-    def setInputs_abs(self) :
-        """Sets the inputs to the layer"""
-        raise NotImplementedError("Should be implemented in child: %s" % self.name)
+    # def setInputs(self) :
+    #     """Sets the inputs to the layer"""
+    #     raise NotImplementedError("Should be implemented in child: %s" % self.name)
+
+    def setInputs(self) :
+        l = list(self.getInLayers())[0]
+        for s in l.outputs.streams :
+            self.inputs[s] = l.outputs[s]
 
     def setOutputs_abs(self) :
         """Defines the outputs and outputs["test"] of the layer before the application of the activation function. This function is called by _init() ans should be written in child."""
@@ -157,14 +163,14 @@ class Layer_ABC(MABS.Abstraction_ABC) :
     def _decorate(self) :
         """applies decorators"""
         for d in self.abstractions["decorators"] :
-            d.apply(self)
+            d._apply(self)
 
     def _activate(self) :
         """applies activation"""
-        self.outputs_preactivation["train"]=self.outputs["train"]
-        self.outputs_preactivation["test"]=self.outputs["test"]
-
-        self.abstractions["activation"].apply(self, self.outputs)
+        for f in self.streams :
+            self.outputs_preactivation[f]=self.outputs[f]
+        
+        self.abstractions["activation"]._apply(self, self.outputs)
 
     def _setTheanoFunctions(self) :
         """Creates propagate/propagateTest theano function that returns the layer's outputs.
@@ -178,10 +184,10 @@ class Layer_ABC(MABS.Abstraction_ABC) :
         "perform basic parameter checks on layers, automatically called on initialization"
         for k, v in self.parameters.iteritems() :
             if v is None :
-                raise ValueError("Parameter '%s' of layer '%s' has invalid value %s" % (k, self.name, self.getParameterShape(k)))
+                raise ValueError("Parameter '%s' of layer '%s' has invalid value %s" % (k, self.name, self.getParameterShape_abs(k)))
         
-            if None in self.getParameterShape(k) :
-                raise ValueError("Parameter '%s' of layer '%s' has invalid shape %s. That can cause initializations to crash." % (k, self.name, self.getParameterShape(k)))
+            if None in self.getParameterShape_abs(k) :
+                raise ValueError("Parameter '%s' of layer '%s' has invalid shape %s. That can cause initializations to crash." % (k, self.name, self.getParameterShape_abs(k)))
         
     def _outputsSanityCheck(self) :
         "perform basic output checks on layers, automatically called on initialization"
@@ -190,24 +196,26 @@ class Layer_ABC(MABS.Abstraction_ABC) :
             if not v :
                 raise AttributeError("Layers %s has invalid ouput: %s for stream: %s" % (self.name, v, s))
  
-    def _setTypes(self) :
-        """Brows layer parameters to see its a input, hidden or output layer"""
-        self.types = set()
+    def getTypes(self) :
+        """Browses layer parameters to see if it is an input, hidden or output layer"""
+        types = set()
         for k, v in self.__dict__.iteritems() :
             if isinstance(v, MTYPES.Inputs) :
-                self.types.add(MSET.TYPE_INPUT_LAYER)
+                types.add(MSET.TYPE_INPUT_LAYER)
             
             if isinstance(v, MTYPES.Targets) :
-                self.types.add(MSET.TYPE_OUTPUT_LAYER)
+                types.add(MSET.TYPE_OUTPUT_LAYER)
 
             if len(self.getInLayers()) > 0 and len(self.network.outConnections[self]) :
-                self.types.add(MSET.TYPE_HIDDEN_LAYER)
+                types.add(MSET.TYPE_HIDDEN_LAYER)
+        
+        return types
 
     def _initA(self) :
         """Initialize the essential attributes of the layer such as: outputs and activations. This function is automatically called before train/test etc..."""
         if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.getInLayers()) ) :
             self._whateverFirstInit()
-            self.setInputs_abs()
+            self.setInputs()
             self._parametersSanityCheck()
             self._initParameters()
             self.setOutputs_abs()
@@ -308,7 +316,7 @@ class Input(Layer_ABC) :
         # self.inputs = MTYPES.Inputs(tt.TensorType, dtype=theano.config.floatX, name="Inp_%s" % self.name, broadcastable=self.broadcastable)
         self.inputs = MTYPES.Inputs(tt.matrix, name="Inp_%s" % self.name)
     
-    def setInputs_abs(self) :
+    def setInputs(self) :
         pass
 
     def getShape_abs(self) :
@@ -316,9 +324,9 @@ class Input(Layer_ABC) :
 
     def setOutputs_abs(self) :
         "initializes the output to be the same as the inputs"
-        self.outputs["train"]=self.inputs["train"]
-        self.outputs["test"]=self.inputs["test"]
-
+        for f in self.streams :
+            self.outputs[f]=self.inputs[f]
+    
     def femaleConnect(self, *args) :
         raise ValueError("Nothing can be connected to an input layer")
 
@@ -355,14 +363,14 @@ class Embedding(Layer_ABC) :
     def getShape_abs(self) :
         return (1, self.nbInputs * self.nbDimentions)
 
-    def setInputs_abs(self) :
+    def setInputs(self) :
         inpLayer = self.getInLayers()[0]
-        if inpLayer.outputs["train"].dtype.find("int") != 0 :
-            self.inputs["train"] = tt.cast(inpLayer.outputs["train"], dtype=MSET.INTX)
-            self.inputs["test"] = tt.cast(inpLayer.outputs["test"], dtype=MSET.INTX)
+        if inpLayer.outputs[self.streams[0]].dtype.find("int") != 0 :
+            for f in self.streams :
+                self.inputs[f] = tt.cast(inpLayer.outputs[f], dtype=MSET.INTX)
         else :
-            self.inputs["train"] = inpLayer.outputs["train"]
-            self.inputs["test"] = inpLayer.outputs["test"]
+            for f in self.streams :
+               self.inputs[f] = inpLayer.outputs[f]
         
     def setOutputs_abs(self) :
         if self.zeroForNull :
@@ -370,9 +378,9 @@ class Embedding(Layer_ABC) :
             embs = self.parameters["embeddings"].getValue()
             self.parameters["embeddings"].setValue( tt.concatenate( [self.null, embs], axis=0) )
        
-        self.preOutputs=self.parameters["fullEmbeddings"][self.inputs["train"]]
-        self.outputs["train"]=self.preOutputs.reshape((self.inputs["train"].shape[0], self.nbOutputs))
-        self.outputs["test"]=self.preOutputs.reshape((self.inputs["test"].shape[0], self.nbOutputs))
+        for f in self.streams :
+            preOutputs=self.parameters["fullEmbeddings"][self.inputs[f]]
+            self.outputs[f] = preOutputs.reshape((self.inputs[f].shape[0], self.nbOutputs))
 
 # class Addition(Layer_ABC):
 #     """Adds up the values of all afferent layers"""
@@ -387,7 +395,7 @@ class Embedding(Layer_ABC) :
 #             raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
 #         self.nbOutputs=layer.nbOutputs
 
-#     def setInputs_abs(self) :
+#     def setInputs(self) :
 #         """set the number of inputs and outputs"""
 #         inputs = 0
 #         testInputs = 0
@@ -438,12 +446,7 @@ class Dense(Layer_ABC) :
 
     def getShape_abs(self) :
         """defines the number of inputs"""
-        return (1, self.nbUnits)        
-
-    def setInputs_abs(self) :
-        l = list(self.getInLayers())[0]
-        for s in l.outputs.streams :
-            self.inputs[s] = l.outputs[s]
+        return (1, self.nbUnits)
 
     def setOutputs_abs(self) :
         """Defines, self.outputs["train"] and self.outputs["test"]"""
@@ -455,7 +458,7 @@ class Dense(Layer_ABC) :
             for s in self.inputs.streams :
                 self.outputs[s]=self.outputs[s] + self.parameters["b"]()
 
-    def getParameterShape(self, param) :
+    def getParameterShape_abs(self, param) :
         if param == "W" :
             return (self.nbInputs, self.nbUnits)
         elif param == "b" :

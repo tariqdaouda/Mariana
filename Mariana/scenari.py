@@ -7,6 +7,16 @@ import Mariana.abstraction as MABS
 
 __all__ = ["LearningScenario_ABC", "ParameterGradUpdates", "OptimizerFreeResults", "OptimizerResult", "Fixed", "GradientDescent"]
 
+class IncompatibleLearningScenarios(Exception) :
+    def __init__(self, msg) :
+        self.message = msg
+
+    def __str__(self) :
+        return self.message
+        
+    def __repr__(self):
+        return self.message
+
 class ConflictResolve(object):
     """In Mariana scenari can be chained. The children of that class defines what to do in case of conflict"""
     def __init__(self, warning=False):
@@ -35,7 +45,7 @@ class Ignore(ConflictResolve):
 class Die(ConflictResolve):
     """No conflic resolve, crashes everything"""
     def resolve(self, previous, current) :
-        raise ValueError("This learning scenario is incompatible with previous ones")
+        raise IncompatibleLearningScenarios("Learning scenario is incompatible with previous ones")
 
 class ParameterGradUpdates(object):
     """docstring for ParameterGradUpdates"""
@@ -99,7 +109,10 @@ class LearningScenario_ABC(MABS.ApplyAbstraction_ABC):
 
         v = self.run(param, loss, more={"layer": layer, "paramName": paramName, "previous": previous, "entity": entity})
         if previous :
-            return self.conflictResolve.apply(previous, v)
+            try :
+                return self.conflictResolve.apply(previous, v)
+            except IncompatibleLearningScenarios :
+                raise IncompatibleLearningScenarios("Learning scenario: '%s' is incompatible with previous updates (layer: '%s')" % (self.__class__.__name__, layer.name))
         return v
 
     def run(self, param, loss, more={}) :
@@ -112,7 +125,7 @@ class Fixed(LearningScenario_ABC):
        super(Fixed, self).__init__(applyTo, inheritable, conflictResolve, **kwargs)
         
     def run(self, param, *args, **kwargs) :
-        ret = OptimizerResult(param, None, None)
+        ret = OptimizerResult(param, None, None, None)
         return ret
 
 class GradientDescent(LearningScenario_ABC):

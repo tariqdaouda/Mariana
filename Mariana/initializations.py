@@ -43,10 +43,11 @@ class Initialization_ABC(MABS.ApplyAbstraction_ABC) :
         
         message = "Applying init: '%s' to param: '%s' of layer: '%s'" % (self.__class__.__name__, self.parameter, layer.name)
         layer.network.logLayerEvent(layer, message, self.hyperParameters)
-
-        v = MUSE.iCast_numpy(self.run(layer.getParameterShape(self.parameter)))
-        if (v.shape != layer.getParameterShape(self.parameter)) :
-            raise ValueError("Initialization has a wrong shape: %s, parameter shape is: %s " % (v.shape, layer.getParameterShape(self.parameter)))
+        
+        retShape = layer.getParameterShape_abs(self.parameter)
+        v = MUSE.iCast_numpy(self.run(retShape))
+        if (v.shape != retShape) :
+            raise ValueError("Initialization has a wrong shape: %s, parameter shape is: %s " % (v.shape, retShape))
         
         v = MUSE.sparsify(v, self.sparsity)
         
@@ -144,7 +145,8 @@ class FanInFanOut_ABC(Initialization_ABC) :
         self.setHP("forceGain", forceGain)
         self.gain = None
 
-    def _getGain(self, activation) :
+    @classmethod
+    def _getGain(cls, activation) :
         """returns the gain with respesct to an activation function"""
         if activation.__class__ is MA.ReLU :
             if activation.leakiness == 0 :
@@ -152,6 +154,9 @@ class FanInFanOut_ABC(Initialization_ABC) :
             else :
                 return numpy.sqrt(2/(1+activation.leakiness**2))
         return 1.0
+
+    def set(self, layer) :
+        self.gain = self._getGain(layer.abstractions["activation"])
 
     def apply(self, layer) :
         import Mariana.activations as MA

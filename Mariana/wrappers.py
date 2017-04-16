@@ -49,14 +49,7 @@ class Updates(object):
             self.loss += updates.loss
 
     def compile(self) :
-        # def _apply(sc, store, layer, entity, param_name, cute_name, loss) :
-        #     res = sc.apply(layer, layer, param_name, loss)
-        #     if res is not None :
-        #         gup = res.parameter
-        #         store.add(gup.parameter, gup.update, gup.gradient, cute_name)
-        #         for gup_co in res.coParameters :
-        #             cute_name2 = "%s.%s" %(cute_name, gup_co.name)
-        #             store.add(gup_co.parameter, gup_co.update, gup_co.gradient, cute_name2)
+        
         def _apply(sc, store, layer, entity, param_name, cute_name, loss) :
             try :
                 previous = store[cute_name]
@@ -80,7 +73,14 @@ class Updates(object):
                 
         for o in self.output_layers :
             for l in o.dependencies.itervalues() :
-                optimizers[l].extend(l.abstractions["learningScenari"])
+                try :
+                    optimizers[l].extend(l.abstractions["learningScenari"])
+                except KeyError :
+                    if len(l.abstractions["learningScenari"]) == 0 and len(l.parameters) > 0 :
+                        raise ValueError("Layer: '%s' has trainable parameters but no defined learning scenario. If you don't want to train it, give it the Fixed() scenario." % l.name)
+                    else :
+                        optimizers[l] = l.abstractions["learningScenari"]
+
                 for reg in l.abstractions["regularizations"] :
                     self.loss = reg.apply(l, self.loss)
 
@@ -98,13 +98,14 @@ class Updates(object):
                     pname = "%s.%s" %(layer.name, k)
                     _apply(sc, tmpStore, layer, layer, k, pname, self.loss)
 
-                for abst in layer.abstractions :
-                    try:
-                        names = abst.parameter.keys()
-                    except Exception as e:
-                        pass
+                for abst in layer.abstractions.itervalues() :
+                    if isinstance(abst, list) :
+                        for abstt in abst :
+                            for k in abstt.parameters.iterkeys() :
+                                pname = "%s.%s.%s" %(layer.name, abst.__class__.__name__, k)
+                                _apply(sc, tmpStore, layer, abst, k, pname, self.loss)
                     else :
-                        for k in names:
+                        for k in abst.parameters.iterkeys() :
                             pname = "%s.%s.%s" %(layer.name, abst.__class__.__name__, k)
                             _apply(sc, tmpStore, layer, abst, k, pname, self.loss)
         
@@ -238,8 +239,6 @@ class TheanoFunction(object) :
             else :
                 updates = {}
             
-            # print self.inputs
-            # print self.outputs
             self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs.values(), updates = updates, **self.theano_kwargs)
 
             if MSET.DEVICE_IS_GPU :

@@ -217,10 +217,10 @@ class Network(object) :
     def init(self, forceInit=False) :
         "Initialiases the network by initialising every layer."
         for layer in self.layers.itervalues() :
-            layer._setTypes()
-            if MSET.TYPE_INPUT_LAYER in layer.types:
+            layerTypes = layer.getTypes()
+            if MSET.TYPE_INPUT_LAYER in layerTypes:
                 self.inputs[layer.name] = layer
-            if MSET.TYPE_OUTPUT_LAYER in layer.types:
+            if MSET.TYPE_OUTPUT_LAYER in layerTypes:
                 self.outputs[layer.name] = layer
 
         if self._mustInit or forceInit :
@@ -230,7 +230,7 @@ class Network(object) :
             if len(self.inputs) < 1 :
                 raise ValueError("Network has no inputs")
 
-            self.initParameters(forceReset=False)
+            # self.initParameters(forceReset=False)
 
             for inp in self.inputs.itervalues() :
                 inp._initA()
