@@ -57,7 +57,7 @@ class Trainer_ABC(object) :
             death_time = time.ctime().replace(' ', '_')
             filename = "dx-xb_" + runName + "_death_by_" + exName + "_" + death_time
             sys.stderr.write("\n===\nDying gracefully from %s, and saving myself to:\n...%s\n===\n" % (exName, filename))
-            model.save(filename)
+            self.model.save(filename)
             f = open(filename +  ".traceback.log", 'w')
             f.write("Mariana training Interruption\n=============================\n")
             f.write("\nDetails\n-------\n")
@@ -89,6 +89,7 @@ class Trainer_ABC(object) :
             cPickle.dump(self.store, f)
             f.close()
 
+        self.model = model
         signal.signal(signal.SIGTERM, _handler_sig_term)
         if MSET.VERBOSE :
             print "\n" + "Training starts."     
@@ -106,7 +107,7 @@ class Trainer_ABC(object) :
             )
     
         try :
-            return self.run(runName, model, recorder, *args, **kwargs)
+            return self.run(runName, self.model, recorder, *args, **kwargs)
         except MSTOP.EndOfTraining as e :
             print e.message
             death_time = time.ctime().replace(' ', '_')
@@ -134,7 +135,7 @@ class Trainer_ABC(object) :
 
             f.flush()
             f.close()
-            model.save(filename)
+            self.model.save(filename)
             f = open(filename + ".store.pkl", "wb")
             cPickle.dump(self.store, f)
             f.close()
