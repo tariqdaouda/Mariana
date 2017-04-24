@@ -147,14 +147,13 @@ class Layer_ABC(MABS.Abstraction_ABC) :
                 init._apply(self)
         self._mustReset=False
 
-    # def setInputs(self) :
-    #     """Sets the inputs to the layer"""
-    #     raise NotImplementedError("Should be implemented in child: %s" % self.name)
-
     def setInputs(self) :
-        l = list(self.getInLayers())[0]
-        for s in l.outputs.streams :
-            self.inputs[s] = l.outputs[s]
+        l = list(self.getInLayers())
+        if len(l) > 1 :
+            raise ValueError("This layer can only take one single layer as input")
+        layer = l[0]
+        for s in layer.outputs.streams :
+            self.inputs[s] = layer.outputs[s]
 
     def setOutputs_abs(self) :
         """Defines the outputs and outputs["test"] of the layer before the application of the activation function. This function is called by _init() ans should be written in child."""

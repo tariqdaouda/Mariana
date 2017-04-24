@@ -41,17 +41,23 @@ class Abstraction_ABC(object):
             return ps[k]
         raise AttributeError("Abstraction of Class '%s' has no attribute '%s'" % (self.__class__.__name__, k))
 
-    # def toJson(self) :
-    #     """A json representation of the object"""
+    def toJson(self) :
+        """A json representation of the object"""
 
-    #     res = {
-    #         "class": self.name,
-    #         "hyperParameters": {}
-    #     }
-    #     for h in self.hyperParameters :
-    #         res["hyperParameters"][h] = getattr(self, h)
+        hps
+        for h in self.hyperParameters :
+            pass
         
-    #     return res
+        res = {
+            "name": self.name,
+            "values": [
+                {}
+            ]
+            "hyperParameters": {}
+        }
+        
+        return res
+
     def __repr__(self) :
         return "< %s: %s >" % (self.__class__.__name__, self.hyperParameters)
 

@@ -157,15 +157,6 @@ class Network(object) :
                 self.inConnections[h] = set()
                 self.outConnections[h] = set()
 
-        # if MSET.TYPE_INPUT_LAYER in h.types:
-        #     self.inputs[h.name] = h
-        #     self.logNetworkEvent("New Input layer %s" % (h.name))
-        # elif MSET.TYPE_OUTPUT_LAYER in h.types :
-        #     self.outputs[h.name] = h
-        #     self.logNetworkEvent("New Output layer %s" % (h.name))
-        # else :
-        #     self.logNetworkEvent("New Hidden layer %s" % (h.name))
-
     def merge(self, fromLayer, toLayer) :
         """Merges the networks of two layers together. fromLayer must be part of the self"""
         
@@ -186,20 +177,8 @@ class Network(object) :
         for l in newLayers :
             l.network = self
 
-        # self.inputs = OrderedDict()
-        # self.outputs = OrderedDict()
         for name, layer in self.layers.iteritems() :
             self.logNetworkEvent("Registering layer %s" % (layer.name))
-
-        # for name, layer in self.layers.iteritems() :
-        #     if MSET.TYPE_INPUT_LAYER in layer.types:
-        #         self.inputs[layer.name] = layer
-        #         self.logNetworkEvent("Registering Input layer %s" % (layer.name))
-        #     if MSET.TYPE_OUTPUT_LAYER in layer.types :
-        #         self.outputs[layer.name] = layer
-        #         self.logNetworkEvent("Registering Output layer %s" % (layer.name))
-        #     if MSET.TYPE_HIDDEN_LAYER in layer.types :
-        #         self.logNetworkEvent("Registering Hidden layer %s" % (layer.name))
 
     def initParameters(self, forceReset = False) :
         """Initializes the parameters of all layers but does nothing else.
@@ -397,7 +376,7 @@ class Network(object) :
         return s
 
     def saveHTML(self, name, forceInit = True) :
-        """Creates an HTML file with the graph representation. Heavily inspired from: http://stackoverflow.com/questions/22595493/reading-dot-files-in-javascript-d3"""
+        """Creates an HTML file with the graph representation."""
         from Mariana.HTML_Templates.aqua import getHTML
         import time
         temp = getHTML(self.toDOT(name, forceInit), name, time.ctime())
