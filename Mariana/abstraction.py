@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 __all__ = ["Abstraction_ABC", "ApplyAbstraction_ABC"]
-
         
 class Abstraction_ABC(object):
     """
@@ -10,8 +9,13 @@ class Abstraction_ABC(object):
     """
     def __init__(self, *args, **kwargs):
         super(Abstraction_ABC, self).__init__()
+        self.name = self.__class__.__name__
         self.hyperParameters = OrderedDict()
         self.parameters = OrderedDict()
+        self.notes = OrderedDict()
+
+    def addNote(self, title, text) :
+        self.notes[title] = text
 
     def addHyperParameters(self, dct) :
         """adds to the list of hyper params, dct must be a dict"""
@@ -44,16 +48,12 @@ class Abstraction_ABC(object):
     def toJson(self) :
         """A json representation of the object"""
 
-        hps
-        for h in self.hyperParameters :
-            pass
-        
         res = {
             "name": self.name,
-            "values": [
-                {}
-            ]
-            "hyperParameters": {}
+            "parameters": self.parameters,
+            "hyperParameters": self.hyperParameters,
+            "notes": self.notes,
+            "documentation": self.documentation
         }
         
         return res

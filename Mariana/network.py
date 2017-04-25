@@ -62,6 +62,7 @@ class Network(object) :
         
         self.outConnections = OrderedDict()
         self.inConnections = OrderedDict()
+        self.notes = OrderedDict()
 
         self.parameters = []
 
@@ -90,6 +91,9 @@ class Network(object) :
     def logLayerEvent(self, layer, message, parameters = {}) :
         "Adds a log event to self.log. Message should be a string and parameters and dict: param_name => value"
         self.logEvent(layer.name, message, parameters)
+
+    def addNote(self, title, text) :
+    	self.notes[title] = text
 
     def printLog(self) :
         "Print a very pretty version of self.log. The log should contain all meaningful events in a chronological order"
@@ -227,15 +231,15 @@ class Network(object) :
             
             self._mustInit = False
         
-    def help(self) :
-        """prints the list of available model functions, such as train, test,..."""
-        self.init()
-        os = []
-        for o in self.outputMaps.itervalues() :
-            os.append(repr(o))
-        os = '\n\t'.join(os)
+    # def help(self) :
+    #     """prints the list of available model functions, such as train, test,..."""
+    #     self.init()
+    #     os = []
+    #     for o in self.outputMaps.itervalues() :
+    #         os.append(repr(o))
+    #     os = '\n\t'.join(os)
 
-        print "Available model functions:\n%s\n" % os
+    #     print "Available model functions:\n%s\n" % os
 
     @classmethod
     def isLayer(cls, obj) :
@@ -331,7 +335,6 @@ class Network(object) :
 
         for l in expandedLayers.itervalues() :
             for k, v in model["layers"][l.name]["parameters"].iteritems() :
-                # print l, k, v.get_value()
                 try:
                     l.updateParameter(k, v)
                 except :
@@ -375,7 +378,19 @@ class Network(object) :
 
         return s
 
-    def saveHTML(self, name, forceInit = True) :
+    def saveHTML(self, filename, forceInit = True) :
+    	if forceInit :
+    		self.init()
+
+    	res = OrderedDict()
+    	res["layers"] = []
+
+    	levels = {}
+    	for k, v in self.inputs.iteritems() :
+    		j = v.getJson()
+    		j["level"] = 0
+    		
+    def saveHTML_old(self, name, forceInit = True) :
         """Creates an HTML file with the graph representation."""
         from Mariana.HTML_Templates.aqua import getHTML
         import time
