@@ -32,7 +32,7 @@ class Abstraction_ABC(object):
         """sets a single parameter"""
         self.parameters[k] = v
 
-    def getParameterShape(self, param) :
+    def getParameterShape_abs(self, param) :
         """Should return the shape of the parameter. This has to be implemented in order for the initializations to work (and maybe some other stuff as well)"""
         raise NotImplemented("Should be implemented in child")
 
@@ -48,13 +48,20 @@ class Abstraction_ABC(object):
     def toJson(self) :
         """A json representation of the object"""
 
+        if self.__class__ is Abstraction_ABC :
+            raise AttributeError("This function cannot be launched from an instance of Abstraction_ABC")
+
         res = {
             "name": self.name,
-            "parameters": self.parameters,
             "hyperParameters": self.hyperParameters,
             "notes": self.notes,
-            "documentation": self.documentation
         }
+        ps = OrderedDict()
+        for k, v in self.parameters.iteritems() :
+            ps[k] = {"shape": self.getParameterShape_abs(k)}
+
+        res["parameters"] = ps    
+        res["documentation"] = self.__doc__
         
         return res
 

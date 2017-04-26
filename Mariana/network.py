@@ -378,31 +378,47 @@ class Network(object) :
 
         return s
 
-    def saveHTML(self, filename, forceInit = True) :
-        def do(dct, layer, level, infer) :
-            if infer :
-                layer.infer()
-            dct[name] = layer.getJson()
-            dct[name]["level"] = level
+    def toDictionary(self) :
+        """return a dict representation of the network"""
+        def do(dct, layer, level) :
+            dct[layer.name] = layer.toJson()
+            dct[layer.name]["level"] = level
             
-            for l2 in self.inConnections[layer] :
+            res["abstractions"] = OrderedDict()
+            for k, v in layer.abstractions.iteritems() :
+                res["abstractions"][k] = OrderedDict()
+                if type(v) is list :
+                    for vv in v :
+                        res["abstractions"][k][vv.__class__.__name__] = vv.toJson()
+                else :
+                    res["abstractions"][k][v.__class__.__name__] = [v.toJson()]
+
+            for l2 in self.outConnections[layer] :
                 dct.update(do(dct, l2, level+1) )
             
             return dct
 
-        if forceInit :
-            self.init()
-
-        res = OrderedDict()
-        res["layers"] = {}
+        res = {}
+        res["layers"] = OrderedDict()
 
         levels = {}
         for name, layer in self.inputs.iteritems() :
-            res["layers"].update(do(res["layers"], layer, 0, not forceInit))
+            res["layers"].update(do(res["layers"], layer, 0))
 
+        res["name"] = name
         res["notes"] = self.notes
-
+        
         return res
+
+    def toJson(self) :
+        import json
+        """return a json representation of the network"""
+        return json.dumps(self.toDictionary())
+
+    def saveHTML(self, name) :
+        from Mariana.HTML_Templates.vulcan.vulcan import Vulcan
+        template = Vulcan()
+        template.render(name, self.toDictionary())
 
     def saveHTML_old(self, name, forceInit = True) :
         """Creates an HTML file with the graph representation."""

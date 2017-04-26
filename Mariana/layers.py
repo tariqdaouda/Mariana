@@ -48,6 +48,8 @@ class Layer_ABC(MABS.Abstraction_ABC) :
         # self.isLayer=True
         self.maxInConnections=maxInConnections
 
+        self.network=MNET.Network()
+        
         #a unique tag associated to the layer
         self.appelido=str(uuid.uuid1())
 
@@ -71,14 +73,13 @@ class Layer_ABC(MABS.Abstraction_ABC) :
             "learningScenari": learningScenari,
         }
         
-        self.network=MNET.Network()
-        self.network._addLayer(self)
 
         self._inputRegistrations=set()
 
         self._mustInit=True
         self._mustReset=True
         self._decorating=False
+        self.network._addLayer(self)
 
     # def getParameters(self) :
     #     """returns the layer's parameters as dictionary"""
@@ -255,6 +256,15 @@ class Layer_ABC(MABS.Abstraction_ABC) :
         self.network.merge(self, layer)
 
         return self.network
+
+    def toJson(self) :
+        res = super(Layer_ABC, self).toJson()
+        try :
+            res["shape"] = self.getShape_abs()
+        except Exception as e:
+            res["shape"] = e.message
+
+        return res
 
     def _dot_representation(self) :
         "returns the representation of the node in the graph DOT format"
@@ -543,6 +553,7 @@ class Output_ABC(Layer_ABC) :
         self._applyRegularizations()
         Calls self._setUpdates() if self.updates is None.
         """
+        # print self
         self._backTrckDependencies()
         super(Output_ABC, self)._setTheanoFunctions()
         self.loss = MTYPES.Losses(self, self.cost, self.targets, self.outputs)
