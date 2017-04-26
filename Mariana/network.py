@@ -379,17 +379,31 @@ class Network(object) :
         return s
 
     def saveHTML(self, filename, forceInit = True) :
-    	if forceInit :
-    		self.init()
+        def do(dct, layer, level, infer) :
+            if infer :
+                layer.infer()
+            dct[name] = layer.getJson()
+            dct[name]["level"] = level
+            
+            for l2 in self.inConnections[layer] :
+                dct.update(do(dct, l2, level+1) )
+            
+            return dct
 
-    	res = OrderedDict()
-    	res["layers"] = []
+        if forceInit :
+            self.init()
 
-    	levels = {}
-    	for k, v in self.inputs.iteritems() :
-    		j = v.getJson()
-    		j["level"] = 0
-    		
+        res = OrderedDict()
+        res["layers"] = {}
+
+        levels = {}
+        for name, layer in self.inputs.iteritems() :
+            res["layers"].update(do(res["layers"], layer, 0, not forceInit))
+
+        res["notes"] = self.notes
+
+        return res
+
     def saveHTML_old(self, name, forceInit = True) :
         """Creates an HTML file with the graph representation."""
         from Mariana.HTML_Templates.aqua import getHTML
