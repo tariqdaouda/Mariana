@@ -140,14 +140,14 @@ Vue.component('graph-view', {
 	        </div>
 
 	    </div>`,
-  // props: ["nodes", "edges", "hyperParameters", "physics"],
+  props: ["nodes", "edges", "physics"],
   qtemplate: `<div v-bind:style="{height: height + 'px'}" ref="network"></div>`,
   data : function(){
 	createNodes = function(layers, color, highlightColor, hoverColor){
   		nodes = []
   		namesToI = {}
   		maxLvl = 0
- 		layerKV = toKV(layers)
+      layerKV = toKV(layers)
   		for (var i = 0; i < layerKV.length; i++) {
   			layer = layerKV[i]
 	    	mData = { name: layer.name, shape: layer.value.shape, parameters: [], hyperParameters: [], notes: [] }
@@ -198,8 +198,9 @@ Vue.component('graph-view', {
 	        namesToI[layer.name] = i
 	        nodes.push(node)
   		}
-		return {nodes: nodes, maxLvl: maxLvl, namesToI}
+      return {nodes: nodes, maxLvl: maxLvl, namesToI}
   	}
+
   	createEdges = function(edges, namesToI, color) {
   		for (var i = edges.length - 1; i >= 0; i--) {
   			edges[i].to = namesToI[edges[i].to]
@@ -211,18 +212,21 @@ Vue.component('graph-view', {
   		}
   		return edges
   	}
+
   	nodeColor = 'rgba(25, 131, 165, 0.5)'
   	nodeHighlightColor = 'rgba(25, 131, 165, 1)'
   	nodeHoverColor = 'rgba(25, 131, 165, 1)'
   
   	edgeColor = "#f68920"
-  	res = createNodes(data.layers, nodeColor, nodeHighlightColor, nodeHoverColor)
+    // res = createNodes(data.layers, nodeColor, nodeHighlightColor, nodeHoverColor)
+  	res = createNodes(this.nodes, nodeColor, nodeHighlightColor, nodeHoverColor)
     nodes = res.nodes
     nodesNamesToI = res.namesToI
   	maxLvl = res.maxLvl
     nodes[0].Mariana.open = true
 	
-	edges = createEdges(data.edges, nodesNamesToI, edgeColor)
+  // edges = createEdges(data.edges, nodesNamesToI, edgeColor)
+	edges = createEdges(this.edges, nodesNamesToI, edgeColor)
     ret = {
         nodes: nodes,
         nodeColor: nodeColor,

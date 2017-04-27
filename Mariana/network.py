@@ -405,6 +405,10 @@ class Network(object) :
         for name, layer in self.inputs.iteritems() :
             res["layers"].update(do(res["layers"], layer, 0))
 
+        res["edges"] = []
+        for t, f in self.edges.iterkeys() :
+            res["edges"].append({"from": t, "to": f})
+
         res["name"] = name
         res["notes"] = self.notes
         

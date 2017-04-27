@@ -1,6 +1,7 @@
 import inspect, sys, os, shutil
+import Mariana.HTML_Templates.template as MTMP
 
-class Vulcan(object):
+class Vulcan(MTMP.HTMLTemplate_ABC):
     """A theme"""
     def __init__(self):
         super(Vulcan, self).__init__()
@@ -42,11 +43,19 @@ class Vulcan(object):
 
     def render(self, filename, networkJson) :
         import time
+        import json
 
         title = os.path.basename(filename)
         currFolder = os.path.dirname(filename)
 
-        html = self.html.format(TITLE = title, NOTES=self.formatNotes(networkJson["notes"]), MACHINE_TIME=time.time(), USER_TIME=time.ctime().replace("_", " "))
+        html = self.html.format(
+            TITLE=title,
+            MODEL_NOTES=self.formatNotes(networkJson["notes"]),
+            MACHINE_TIME=time.time(),
+            USER_TIME=time.ctime().replace("_", " "),
+            LAYERS_JSON=json.dumps(networkJson["layers"]).replace('"', "'"),
+            EDGES_JSON=json.dumps(networkJson["edges"]).replace('"', "'")
+        )
         
         webFolder = "%s_web" % title
         if not os.path.exists(webFolder) :

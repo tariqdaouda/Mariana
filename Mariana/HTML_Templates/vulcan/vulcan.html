@@ -22,7 +22,7 @@
                 <h3 class="uk-card-title uk-margin-remove-bottom">{TITLE}</h3>
                 <p class="uk-text-meta uk-margin-remove-top"><time datetime="{MACHINE_TIME}">{USER_TIME}</time></p>
                 <div class="uk-card-body">
-                    {NOTES}
+                    {MODEL_NOTES}
                 </div>
                 <div class="uk-card-footer">
                     From Mariana, with <span uk-icon="icon: heart; ratio: 0.75"></span>
@@ -34,7 +34,7 @@
             </div>
 
             <div class="uk-width-1-1">
-                <graph-view></graph-view>
+                <graph-view nodes="{LAYERS_JSON}" edges="{EDGES_JSON}" physics="true" ></graph-view>
             </div>
             
         </div>
