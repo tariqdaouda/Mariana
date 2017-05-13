@@ -384,14 +384,14 @@ class Network(object) :
             dct[layer.name] = layer.toJson()
             dct[layer.name]["level"] = level
             
-            res["abstractions"] = OrderedDict()
+            dct[layer.name]["abstractions"] = OrderedDict()
             for k, v in layer.abstractions.iteritems() :
-                res["abstractions"][k] = OrderedDict()
+                dct[layer.name]["abstractions"][k] = OrderedDict()
                 if type(v) is list :
                     for vv in v :
-                        res["abstractions"][k][vv.__class__.__name__] = vv.toJson()
+                        dct[layer.name]["abstractions"][k][vv.__class__.__name__] = vv.toJson()
                 else :
-                    res["abstractions"][k][v.__class__.__name__] = [v.toJson()]
+                    dct[layer.name]["abstractions"][k][v.__class__.__name__] = [v.toJson()]
 
             for l2 in self.outConnections[layer] :
                 dct.update(do(dct, l2, level+1) )
@@ -414,9 +414,12 @@ class Network(object) :
         
         return res
 
-    def toJson(self) :
+    def toJson(self, pretty=False) :
         import json
         """return a json representation of the network"""
+        if pretty :
+            return json.dumps(self.toDictionary(), indent=2, sort_keys=True)
+    
         return json.dumps(self.toDictionary())
 
     def saveHTML(self, name) :

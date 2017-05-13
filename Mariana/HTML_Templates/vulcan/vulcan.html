@@ -12,7 +12,6 @@
     
     <script type="text/javascript" src="https://unpkg.com/vue"></script>
     <link href="{TITLE}_web/vulcan.css" rel="stylesheet" type="text/css"/>
-
 </head>
 
 <body>
@@ -30,11 +29,10 @@
                     <a href="https://github.com/tariqdaouda/Mariana" class="uk-icon-button" uk-icon="icon: github"></a>
                 </div>
             </div>
+            <!-- {LAYERS_JSON} -->
+            <div class="uk-width-1-1"></div>
             <div class="uk-width-1-1">
-            </div>
-
-            <div class="uk-width-1-1">
-                <graph-view nodes="{LAYERS_JSON}" edges="{EDGES_JSON}" physics="true" ></graph-view>
+                <graph-view nodesp='{LAYERS_JSON}' edgesp='{EDGES_JSON}' physicsp="true" ></graph-view>
             </div>
             
         </div>
