@@ -45,27 +45,27 @@ class Abstraction_ABC(object):
             return ps[k]
         raise AttributeError("Abstraction of Class '%s' has no attribute '%s'" % (self.__class__.__name__, k))
 
-    def toJson(self) :
-        """A json representation of the object"""
-
+    def toDictionary(self) :
+        """A dct representation of the object"""
         if self.__class__ is Abstraction_ABC :
             raise AttributeError("This function cannot be launched from an instance of Abstraction_ABC")
 
         res = {
-            "name": self.name,
-            "hyperParameters": self.hyperParameters,
-            "notes": self.notes,
+            "name": str(self.name),
+            "hyperParameters": OrderedDict(self.hyperParameters),
+            "notes": OrderedDict(self.notes),
         }
         ps = OrderedDict()
         for k, v in self.parameters.iteritems() :
             ps[k] = {"shape": self.getParameterShape_abs(k)}
 
         res["parameters"] = ps    
-        
+        # res["documentation"] = self.__doc__
+
         return res
 
     def __repr__(self) :
-        return "< %s: %s >" % (self.__class__.__name__, self.hyperParameters)
+        return "< %s: %s >" % (self.__class__.__name__, dict(self.hyperParameters))
 
 
 class ApplyAbstraction_ABC(Abstraction_ABC):

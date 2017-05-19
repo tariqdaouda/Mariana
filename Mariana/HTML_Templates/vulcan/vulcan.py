@@ -41,19 +41,6 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
        
         return tmp.format(trs = "\n".join(trs))
 
-    def flatten(self, dct) :
-        def _flatten(ref, res, prefix = "") :
-            for k, v in ref.iteritems() :
-                if type(v) is dict :
-                    _flatten(v, res, "%s." % k)
-                else :
-                    key = prefix + k
-                    res[key] = v
-        
-        res = {}
-        _flatten(dct, res)
-        return res
-
     def render(self, filename, networkJson) :
         import time
         import json
@@ -61,16 +48,42 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
         title = os.path.basename(filename)
         currFolder = os.path.dirname(filename)
 
-        for k in ["parameters", "hyperParameters"] :
-            for l in networkJson["layers"] :
-                networkJson["layers"][l][k] = self.flatten(networkJson["layers"][l][k])
-                
+        layers = []
+        for l in networkJson["layers"] :
+            dct = {"name": l, "shape": networkJson["layers"][l]['shape'], "level": networkJson["layers"][l]['level']}
+
+            for cat in ["parameters", "hyperParameters", "notes"] :
+                dct[cat] = {"size": 0}
+                dct[cat]["layer"] = []
+                for pName, pVal in networkJson["layers"][l][cat].iteritems() :
+                    if cat == "notes" :
+                        pKey = pName
+                    else :
+                        pKey = "%s.%s" % (l, pName)
+
+                    dct[cat]["layer"].append({"name": pKey, "value": pVal})
+                    dct[cat]["size"] += 1
+                    
+                for absCat, abstractions in networkJson["layers"][l]["abstractions"].iteritems() :
+                    dct[cat][absCat] = []
+                    for absName, absVal in abstractions.iteritems() :
+                        for pName, pVal in absVal[cat].iteritems() :
+                            if cat == "notes" :
+                                pKey = pName
+                            else :
+                                pKey = "{absName}.{pName}".format(absName = absName, pName = pName)
+                            
+                            dct[cat][absCat].append({"name": pKey, "value": pVal})
+                            dct[cat]["size"] += 1
+    
+            layers.append([l, dct])
+
         html = self.html.format(
             TITLE=title,
             MODEL_NOTES=self.formatNotes(networkJson["notes"]),
             MACHINE_TIME=time.time(),
             USER_TIME=time.ctime().replace("_", " "),
-            LAYERS_JSON=json.dumps(networkJson["layers"]),
+            LAYERS_JSON=json.dumps(layers),
             EDGES_JSON=json.dumps(networkJson["edges"])
         )
         

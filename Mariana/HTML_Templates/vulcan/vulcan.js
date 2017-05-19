@@ -1,109 +1,103 @@
-toKV = function(obj) {
-	res = []
-  keys = Object.keys(obj)
-  for (var i = keys.length - 1; i >= 0; i--) {
-    res.push({name: keys[i], value: obj[keys[i]]})
-  }
-  return res
-}
-
 Vue.component('graph-view', {
-	template: `
-	    <div uk-grid>
-	        <div class="uk-card uk-card-default uk-width-3-4@l uk-width-3-4@m uk-width-1-1@s">
-	            <div class="uk-button-group">
-	                <button class="uk-button uk-button-medium uk-button-primary vulcan-button-primary" v-on:click="changeDirection('UD')">
-	                    <span uk-icon="icon: arrow-down; ratio: 2"></span>
-	                </button>
-	                <button class="uk-button uk-button-medium uk-button-primary vulcan-button-primary" v-on:click="changeDirection('DU')">
-	                    <span uk-icon="icon: arrow-up; ratio: 2"></span>
-	                </button>
-	                <button class="uk-button uk-button-medium uk-button-primary vulcan-button-primary" v-on:click="changeDirection('LR')">
-	                    <span uk-icon="icon: arrow-right; ratio: 2"></span>
-	                </button>
-	                <button class="uk-button uk-button-medium uk-button-primary vulcan-button-primary" v-on:click="changeDirection('RL')">
-	                    <span uk-icon="icon: arrow-left; ratio: 2"></span>
-	                </button>
-	            </div>
-	            <button class="uk-button uk-button-medium uk-button-primary vulcan-button-primary uk-align-right" v-on:click="toggleShapes()">
-	                <span uk-icon="icon: code; ratio: 2"></span>
-	            </button>
-	            <div v-bind:style="{height: height + 'px'}" ref="network"></div>
-	            <div class="uk-button-group">
-	                <button class="uk-button uk-button-medium uk-button-primary vulcan-button-primary" v-on:click="decreaseHeight()">
-	                    <span uk-icon="icon: triangle-up; ratio: 2"></span>
-	                </button>
-	                <button class="uk-button uk-button-medium uk-button-primary vulcan-button-primary" v-on:click="increaseHeight()">
-	                    <span uk-icon="icon: triangle-down; ratio: 2"></span>
-	                </button>
-	            </div>
-	        </div>
+  template: `
+      <div uk-grid>
+          <div class="uk-card uk-card-default uk-width-3-4@l uk-width-3-4@m uk-width-1-1@s">
+              <div class="uk-button-group">
+                  <button class="uk-button uk-button-medium uk-button-primary vulcan-button-primary" v-on:click="changeDirection('UD')">
+                      <span uk-icon="icon: arrow-down; ratio: 2"></span>
+                  </button>
+                  <button class="uk-button uk-button-medium uk-button-primary vulcan-button-primary" v-on:click="changeDirection('DU')">
+                      <span uk-icon="icon: arrow-up; ratio: 2"></span>
+                  </button>
+                  <button class="uk-button uk-button-medium uk-button-primary vulcan-button-primary" v-on:click="changeDirection('LR')">
+                      <span uk-icon="icon: arrow-right; ratio: 2"></span>
+                  </button>
+                  <button class="uk-button uk-button-medium uk-button-primary vulcan-button-primary" v-on:click="changeDirection('RL')">
+                      <span uk-icon="icon: arrow-left; ratio: 2"></span>
+                  </button>
+              </div>
+              <button class="uk-button uk-button-medium uk-button-primary vulcan-button-primary uk-align-right" v-on:click="toggleShapes()">
+                  <span uk-icon="icon: code; ratio: 2"></span>
+              </button>
+              <div v-bind:style="{height: height + 'px'}" ref="network"></div>
+              <div class="uk-button-group">
+                  <button class="uk-button uk-button-medium uk-button-primary vulcan-button-primary" v-on:click="decreaseHeight()">
+                      <span uk-icon="icon: triangle-up; ratio: 2"></span>
+                  </button>
+                  <button class="uk-button uk-button-medium uk-button-primary vulcan-button-primary" v-on:click="increaseHeight()">
+                      <span uk-icon="icon: triangle-down; ratio: 2"></span>
+                  </button>
+              </div>
+          </div>
 
-	        <div class="uk-width-1-4@l uk-width-1-4@m uk-width-1-1@s">
-	            <ul uk-accordion="multiple: true">
-	                <li v-for="node in nodes">
-                        <button class="uk-button uk-button-small uk-button-default" v-on:click="toggleNode(node)" v-if="!node.Mariana.open">
-                            <span uk-icon="icon: chevron-down; ratio: 0.75"></span>
+          <div class=" uk-width-1-4@l uk-width-1-4@m uk-width-1-1@s">
+              <ul uk-accordion="multiple: true">
+                  <li v-for="node in nodes">
+                        <button class="uk-button uk-button-small uk-button-default uk-margin-remove" v-on:click="toggleNode(node)" v-if="!node.Mariana.open">
                             {{node.Mariana.data.name}}
                         </button>
                         <button class="uk-button uk-button-small uk-button-secondary vulcan-button-secondary" v-on:click="toggleNode(node)" v-else>
-                            <span uk-icon="icon: chevron-down; ratio: 0.75"></span>
                             {{node.Mariana.data.name}}
                         </button>
-	                    <div uk-dropdown="pos: bottom-right">
-	                        <ul class="uk-nav uk-dropdown-nav">
-	                            <ul class="uk-list uk-list-striped">
-	                                <li v-on:click="changeFocus(node, 'hyperParameters')"><a>Hyper-parameters</a></li>
-	                                <li v-on:click="changeFocus(node, 'parameters')"><a>Parameters</a></li>
-	                                <li v-on:click="changeFocus(node, 'notes')"><a>Notes</a></li>
-	                            </ul>
-	                        </ul>
-	                    </div>
-	                    <ul v-show="node.Mariana.open" class="uk-list uk-list-striped">
-	                        <li v-for="thing in node.Mariana.data[node.Mariana.focus]">
-	                        	<span class="uk-text-bold">{{thing.name}}</span> <br/> <span v-for="kv in thing.value"> {{kv.name}}: {{kv.value}}<br/></span>
-	                        </li>
-	                    </ul>
-	                </li>
-	            </ul>
-	        </div>
-	    </div>`,
+                      <div class="uk-align-center uk-margin-remove">
+                        <div class="uk-button-group">
+                          <div v-on:click="changeFocus(node, 'hyperParameters')" class="uk-width-1-3 uk-button uk-button-small uk-button-primary vulcan-button-primary">
+                            <span uk-icon="icon: lock"></span>
+                            <br/>
+                            <span class="uk-badge">{{node.Mariana.data["hyperParameters"].size}}</span>
+                          </div>
+                          <div v-on:click="changeFocus(node, 'parameters')" class="uk-width-1-3 uk-button uk-button-small uk-button-primary vulcan-button-primary">
+                            <span uk-icon="icon: unlock"></span>
+                            <br/>
+                            <span class="uk-badge">{{node.Mariana.data["parameters"].size}}</span>
+                          </div>
+                          <div v-on:click="changeFocus(node, 'notes')" class="uk-width-1-3 uk-button uk-button-small uk-button-primary vulcan-button-primary">
+                            <span uk-icon="icon: comments"></span>
+                            <br/>
+                            <span class="uk-badge">{{node.Mariana.data["notes"].size}}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <ul v-show="node.Mariana.open" class="uk-list uk-list-striped">
+                        <li v-for="category in categories">
+                          <span class="uk-text-bold uk-text-capitalize">
+                            {{category}}
+                          </span>
+                          <br/>
+                          <span v-for="kv in node.Mariana.data[node.Mariana.focus][category]">
+                            <span class="uk-text-muted">{{kv.name}}</span>: {{kv.value}}
+                            <br/>
+                          </span>
+                        </li>
+                      </ul>
+                  </li>
+              </ul>
+          </div>
+      </div>`,
+
   props: ["nodesp", "edgesp", "physicsp"],
   qtemplate: `<div v-bind:style="{height: height + 'px'}" ref="network"></div>`,
   data : function(){
 	createNodes = function(layers, color, highlightColor, hoverColor){
-  		nodes = []
+  		categories = ["layer", "initializations", "activation", "regularizations", "decorators", "learningScenari"]
+      superCats = ["parameters", "hyperParameters", "notes"]
+      nodes = []
   		namesToI = {}
   		maxLvl = 0
-      layerKV = toKV(layers)
-  		for (var i = 0; i < layerKV.length; i++) {
-  			layer = layerKV[i]
-	    	mData = { name: layer.name, shape: layer.value.shape, parameters: [], hyperParameters: [], notes: [] }
-  			
-  			mData.parameters.push({name: "self", value: toKV(layer.value.parameters)})
-        mData.hyperParameters.push({name: "self", value: toKV(layer.value.hyperParameters)})
-        mData.notes.push({name: "self", value: toKV(layer.value.notes)})
-        // console.log("c")
+      for (var i = 0; i < layers.length; i++) {
+        // console.log(layers[i])
+        // for (var k = superCats.length - 1; k >= 0; k--) { 
+        //   for (var j = categories.length - 1; j >= 0; j--) {
+        //     console.log(layers[i][1][superCats[k]][categories[j]])
 
-        abs = toKV(layer.value.abstractions)
-        for (var j = abs.length - 1; j >= 0; j--) {
-          if (abs[j].value.parameters) {
-            v = toKV(abs[j].value.parameters)
-            if (v.length > 0) {
-              mData.parameters.push({name: abs[j].name, value: v})
-            }
-          }
-          if (abs[j].value.hyperParameters) {
-            mData.hyperParameters.push({name: abs[j].name, value: toKV(abs[j].value.hyperParameters)})
-          }
-          if (abs[j].value.notes) {
-            v = toKV(toKV(abs[j].value.notes))
-            if (v.length > 0) {
-              mData.notes.push({name: abs[j].name, value: v})
-          }
-          }
-        }
-        node = { id: i, label: layer.name, shape: "box", font: {color: "white"},
+        //     if (layers[i][1][superCats[k]][categories[j]].length < 1) {
+        //       delete layers[i][1][superCats[k]][categories[j]]
+        //       console.log(layers[i][1][superCats[k]][categories[j]])
+
+        //     };
+        //   };
+        // };
+        node = { id: i, label: layers[i][0], shape: "box", font: {color: "white"},
           color: {
             background: color,
             border: "black",
@@ -116,16 +110,17 @@ Vue.component('graph-view', {
               border:"black"
             }
           },
-          level: layer.value.level,
+          level: layers[i][1].level,
           shadow:true,
-          Mariana: {open:false, focus: "hyperParameters", data: mData}
+          Mariana: {open:false, focus: "hyperParameters", data: layers[i][1]}
         }
           
-          if (layer.value.level > maxLvl) {
-              maxLvl = layer.value.level
-          };
-          namesToI[layer.name] = i
-          nodes.push(node)
+        if (layers[i][1].level > maxLvl) {
+          maxLvl = layers[i][1].level
+        };
+
+        namesToI[layers[i][0]] = i
+        nodes.push(node)
       }
 	  	return {nodes: nodes, maxLvl: maxLvl, namesToI}
     }
@@ -157,6 +152,7 @@ Vue.component('graph-view', {
     edgesObj = JSON.parse(this.edgesp)
     edges = createEdges(edgesObj, nodesNamesToI, edgeColor)
     ret = {
+        categories: categories,
         nodes: nodes,
         nodeColor: nodeColor,
         nodesNamesToI: nodesNamesToI,
@@ -165,7 +161,7 @@ Vue.component('graph-view', {
         network: null,
         maxLvl: maxLvl,
         height: (maxLvl +1) * 150,
-        direction: "UD",
+        direction: "LR",
         showShapes: true,
         physics: this.physicsp === "true"
     }
@@ -244,7 +240,7 @@ Vue.component('graph-view', {
         };
         var container = this.$refs.network;
         this.network = new vis.Network(container, data, options);
-        console.log(this.nodesNamesToI)
+        
         var self = this
         this.network.on('select', function (params) {
             for (var i = self.nodes.length - 1; i >= 0; i--) {

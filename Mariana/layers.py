@@ -66,7 +66,7 @@ class Layer_ABC(MABS.Abstraction_ABC) :
         self.outputs_preactivation=MTYPES.Variable(streams = streams)
 
         self.abstractions={
-            "activation": activation,
+            "activation": [activation],
             "regularizations": regularizations,
             "decorators": decorators,
             "initializations": initializations,
@@ -170,7 +170,7 @@ class Layer_ABC(MABS.Abstraction_ABC) :
         for f in self.streams :
             self.outputs_preactivation[f]=self.outputs[f]
         
-        self.abstractions["activation"]._apply(self, self.outputs)
+        self.abstractions["activation"][0]._apply(self, self.outputs)
 
     def _setTheanoFunctions(self) :
         """Creates propagate/propagateTest theano function that returns the layer's outputs.
@@ -257,8 +257,8 @@ class Layer_ABC(MABS.Abstraction_ABC) :
 
         return self.network
 
-    def toJson(self) :
-        res = super(Layer_ABC, self).toJson()
+    def toDictionary(self) :
+        res = super(Layer_ABC, self).toDictionary()
         try :
             res["shape"] = self.getShape_abs()
         except Exception as e:

@@ -381,7 +381,7 @@ class Network(object) :
     def toDictionary(self) :
         """return a dict representation of the network"""
         def do(dct, layer, level) :
-            dct[layer.name] = layer.toJson()
+            dct[layer.name] = layer.toDictionary()
             dct[layer.name]["level"] = level
             
             dct[layer.name]["abstractions"] = OrderedDict()
@@ -389,9 +389,9 @@ class Network(object) :
                 dct[layer.name]["abstractions"][k] = OrderedDict()
                 if type(v) is list :
                     for vv in v :
-                        dct[layer.name]["abstractions"][k][vv.__class__.__name__] = vv.toJson()
+                        dct[layer.name]["abstractions"][k][vv.__class__.__name__] = vv.toDictionary()
                 else :
-                    dct[layer.name]["abstractions"][k][v.__class__.__name__] = [v.toJson()]
+                    dct[layer.name]["abstractions"][k][v.__class__.__name__] = v.toDictionary()
 
             for l2 in self.outConnections[layer] :
                 dct.update(do(dct, l2, level+1) )
@@ -411,7 +411,7 @@ class Network(object) :
 
         res["name"] = name
         res["notes"] = self.notes
-        
+
         return res
 
     def toJson(self, pretty=False) :
