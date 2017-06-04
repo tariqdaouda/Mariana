@@ -1,0 +1,25 @@
+body {
+    font: 10pt sans;
+}
+
+a{
+	color: #1983a5;
+}
+.vulcan-button-primary{
+	background-color: #1983a5;
+	opacity: 0.8;
+}
+.vulcan-button-primary:hover{
+	background-color: #1983a5;
+	opacity: 1;
+}
+
+.vulcan-button-secondary{
+	background-color: #f68920;
+	opacity: 0.8;
+}
+
+.vulcan-button-secondary:hover{
+	background-color: #f68920;
+	opacity: 1;
+}
