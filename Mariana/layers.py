@@ -47,43 +47,42 @@ class ArithmeticMerge(object):
     def getDependencies(self) :
         deps = []
         if isinstance(self.a, ArithmeticMerge):
-            deps.extend(self.a.getDependencies)
+            deps.extend(self.a.getDependencies())
         else :
             deps.append(self.a)
             
         if isinstance(self.b, ArithmeticMerge):
-            deps.extend(self.b.getDependencies)
+            deps.extend(self.b.getDependencies())
         else :
             deps.append(self.b)
 
         return deps
 
-    def getOutputs(self, stream) :
+    def getOutputs(self) :
         
         if isinstance(self.a, ArithmeticMerge):
             aOuts = self.a.getOutputs()
         else :
-            aOuts = self.a.outputs[s]
+            aOuts = self.a.outputs
             
         if isinstance(self.b, ArithmeticMerge):
             bOuts = self.b.getOutputs()
         else :
-            bOuts = self.b.arg
+            bOuts = self.b.outputs
       
-        outputs = MTYPES.Variable(self.streams)
+        outputs = MTYPES.Variable(streams = self.streams)
         for s in self.streams :
             outputs[s] = 0
-            for typ, thing in self.operations :
-                if typ == "+" :
-                    outputs[s] = aOuts[s] + bOuts[s]
-                if typ == "-" :
-                    outputs[s] = aOuts[s] - bOuts[s]
-                if typ == "*" :
-                    outputs[s] = aOuts[s] * bOuts[s]
-                if typ == "/" :
-                    outputs[s] = aOuts[s] / bOuts[s]
+            if self.op == "+" :
+                outputs[s] = aOuts[s] + bOuts[s]
+            if self.op == "-" :
+                outputs[s] = aOuts[s] - bOuts[s]
+            if self.op == "*" :
+                outputs[s] = aOuts[s] * bOuts[s]
+            if self.op == "/" :
+                outputs[s] = aOuts[s] / bOuts[s]
         
-        return self.outputs
+        return outputs
 
     def __add__(self, thing) :
         return ArithmeticMerge(self, thing, "+")
@@ -342,16 +341,16 @@ class Layer_ABC(MABS.Abstraction_ABC) :
         return self.connect(layer)
 
     def __add__(self, layer) :
-        return Addition(self, layer)
+        return ArithmeticMerge(self, layer, "+")
 
     def __sub__(self, layer) :
-        return Substraction(self, layer)
+        return ArithmeticMerge(self, layer, "-")
 
     def __mul__(self, layer) :
-        return Multiplication(self, layer)
+        return ArithmeticMerge(self, layer, "*")
 
     def __div__(self, layer) :
-        return Division(self, layer)
+        return ArithmeticMerge(self, layer, "/")
 
     def __repr__(self) :
         return "(Mariana %s '%s': %s )" % (self.__class__.__name__, self.name, self.getShape_abs())
@@ -367,31 +366,8 @@ class Layer_ABC(MABS.Abstraction_ABC) :
                 MABS.Abstraction_ABC.__setattr__(self, k, v)
                 self.network=MNET.Network()
                 self.network._addLayer(self)
-        
-        # try :
-        #     deco=self._decorating
-        # except AttributeError:
-        #     MABS.Abstraction_ABC.__setattr__(self, k, v)
-        #     return
-
-        # if deco :
-        #     var=getattr(self, k)
-        #     try :
-        #         var.set_value(numpy.asarray(v, dtype=theano.config.floatX), borrow=True)
-        #         return
-        #     except AttributeError :
-        #         pass
 
         MABS.Abstraction_ABC.__setattr__(self, k, v)
-
-    # def __getattribute__(self, k) :
-    #     try :
-    #         v = MABS.Abstraction_ABC.__getattribute__(self, k)
-    #     except :
-    #         net = MABS.Abstraction_ABC.__getattribute__(self, "network")
-    #         net.init()
-    #         v = MABS.Abstraction_ABC.__getattribute__(self, k)
-    #     return v
 
 class MergeLayer(Layer_ABC):
     """docstring for MergeLayer"""
@@ -399,6 +375,9 @@ class MergeLayer(Layer_ABC):
         super(MergeLayer, self).__init__(maxInConnections=None, **kwargs)
         self.operations = operations
         self.outputs = MTYPES.Variable(streams = self.operations.streams)
+
+        for l in self.operations.getDependencies() :
+            l.connect(self)
 
     def femaleConnect(self, layer) :
         raise ValueError("You can't connect something to a MergeLayer")
@@ -410,8 +389,6 @@ class MergeLayer(Layer_ABC):
         return self.operations.getShape_abs()
 
     def setOutputs_abs(self) :
-        for l in self.operations.getDependencies() :
-            l.connect(self)
         self.outputs = self.operations.getOutputs()
 #Shortcut
 M = MergeLayer
@@ -470,7 +447,7 @@ class Concatenation(Layer_ABC):
             for l in self.layers :
                 outs.append(l.outputs[s])
             self.outputs[s] = tt.concatenate(autocrop(outs, self.croppings), axis=self.axis)
-        
+
 #Shortcut
 C = Concatenation
 # C( [a, b, c], )
