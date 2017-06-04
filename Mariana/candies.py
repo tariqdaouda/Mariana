@@ -47,3 +47,6 @@ def fatal(msgSubject, msg, toRaise = ValueError, flush = True) :
 			MESSAGE_LOG_FILE.flush()
 
 	raise toRaise
+
+def warning(msg) :
+	print "\n=========\nWARNING: %s\n=========\n" % msg

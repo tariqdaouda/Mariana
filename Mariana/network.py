@@ -378,7 +378,7 @@ class Network(object) :
 
         return s
 
-    def toDictionary(self) :
+    def toDictionary(self, name) :
         """return a dict representation of the network"""
         def do(dct, layer, level) :
             dct[layer.name] = layer.toDictionary()
@@ -402,7 +402,7 @@ class Network(object) :
         res["layers"] = OrderedDict()
 
         levels = {}
-        for name, layer in self.inputs.iteritems() :
+        for layerName, layer in self.inputs.iteritems() :
             res["layers"].update(do(res["layers"], layer, 0))
 
         res["edges"] = []
@@ -418,14 +418,16 @@ class Network(object) :
         import json
         """return a json representation of the network"""
         if pretty :
-            return json.dumps(self.toDictionary(), indent=2, sort_keys=True)
+            return json.dumps(self.toDictionary(name), indent=2, sort_keys=True)
     
-        return json.dumps(self.toDictionary())
+        return json.dumps(self.toDictionary(name))
 
-    def saveHTML(self, name) :
+    def saveHTML(self, name, init=True) :
         from Mariana.HTML_Templates.vulcan.vulcan import Vulcan
+        if init :
+            self.init()
         template = Vulcan()
-        template.render(name, self.toDictionary())
+        template.render(name, self.toDictionary(name))
 
     def saveHTML_old(self, name, forceInit = True) :
         """Creates an HTML file with the graph representation."""

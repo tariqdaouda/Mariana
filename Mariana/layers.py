@@ -14,13 +14,92 @@ import Mariana.network as MNET
 import Mariana.wrappers as MWRAP
 import Mariana.candies as MCAN
 
-__all__=["Layer_ABC", "DenseOutput_ABC", "Dense", "Output_ABC", "Input", "Hidden", "Addition", "Embedding", "SoftmaxClassifier", "Regression", "Autoencode"]
+__all__=["Layer_ABC", "DenseOutput_ABC", "Dense", "Output_ABC", "Input", "Hidden", "Embedding", "SoftmaxClassifier", "Regression", "Autoencode"]
 
-class ClassName(object):
-    """docstring for ClassName"""
-    def __init__(self, arg):
-        self.arg = arg
+class ArithmeticMerge(object):
+    """docstring for ArithmeticMerge"""
+    def __init__(self, a, b, op):
+        super(ArithmeticMerge, self).__init__()
         
+        aStreams = set(a.streams)
+        streams  = aStreams & set(b.streams)
+        if len(streams) < 1 :
+            raise ValueError("Parameters have no common streams")
+        if len(aStreams) != len(streams) :
+            print MCAN.warning("Parameter have different streams, will take the intersection")
+        
+        self.streams = list(streams)
+        
+        aShape = a.getShape_abs()
+        bShape = b.getShape_abs()
+        if aShape != bShape :
+            raise ValueError("All parameters nust have the same shape")
+
+        self.shape = aShape
+
+        self.a = a
+        self.b = b
+        self.op = op
+
+    def getShape_abs(self):
+        return self.shape
+
+    def getDependencies(self) :
+        deps = []
+        if isinstance(self.a, ArithmeticMerge):
+            deps.extend(self.a.getDependencies)
+        else :
+            deps.append(self.a)
+            
+        if isinstance(self.b, ArithmeticMerge):
+            deps.extend(self.b.getDependencies)
+        else :
+            deps.append(self.b)
+
+        return deps
+
+    def getOutputs(self, stream) :
+        
+        if isinstance(self.a, ArithmeticMerge):
+            aOuts = self.a.getOutputs()
+        else :
+            aOuts = self.a.outputs[s]
+            
+        if isinstance(self.b, ArithmeticMerge):
+            bOuts = self.b.getOutputs()
+        else :
+            bOuts = self.b.arg
+      
+        outputs = MTYPES.Variable(self.streams)
+        for s in self.streams :
+            outputs[s] = 0
+            for typ, thing in self.operations :
+                if typ == "+" :
+                    outputs[s] = aOuts[s] + bOuts[s]
+                if typ == "-" :
+                    outputs[s] = aOuts[s] - bOuts[s]
+                if typ == "*" :
+                    outputs[s] = aOuts[s] * bOuts[s]
+                if typ == "/" :
+                    outputs[s] = aOuts[s] / bOuts[s]
+        
+        return self.outputs
+
+    def __add__(self, thing) :
+        return ArithmeticMerge(self, thing, "+")
+
+    def __sub__(self, thing) :
+        return ArithmeticMerge(self, thing, "-")
+
+    def __mul__(self, thing) :
+        return ArithmeticMerge(self, thing, "*")
+
+    def __div__(self, thing) :
+        return ArithmeticMerge(self, thing, "/")
+
+    def __repr__(self):
+        return "(" + repr(self.a) + self.op + repr(self.b) + ")"
+
 class Layer_ABC(MABS.Abstraction_ABC) :
     "The interface that every layer should expose"
 
@@ -61,9 +140,9 @@ class Layer_ABC(MABS.Abstraction_ABC) :
         # self.types=None #input or output layer, automatically derived from inputs and tragets
 
         self.streams = streams
-        self.inputs=MTYPES.Variable(streams = streams)
-        self.outputs=MTYPES.Variable(streams = streams)
-        self.outputs_preactivation=MTYPES.Variable(streams = streams)
+        self.inputs=MTYPES.Variable(streams = self.streams)
+        self.outputs=MTYPES.Variable(streams = self.streams)
+        self.outputs_preactivation=None
 
         self.abstractions={
             "activation": [activation],
@@ -78,27 +157,12 @@ class Layer_ABC(MABS.Abstraction_ABC) :
 
         self._mustInit=True
         self._mustReset=True
-        self._decorating=False
+        # self._decorating=False
         self.network._addLayer(self)
-
-    # def getParameters(self) :
-    #     """returns the layer's parameters as dictionary"""
-    #     return self.parameters
-
-    # def getParameter(self, pname) :
-    #     return self.parameters[pname]
-
-    # def getParameters(self) :
-    #     """returns the layer's parameters"""
-    #     return self.getParameters().values()
-
-    # def getParameterNames(self) :
-    #     """returns the layer's parameters names"""
-    #     return self.getParameters().keys()
 
     def getParameterShape_abs(self, param) :
         """Should return the shape of the parameter. This has to be implemented in order for the initializations to work (and maybe some other stuff as well)"""
-        raise NotImplementedError("Should be implemented in child: %s" % self.name)
+        raise NotImplementedError("Must be implemented in child: %s" % self.name)
 
     def clone(self, **kwargs) :
         """Returns a free layer with the same parameters."""
@@ -134,10 +198,10 @@ class Layer_ABC(MABS.Abstraction_ABC) :
         return self.network.outConnections[self]
 
     def getShape_abs(self) :
-        """returns the shape of the layer. The first dimention is for the minibatch"""
-        raise NotImplementedError("Should be implemented in child: %s" % self.name)        
+        """returns the shape of the layer. The first dimentios is for the minibatch"""
+        raise NotImplementedError("Must be implemented in child: %s" % self.name)        
     
-    def getDimentionality(self) :
+    def getDimensionality(self) :
         """returns the layer intrinsic dimentionality (without the minibatch dimention), by default len(shape)-1"""
         return len(self.getShape_abs()) -1
 
@@ -150,7 +214,7 @@ class Layer_ABC(MABS.Abstraction_ABC) :
 
     def setInputs(self) :
         l = list(self.getInLayers())
-        if len(l) > 1 :
+        if self.maxInConnections is not None and len(l) > self.maxInConnections :
             raise ValueError("This layer can only take one single layer as input")
         layer = l[0]
         for s in layer.outputs.streams :
@@ -158,7 +222,7 @@ class Layer_ABC(MABS.Abstraction_ABC) :
 
     def setOutputs_abs(self) :
         """Defines the outputs and outputs["test"] of the layer before the application of the activation function. This function is called by _init() ans should be written in child."""
-        raise NotImplementedError("Should be implemented in child: %s" % self.name)
+        raise NotImplementedError("Must be implemented in child: %s" % self.name)
 
     def _decorate(self) :
         """applies decorators"""
@@ -167,6 +231,7 @@ class Layer_ABC(MABS.Abstraction_ABC) :
 
     def _activate(self) :
         """applies activation"""
+        self.outputs_preactivation=MTYPES.Variable(streams = self.streams)
         for f in self.streams :
             self.outputs_preactivation[f]=self.outputs[f]
         
@@ -213,6 +278,7 @@ class Layer_ABC(MABS.Abstraction_ABC) :
 
     def _initA(self) :
         """Initialize the essential attributes of the layer such as: outputs and activations. This function is automatically called before train/test etc..."""
+        # print self, self.getOutLayers()
         if ( self._mustInit ) and ( len(self._inputRegistrations) == len(self.getInLayers()) ) :
             self._whateverFirstInit()
             self.setInputs()
@@ -223,14 +289,13 @@ class Layer_ABC(MABS.Abstraction_ABC) :
             self._outputsSanityCheck()
             self._activate()
             
-            for l in self.network.outConnections[self] :
+            for l in self.getOutLayers() :
                 l._registerInput(self)
                 l._initA()
             self._mustInit=False
 
     def _initB(self) :
         """Initialize the fancy attributes of the layer such as: regularizers, decorators and theano functions. This function is automatically called before train/test etc..."""
-        # self._listRegularizations()
         self._setTheanoFunctions()
         self._whateverLastInit()
         
@@ -251,9 +316,11 @@ class Layer_ABC(MABS.Abstraction_ABC) :
     def connect(self, layer) :
         """Connect the layer to another one. Using the '>' operator to connect two layers actually calls this function.
         This function returns the resulting network"""
-        self.maleConnect(layer)
-        layer._femaleConnect(self)
-        self.network.merge(self, layer)
+        # print self, layer
+        if layer not in self.getInLayers() :
+            self.maleConnect(layer)
+            layer._femaleConnect(self)
+            self.network.merge(self, layer)
 
         return self.network
 
@@ -270,9 +337,21 @@ class Layer_ABC(MABS.Abstraction_ABC) :
         "returns the representation of the node in the graph DOT format"
         return '[label="%s: %s"]' % (self.name, self.getShape_abs())
 
-    def __gt__(self, pathOrLayer) :
+    def __gt__(self, layer) :
         """Alias to connect, make it possible to write things such as layer1 > layer2"""
-        return self.connect(pathOrLayer)
+        return self.connect(layer)
+
+    def __add__(self, layer) :
+        return Addition(self, layer)
+
+    def __sub__(self, layer) :
+        return Substraction(self, layer)
+
+    def __mul__(self, layer) :
+        return Multiplication(self, layer)
+
+    def __div__(self, layer) :
+        return Division(self, layer)
 
     def __repr__(self) :
         return "(Mariana %s '%s': %s )" % (self.__class__.__name__, self.name, self.getShape_abs())
@@ -285,25 +364,116 @@ class Layer_ABC(MABS.Abstraction_ABC) :
             if len(self.network.layers) > 1 :
                 raise ValueError("You can't change the name of a connected layer")
             else :
-                object.__setattr__(self, k, v)
+                MABS.Abstraction_ABC.__setattr__(self, k, v)
                 self.network=MNET.Network()
                 self.network._addLayer(self)
         
-        try :
-            deco=self._decorating
-        except AttributeError:
-            object.__setattr__(self, k, v)
-            return
+        # try :
+        #     deco=self._decorating
+        # except AttributeError:
+        #     MABS.Abstraction_ABC.__setattr__(self, k, v)
+        #     return
 
-        if deco :
-            var=getattr(self, k)
-            try :
-                var.set_value(numpy.asarray(v, dtype=theano.config.floatX), borrow=True)
-                return
-            except AttributeError :
-                pass
+        # if deco :
+        #     var=getattr(self, k)
+        #     try :
+        #         var.set_value(numpy.asarray(v, dtype=theano.config.floatX), borrow=True)
+        #         return
+        #     except AttributeError :
+        #         pass
 
-        object.__setattr__(self, k, v)
+        MABS.Abstraction_ABC.__setattr__(self, k, v)
+
+    # def __getattribute__(self, k) :
+    #     try :
+    #         v = MABS.Abstraction_ABC.__getattribute__(self, k)
+    #     except :
+    #         net = MABS.Abstraction_ABC.__getattribute__(self, "network")
+    #         net.init()
+    #         v = MABS.Abstraction_ABC.__getattribute__(self, k)
+    #     return v
+
+class MergeLayer(Layer_ABC):
+    """docstring for MergeLayer"""
+    def __init__(self, operations, **kwargs):
+        super(MergeLayer, self).__init__(maxInConnections=None, **kwargs)
+        self.operations = operations
+        self.outputs = MTYPES.Variable(streams = self.operations.streams)
+
+    def femaleConnect(self, layer) :
+        raise ValueError("You can't connect something to a MergeLayer")
+
+    def _femaleConnect(self, layer) :
+        pass
+
+    def getShape_abs(self) :
+        return self.operations.getShape_abs()
+
+    def setOutputs_abs(self) :
+        for l in self.operations.getDependencies() :
+            l.connect(self)
+        self.outputs = self.operations.getOutputs()
+#Shortcut
+M = MergeLayer
+# M(a + b * c - o, )
+
+class Concatenation(Layer_ABC):
+    """docstring for Concatenation"""
+    def __init__(self, layers, croppings = [], axis=1, **kwargs):
+        from lasagne.layers.merge import autocrop_array_shapes
+        
+        super(Concatenation, self).__init__(maxInConnections=None, **kwargs)
+        self.layers = layers
+        self.croppings = croppings
+        self.axis = axis
+
+        self.croppedShapes = []
+        self.originalShapes = []
+        for l in self.layers :
+            self.originalShapes.append(l.getShape_abs())
+        self.croppedShapes = autocrop_array_shapes(self.originalShapes, self.croppings)
+        
+        self.shape = []
+        for i in xrange(len(self.croppedShapes[0])) :
+            if i == self.axis :
+                v = 0
+                for s in self.croppedShapes :
+                    v += s[i]
+            else :
+                v = self.croppedShapes[0][i]
+            self.shape.append(v)
+        
+        self.streams = None
+        for l in self.layers :
+            l.connect(self)
+            if self.streams is None :
+                self.streams = set(l.outputs.streams)
+            else :
+                sl = set(l.outputs.streams)
+                notCommon = self.streams - sl
+                if len(notCommon) > 0 :
+                    print MCAN.warning("Layers %s do not share streams: %s with other layers .Will take the intersection" %(l.name, notCommon))
+                    self.streams = self.streams & sl
+
+        self.outputs = MTYPES.Variable(streams = self.streams)
+
+    def _femaleConnect(self, layer) :
+        pass
+
+    def getShape_abs(self) :
+        return self.shape
+
+    def setOutputs_abs(self) :
+        from lasagne.layers.merge import autocrop
+        for s in self.streams :
+            outs = []
+            for l in self.layers :
+                outs.append(l.outputs[s])
+            self.outputs[s] = tt.concatenate(autocrop(outs, self.croppings), axis=self.axis)
+        
+#Shortcut
+C = Concatenation
+# C( [a, b, c], )
 
 class Input(Layer_ABC) :
     """"General representation of an input layer for creating taylored input layers on the fly.
@@ -343,9 +513,9 @@ class Embedding(Layer_ABC) :
     """Embeddings are learned representations of the inputs that are much loved in NLP.
     This layer will take care of creating the embeddings and optimizing them. It can either be used as an input layer or as hidden layer"""
 
-    def __init__(self, nbDimentions, dictSize, zeroForNull=False, initializations=[MI.Uniform('embeddings', small=True)], **kwargs) :
+    def __init__(self, nbDimensions, dictSize, zeroForNull=False, initializations=[MI.Uniform('embeddings', small=True)], **kwargs) :
         """
-        :param int nbDimentions: the number of dimentions in wich to encode each word.
+        :param int nbDimensions: the number of dimensions in wich to encode each word.
         :param int dictSize: the total number of words.
         :param bool zeroForNull: if True the dictionnary will be augmented by one elements at te begining (index=0) whose parameters will always be vector of zeros. This can be used to selectively mask some words in the input, but keep in mind that the index for the first word is moved to one.
         :param int size: the size of the input vector (if your input is a sentence this should be the number of words in it). You don't have to provide a value in the embedding layer is a hidden layer
@@ -358,19 +528,19 @@ class Embedding(Layer_ABC) :
         self.zeroForNull=zeroForNull
 
         self.setHP("dictSize", dictSize)
-        self.setHP("nbDimentions", nbDimentions)
+        self.setHP("nbDimensions", nbDimensions)
 
         self.setP("embeddings", MTYPES.Parameter(name="%s.%s" % (self.name, "embeddings")))
 
         self.inputs=MTYPES.Variable()
 
     def femaleConnect(self, layer) :
-        if layer.getDimentionality() != 1 :
-            raise ValueError("Input layer must be a vector, got %s dimentions" % layer.getDimentionality())
+        if layer.getDimensionality() != 1 :
+            raise ValueError("Input layer must be a vector, got %s dimensions" % layer.getDimensionality())
         self.nbInputs = layer.getShape_abs()[1]
 
     def getShape_abs(self) :
-        return (1, self.nbInputs * self.nbDimentions)
+        return (1, self.nbInputs * self.nbDimensions)
 
     def setInputs(self) :
         inpLayer = self.getInLayers()[0]
@@ -383,7 +553,7 @@ class Embedding(Layer_ABC) :
         
     def setOutputs_abs(self) :
         if self.zeroForNull :
-            self.null=numpy.zeros((1, self.nbDimentions))
+            self.null=numpy.zeros((1, self.nbDimensions))
             embs = self.parameters["embeddings"].getValue()
             self.parameters["embeddings"].setValue( tt.concatenate( [self.null, embs], axis=0) )
        
@@ -391,38 +561,34 @@ class Embedding(Layer_ABC) :
             preOutputs=self.parameters["fullEmbeddings"][self.inputs[f]]
             self.outputs[f] = preOutputs.reshape((self.inputs[f].shape[0], self.nbOutputs))
 
-# class Addition(Layer_ABC):
+# I > h1
+# I > h2
+# (h2 == h3 * h1) > o
+
+# C(h1, h2) > o
+
+# class Concatenation(Layer_ABC):
 #     """Adds up the values of all afferent layers"""
 
-#     def __init__(self, name=None, **kwargs):
-#         super(Addition, self).__init__(layerTypes=[MSET.TYPE_HIDDEN_LAYER], size=None, name=name, **kwargs)
+#     def __init__(self, **kwargs):
+#         super(Addition, self).__init__(**kwargs)
+#         self.shape = None
 
 #     def femaleConnect(self, layer) :
-#         if self.nbInputs is None :
-#             self.nbInputs=layer.nbOutputs
-#         elif self.nbInputs != layer.nbOutputs :
-#             raise ValueError("All inputs to layer %s must have the same size, got: %s previous: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
-#         self.nbOutputs=layer.nbOutputs
-
-#     def setInputs(self) :
-#         """set the number of inputs and outputs"""
-#         inputs = 0
-#         testInputs = 0
-#         for l in self.getInLayers() :
-#             inputs += l.outputs["train"]
-#             testInputs += l.outputs["test"]
-
-#         self.inputs["train"] = inputs
-#         self.inputs["test"] = testInputs
-
+#         if self.shape is None :
+#             self.shape=layer.getShape_abs()
+#         elif self.shape != layer.getShape_abs() :
+#             raise ValueError("All inputs to layer %s must have the same shape, got: %s previous: %s" % (self.name, layer.getShape_abs(), self.shape) )
+    
 #     def setOutputs_abs(self) :
-#         self.outputs["train"]=self.inputs["train"]
-#         self.outputs["test"]=self.inputs["test"]
+#         for stream in ("test", "train") :
+#             self.outputs["test"] = 0
+#             for l in self.getInLayers() :
+#                 self.outputs["test"] += l.outputs["test"]
 
 class Pass(Layer_ABC) :
     def __init__(self, name=None, **kwargs):
-        # super(Pass, self).__init__(layerTypes=[MSET.TYPE_HIDDEN_LAYER], size=None, name=name, **kwargs)
-        super(Pass, self).__init__(size=None, name=name, **kwargs)
+        super(Pass, self).__init__(name=name, **kwargs)
         self.shape = None
 
     def getShape_abs(self) :
@@ -449,8 +615,8 @@ class Dense(Layer_ABC) :
         self.nbInputs=None
 
     def femaleConnect(self, layer) :
-        if layer.getDimentionality() != 1 :
-            raise ValueError("Input layer must be a vector, got %s dimentions" % layer.getDimentionality())
+        if layer.getDimensionality() != 1 :
+            raise ValueError("Input layer must be a vector, got %s dimensions" % layer.getDimensionality())
         self.nbInputs = layer.getShape_abs()[1]
 
     def getShape_abs(self) :
@@ -459,6 +625,7 @@ class Dense(Layer_ABC) :
 
     def setOutputs_abs(self) :
         """Defines, self.outputs["train"] and self.outputs["test"]"""
+        # print "ssss", self
         if self.parameters["W"] is not None:
             for s in self.inputs.streams :
                 self.outputs[s]=tt.dot(self.inputs[s], self.parameters["W"]())
@@ -474,20 +641,6 @@ class Dense(Layer_ABC) :
             return (self.nbUnits,)
         else :
             raise ValueError("Unknown parameter: %s" % param)
-
-    # def getW(self) :
-    #     """Return the weight values"""
-    #     try :
-    #         return self.parameters["W"].get_value()
-    #     except AttributeError :
-    #         raise ValueError("It looks like the network has not been initialized yet")
-
-    # def getb(self) :
-    #     """Return the bias values"""
-    #     try :
-    #         return self.parameters["b"].get_value()
-    #     except AttributeError :
-    #         raise ValueError("It looks like the network has not been initialized yet")
 
 Hidden = Dense
     
@@ -531,21 +684,6 @@ class Output_ABC(Layer_ABC) :
             else:
                 self.dependencies=_bckTrk(self.dependencies, self)
 
-    # def _applyRegularizations(self, force=False) :
-    #     """Defines the regularizations to be added to the cost"""
-    #     if self._mustRegularize or force :
-    #         self._backTrckDependencies()
-    #         for l in self.dependencies.itervalues() :
-    #             # for sc in self.abstractions["scenari"] :
-    #                 # l.pushLearningScenario(sc)
-    #             try :
-    #                 for reg in l.abstractions["regularizations"] :
-    #                     self.loss["train"] += reg.apply(l)
-    #                     # reg.apply(l, self.loss)
-    #             except AttributeError :
-    #                 pass
-    #     self._mustRegularize=False
-
     def _setTheanoFunctions(self) :
         """
         Sets all the theano function.
@@ -557,13 +695,8 @@ class Output_ABC(Layer_ABC) :
         self._backTrckDependencies()
         super(Output_ABC, self)._setTheanoFunctions()
         self.loss = MTYPES.Losses(self, self.cost, self.targets, self.outputs)
-        # self._applyRegularizations()
         
-        # if self.updates is None :
-        #     self._setUpdates()
-
         self.train = MWRAP.TheanoFunctionHandle("train", self, self.loss, stream="train", update=True, allow_input_downcast=True)
-        # self.train = MWRAP.TheanoFunctionHandle("train", self, self.loss["train"], stream="train", updates=self.updates, allow_input_downcast=True)
         self.test = MWRAP.TheanoFunctionHandle("test", self, self.loss, stream="test", allow_input_downcast=True)
 
 class DenseOutput_ABC(Output_ABC, Dense):

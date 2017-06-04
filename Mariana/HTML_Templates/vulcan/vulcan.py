@@ -11,16 +11,8 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
         self.html = f.read()
         f.close()
         
-        self.jsFP = os.path.join(self.dirname, "vulcan.js")
-        f = open(self.jsFP)
-        self.js = f.read()
-        f.close()
-        
-        self.cssFP = os.path.join(self.dirname, "vulcan.css")
-        f = open(self.cssFP)
-        self.css = f.read()
-        f.close()
-
+        self.filesDir = os.path.join(self.dirname, "files")
+    
     def formatNotes(self, notes) :
         tmp = """
             <div class="uk-flex-center uk-child-width-1-2@s uk-child-width-1-3@m" uk-grid>
@@ -80,6 +72,8 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
 
         html = self.html.format(
             TITLE=title,
+            DOCUMENTATION_URL="http://bioinfo.iric.ca/~daoudat/Mariana/",
+            GITHUB_URL="https://github.com/tariqdaouda/Mariana",
             MODEL_NOTES=self.formatNotes(networkJson["notes"]),
             MACHINE_TIME=time.time(),
             USER_TIME=time.ctime().replace("_", " "),
@@ -87,12 +81,10 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
             EDGES_JSON=json.dumps(networkJson["edges"])
         )
         
-        webFolder = "%s_web" % title
-        if not os.path.exists(webFolder) :
-            os.mkdir(webFolder)
-
-        shutil.copy(self.jsFP, os.path.join(currFolder, webFolder, "vulcan.js"))
-        shutil.copy(self.cssFP, os.path.join(currFolder, webFolder, "vulcan.css"))
+        webFolder = "%s_webfiles" % title
+        
+        if not os.path.isdir(self.filesDir) :
+            shutil.copytree(self.filesDir, os.path.join(currFolder, webFolder))
         
         f = open(os.path.join(currFolder, "%s.html" % title), "w") 
         f.write(html)

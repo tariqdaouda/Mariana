@@ -60,8 +60,7 @@ class Abstraction_ABC(object):
             ps[k] = {"shape": self.getParameterShape_abs(k)}
 
         res["parameters"] = ps    
-        # res["documentation"] = self.__doc__
-
+        
         return res
 
     def __repr__(self) :
