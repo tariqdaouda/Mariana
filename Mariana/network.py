@@ -339,7 +339,7 @@ class Network(object) :
                     l.updateParameter(k, v)
                 except :
                     l.initParameter(k, v)
-            l._mustReset = False
+            l._mustInit = False
            
         for l1, l2 in model["edges"] :
             network = expandedLayers[l1] > expandedLayers[l2]

@@ -155,8 +155,6 @@ class Layer_ABC(MABS.Abstraction_ABC) :
         self._inputRegistrations=set()
 
         self._mustInit=True
-        self._mustReset=True
-        # self._decorating=False
         self.network._addLayer(self)
 
     def getParameterShape_abs(self, param) :
@@ -171,7 +169,7 @@ class Layer_ABC(MABS.Abstraction_ABC) :
         
         for k, v in self.getParameters().iteritems() :
             setattr(newLayer, k, v)
-            newLayer._mustReset=False
+            newLayer._mustInit=False
         return newLayer
 
     def _registerInput(self, inputLayer) :
@@ -206,10 +204,10 @@ class Layer_ABC(MABS.Abstraction_ABC) :
 
     def _initParameters(self, forceReset=False) :
         """creates the parameters if necessary (self._mustRest == True)"""
-        if self._mustReset or forceReset :        
+        if self._mustInit or forceReset :        
             for init in self.abstractions["initializations"] :
                 init._apply(self)
-        self._mustReset=False
+        self._mustInit=False
 
     def setInputs(self) :
         l = list(self.getInLayers())
@@ -392,7 +390,7 @@ class MergeLayer(Layer_ABC):
         self.outputs = self.operations.getOutputs()
 #Shortcut
 M = MergeLayer
-# M(a + b * c - o, )
+# M(a + b * c - o, ...)
 
 class Concatenation(Layer_ABC):
     """docstring for Concatenation"""
@@ -450,7 +448,7 @@ class Concatenation(Layer_ABC):
 
 #Shortcut
 C = Concatenation
-# C( [a, b, c], )
+# C( [a, b, c], ...)
 
 class Input(Layer_ABC) :
     """"General representation of an input layer for creating taylored input layers on the fly.
@@ -460,7 +458,6 @@ class Input(Layer_ABC) :
     :param dtype: the numpy data type 
     """
     def __init__(self, shape, name=None, dtype=theano.config.floatX,  **kwargs) :
-        # super(Input, self).__init__(layerTypes=[MSET.TYPE_INPUT_LAYER], name=name, **kwargs)
         super(Input, self).__init__(name=name, **kwargs)
         
         if isinstance(shape, int) :
@@ -469,7 +466,6 @@ class Input(Layer_ABC) :
             self.shape = tuple([1].extend(list(shape)))
         
         self.broadcastable = [s == 1 for s in self.shape]
-        # self.inputs = MTYPES.Inputs(tt.TensorType, dtype=theano.config.floatX, name="Inp_%s" % self.name, broadcastable=self.broadcastable)
         self.inputs = MTYPES.Inputs(tt.matrix, name="Inp_%s" % self.name)
     
     def setInputs(self) :
@@ -486,6 +482,53 @@ class Input(Layer_ABC) :
     def femaleConnect(self, *args) :
         raise ValueError("Nothing can be connected to an input layer")
 
+
+class Dense(Layer_ABC) :
+    """A layer with weigth and bias. If would like to disable either one of them do not provide an initialization"""
+
+    def __init__(self, nbUnits, initializations=[MI.GlorotNormal('W'), MI.SingleValue('b', 0)], **kwargs) :
+        # super(Dense, self).__init__(layerTypes=[MSET.TYPE_HIDDEN_LAYER], initializations=initializations, **kwargs)
+        super(Dense, self).__init__(initializations=initializations, **kwargs)
+        # self.inputs["test"]=None
+        self.addParameters({
+            "W": MTYPES.Parameter("%s.W" % (self.name)),
+            "b": MTYPES.Parameter("%s.b" % (self.name))
+        })
+
+        self.setHP("nbUnits", nbUnits)
+        self.nbInputs=None
+
+    def femaleConnect(self, layer) :
+        if layer.getDimensionality() != 1 :
+            raise ValueError("Input layer must be a vector, got %s dimensions" % layer.getDimensionality())
+        self.nbInputs = layer.getShape_abs()[1]
+
+    def getShape_abs(self) :
+        """defines the number of inputs"""
+        return (1, self.nbUnits)
+
+    def setOutputs_abs(self) :
+        """Defines, self.outputs["train"] and self.outputs["test"]"""
+        # print "ssss", self
+        if self.parameters["W"] is not None:
+            for s in self.inputs.streams :
+                self.outputs[s]=tt.dot(self.inputs[s], self.parameters["W"]())
+            
+        if self.parameters["b"] is not None:
+            for s in self.inputs.streams :
+                self.outputs[s]=self.outputs[s] + self.parameters["b"]()
+
+    def getParameterShape_abs(self, param) :
+        if param == "W" :
+            return (self.nbInputs, self.nbUnits)
+        elif param == "b" :
+            return (self.nbUnits,)
+        else :
+            raise ValueError("Unknown parameter: %s" % param)
+
+Hidden = Dense
+
+###NEED MAJ
 class Embedding(Layer_ABC) :
     """Embeddings are learned representations of the inputs that are much loved in NLP.
     This layer will take care of creating the embeddings and optimizing them. It can either be used as an input layer or as hidden layer"""
@@ -538,36 +581,11 @@ class Embedding(Layer_ABC) :
             preOutputs=self.parameters["fullEmbeddings"][self.inputs[f]]
             self.outputs[f] = preOutputs.reshape((self.inputs[f].shape[0], self.nbOutputs))
 
-# I > h1
-# I > h2
-# (h2 == h3 * h1) > o
-
-# C(h1, h2) > o
-
-# class Concatenation(Layer_ABC):
-#     """Adds up the values of all afferent layers"""
-
-#     def __init__(self, **kwargs):
-#         super(Addition, self).__init__(**kwargs)
-#         self.shape = None
-
-#     def femaleConnect(self, layer) :
-#         if self.shape is None :
-#             self.shape=layer.getShape_abs()
-#         elif self.shape != layer.getShape_abs() :
-#             raise ValueError("All inputs to layer %s must have the same shape, got: %s previous: %s" % (self.name, layer.getShape_abs(), self.shape) )
-    
-#     def setOutputs_abs(self) :
-#         for stream in ("test", "train") :
-#             self.outputs["test"] = 0
-#             for l in self.getInLayers() :
-#                 self.outputs["test"] += l.outputs["test"]
 
 class Pass(Layer_ABC) :
     def __init__(self, name=None, **kwargs):
         super(Pass, self).__init__(name=name, **kwargs)
-        self.shape = None
-
+    
     def getShape_abs(self) :
         return self.getInLayers().values()[0].getShape_abs()
 
@@ -575,52 +593,6 @@ class Pass(Layer_ABC) :
         layer = self.getInLayers().values()[0]
         for f in layer.outputs.streams :
             self.outputs[f] = layer.outputs[f]
-
-class Dense(Layer_ABC) :
-    """A layer with weigth and bias. If would like to disable either one of them do not provide an initialization"""
-
-    def __init__(self, nbUnits, initializations=[MI.GlorotNormal('W'), MI.SingleValue('b', 0)], **kwargs) :
-        # super(Dense, self).__init__(layerTypes=[MSET.TYPE_HIDDEN_LAYER], initializations=initializations, **kwargs)
-        super(Dense, self).__init__(initializations=initializations, **kwargs)
-        # self.inputs["test"]=None
-        self.addParameters({
-            "W": MTYPES.Parameter("%s.W" % (self.name)),
-            "b": MTYPES.Parameter("%s.b" % (self.name))
-        })
-
-        self.setHP("nbUnits", nbUnits)
-        self.nbInputs=None
-
-    def femaleConnect(self, layer) :
-        if layer.getDimensionality() != 1 :
-            raise ValueError("Input layer must be a vector, got %s dimensions" % layer.getDimensionality())
-        self.nbInputs = layer.getShape_abs()[1]
-
-    def getShape_abs(self) :
-        """defines the number of inputs"""
-        return (1, self.nbUnits)
-
-    def setOutputs_abs(self) :
-        """Defines, self.outputs["train"] and self.outputs["test"]"""
-        # print "ssss", self
-        if self.parameters["W"] is not None:
-            for s in self.inputs.streams :
-                self.outputs[s]=tt.dot(self.inputs[s], self.parameters["W"]())
-            
-        if self.parameters["b"] is not None:
-            for s in self.inputs.streams :
-                self.outputs[s]=self.outputs[s] + self.parameters["b"]()
-
-    def getParameterShape_abs(self, param) :
-        if param == "W" :
-            return (self.nbInputs, self.nbUnits)
-        elif param == "b" :
-            return (self.nbUnits,)
-        else :
-            raise ValueError("Unknown parameter: %s" % param)
-
-Hidden = Dense
-    
         
 class Output_ABC(Layer_ABC) :
     """The interface that every output layer should expose.

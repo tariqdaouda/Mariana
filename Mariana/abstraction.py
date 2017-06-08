@@ -69,13 +69,22 @@ class Abstraction_ABC(object):
 
 class ApplyAbstraction_ABC(Abstraction_ABC):
 
-    def set(self, layer) :
-        """Last setup before apply, default: does nothing"""
+    def __init__(self, *args, **kwargs):
+        super(ApplyAbstraction_ABC, self).__init__()
+        self._mustInit=True
+
+    def _initialize(self, layer) :
+        if self._mustInit :
+            self.initialize(self, layer)
+            self._mustInit=False
+
+    def initialize(self, layer) :
+        """Last setup before apply, default: does nothing. Parameter initializations must be put here"""
         pass
 
     def _apply(self, layer, *args, **kwargs) :
         """does self.set() + self.apply()"""
-        self.set(layer)
+        self._initialise(layer)
         self.apply(layer, *args, **kwargs)
 
     def apply(self, layer, *args, **kwargs) :

@@ -51,10 +51,9 @@ class Targets(Variable):
 
 class Parameter(object):
     """docstring for Parameter"""
-    def __init__(self, name, tags={"regularizable": True}):
+    def __init__(self, name):
         super(Parameter, self).__init__()
         self.name = name
-        self.tags = tags
         self.value = None
 
     def __call__(self) :
@@ -97,18 +96,6 @@ class Parameter(object):
             return None
         return self.getValue().shape
 
-    def hasTag(self, tag) :
-        return tag in self.tags
-
-    def getTag(self, tag) :
-        return self.tags[tag]
-
-    def setTag(self, tag, value = True) :
-        self.tags[tag]
-
-    def removeTag(self, tag) :
-        del self.tags[tag]
-
     def __repr__(self) :
         return "< Parameter: %s, %s>" % (self.name, self.getShape())
 
@@ -125,7 +112,7 @@ class Losses(object):
 
         self.store = {}
         for k in self.streams :
-            self.store[k] = self.cost.apply(self.layer, self.targets[k], self.outputs[k])
+            self.store[k] = self.cost.apply(self.layer, self.targets[k], self.outputs[k], stream = k)
 
     def __getitem__(self, k) :
         return self.store[k]
