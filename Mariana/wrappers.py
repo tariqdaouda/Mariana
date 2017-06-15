@@ -139,7 +139,7 @@ class TheanoFunctionHandle(object) :
         """
         super(TheanoFunctionHandle, self).__init__()
         
-        def _bckTrckInputs(current_layer, stream, inputs = OrderedDict()) :     
+        def _bckTrckInputs(current_layer, stream, inputs = OrderedDict()) :
             for k, v in current_layer.__dict__.iteritems() :
                 if v.__class__ is MTYPES.Inputs :
                     inputs["%s.%s" % (current_layer.name, k)] = v[stream]
@@ -160,7 +160,11 @@ class TheanoFunctionHandle(object) :
             if v.__class__ is MTYPES.Targets :
                 self.inputs["%s.%s" % (layer.name, k)] = v[stream]
 
-        self.output = output[stream]
+        try :
+            self.output = output[stream]
+        except :
+            raise ValueError("Output does not have a stream: '%s'" % stream)
+
         self.theano_fct = None
 
     def hasUpdates(self) :
@@ -168,7 +172,7 @@ class TheanoFunctionHandle(object) :
         return self.update
 
     def __add__(self, other) :
-        """Add to handle together using the '+' operator. Losses will be added up and updates will be merged"""
+        """Add two handles together using the '+' operator. Losses will be added up and updates re-calculated"""
         if self.stream != other.stream :
             raise TypeError("All functions must be in the same stream %s != %s" %(self.stream, other.stream))
         
@@ -362,3 +366,63 @@ class TheanoFunction(object) :
 
     def __str__(self) :
         return "<Mariana Theano Fct '%s': %s>" % (self.name, self.theano_fct)
+
+class TheanoFunctionGroup(object):
+    """docstring for TheanoFunctionGroup"""
+    def __init__(self, name, layer, outputs, **theano_kwargs):
+        super(TheanoFunctionGroup, self).__init__()
+        
+        self.name = name
+        self.layer = layer
+        self.outputs = outputs
+        self.theano_kwargs = theano_kwargs
+
+        self.functions = {}
+        try :
+            streams = self.outputs.streams
+        except AttributeError :
+            try:
+                streams = self.outputs.keys()
+            except KeyError:
+                raise ValueError("Unable to derive streams form object: '%s'" % self.outputs)
+
+        for stream in streams :
+            self.functions[stream] = None
+
+        self.updates = set()
+        self.mustInit = True
+
+    def allowUpdates(self, stream) :
+        if stream not in self :
+            raise ValueError("Output has no stream: '%s'" % stream)
+        self.updates.add(stream)
+
+    def removeUpdates(self, stream) :
+        if stream not in self :
+            raise ValueError("Output has no stream: '%s'" % stream)
+        self.updates.remove(stream)
+    
+    def init(self) :
+        if self.mustInit :
+            for stream in self.functions :
+                if self.functions[stream] is None :
+                    update = False
+                    if stream in self.updates :
+                        update = True
+                    self.functions[stream] = TheanoFunctionHandle("%s.%s" %(self.name, stream), self.layer, self.outputs, stream=stream, update = update, **self.theano_kwargs)
+            self.mustInit = False
+
+    def __getitem__(self, stream) :
+        self.init()
+        return self.functions[stream]
+
+    def __setitem__(self, stream, v) :
+        if stream not in self :
+            raise ValueError("Cannot add a function. Output has no stream: '%s'" % stream)
+
+        self.functions[stream] = v
+        self.mustInit = True
+
+    def __contains__(self, stream) :
+        """check if the stream is supported"""
+        return stream in self.functions

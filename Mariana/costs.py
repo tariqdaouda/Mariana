@@ -12,6 +12,7 @@ class Cost_ABC(MABS.ApplyAbstraction_ABC) :
     def __init__(self, reverse=False, streams=["test", "train"], **kwargs) :
         """use reverse = True, to have the opposite of cost"""
         super(Cost_ABC, self).__init__(**kwargs)
+        self.streams = streams
         self.setHP("reverse", reverse)
         self.streams = set(self.streams)
         self.setHP("streams", streams)

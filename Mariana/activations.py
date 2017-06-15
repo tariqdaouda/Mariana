@@ -54,13 +54,13 @@ class ReLU(Activation_ABC):
     """
     .. math::
 
-        max(0, x)"""
+        if pre_act < 0 return leakiness; else return pre_act"""
     def __init__(self, leakiness=0):
         Activation_ABC.__init__(self)
         self.setHP("leakiness", leakiness)
 
     def run(self, x):
-        tt.nnet.relu(x, alpha=self.getHP("temperature"))
+        return tt.nnet.relu(x, alpha=self.leakiness)
         # return tt.maximum(0., x)
 
 class Softmax(Activation_ABC):

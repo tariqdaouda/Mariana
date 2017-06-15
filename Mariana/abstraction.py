@@ -75,7 +75,7 @@ class ApplyAbstraction_ABC(Abstraction_ABC):
 
     def _initialize(self, layer) :
         if self._mustInit :
-            self.initialize(self, layer)
+            self.initialize(layer)
             self._mustInit=False
 
     def initialize(self, layer) :
@@ -84,7 +84,7 @@ class ApplyAbstraction_ABC(Abstraction_ABC):
 
     def _apply(self, layer, *args, **kwargs) :
         """does self.set() + self.apply()"""
-        self._initialise(layer)
+        self._initialize(layer)
         self.apply(layer, *args, **kwargs)
 
     def apply(self, layer, *args, **kwargs) :

@@ -1,5 +1,5 @@
-import Mariana.useful as MUSE
 import theano
+import Mariana.useful as MUSE
 
 class Variable(object):
     """docstring for Variable"""
@@ -42,6 +42,10 @@ class Variable(object):
             self.variables[stream] = newVal
         except KeyError :
             raise KeyError("There is no stream by the name of: '%s'" % f)
+
+    def __contains__(self, stream) :
+        """check if the stream is supported"""
+        return stream in self.streams
 
 class Inputs(Variable):
     """docstring for Input"""
@@ -119,3 +123,7 @@ class Losses(object):
 
     def __setitem__(self, k, v) :
         self.store[k] = v
+
+    def __contains__(self, stream) :
+        """check if the stream is supported"""
+        return stream in self.streams

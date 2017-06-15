@@ -235,13 +235,10 @@ class Layer_ABC(MABS.Abstraction_ABC) :
         self.abstractions["activation"][0]._apply(self, self.outputs)
 
     def _setTheanoFunctions(self) :
-        """Creates propagate/propagateTest theano function that returns the layer's outputs.
-        propagateTest returns the outputs["test"], some decorators might not be applied.
-        This is called after decorating"""
-        self.propagate = {}
-        self.propagate["train"]=MWRAP.TheanoFunctionHandle("propagate", self, self.outputs, stream="train", allow_input_downcast=True)
-        self.propagate["test"]=MWRAP.TheanoFunctionHandle("propagateTest", self, self.outputs, stream="test", allow_input_downcast=True)
+        """Creates propagate/propagateTest theano function that returns the layer's outputs."""
         
+        self.propagate = MWRAP.TheanoFunctionGroup("propagate", self, self.outputs, allow_input_downcast=True)
+
     def _parametersSanityCheck(self) :
         "perform basic parameter checks on layers, automatically called on initialization"
         for k, v in self.parameters.iteritems() :
@@ -282,9 +279,9 @@ class Layer_ABC(MABS.Abstraction_ABC) :
             self._parametersSanityCheck()
             self._initParameters()
             self.setOutputs_abs()
+            self._activate()
             self._decorate()
             self._outputsSanityCheck()
-            self._activate()
             
             for l in self.getOutLayers() :
                 l._registerInput(self)
@@ -487,9 +484,7 @@ class Dense(Layer_ABC) :
     """A layer with weigth and bias. If would like to disable either one of them do not provide an initialization"""
 
     def __init__(self, nbUnits, initializations=[MI.GlorotNormal('W'), MI.SingleValue('b', 0)], **kwargs) :
-        # super(Dense, self).__init__(layerTypes=[MSET.TYPE_HIDDEN_LAYER], initializations=initializations, **kwargs)
         super(Dense, self).__init__(initializations=initializations, **kwargs)
-        # self.inputs["test"]=None
         self.addParameters({
             "W": MTYPES.Parameter("%s.W" % (self.name)),
             "b": MTYPES.Parameter("%s.b" % (self.name))
@@ -528,7 +523,6 @@ class Dense(Layer_ABC) :
 
 Hidden = Dense
 
-###NEED MAJ
 class Embedding(Layer_ABC) :
     """Embeddings are learned representations of the inputs that are much loved in NLP.
     This layer will take care of creating the embeddings and optimizing them. It can either be used as an input layer or as hidden layer"""
@@ -542,7 +536,6 @@ class Embedding(Layer_ABC) :
         
         """
 
-        # super(Embedding, self).__init__(layerTypes=[MSET.TYPE_HIDDEN_LAYER], initializations=initializations, **kwargs)
         super(Embedding, self).__init__(initializations=initializations, **kwargs)
 
         self.zeroForNull=zeroForNull
@@ -581,7 +574,6 @@ class Embedding(Layer_ABC) :
             preOutputs=self.parameters["fullEmbeddings"][self.inputs[f]]
             self.outputs[f] = preOutputs.reshape((self.inputs[f].shape[0], self.nbOutputs))
 
-
 class Pass(Layer_ABC) :
     def __init__(self, name=None, **kwargs):
         super(Pass, self).__init__(name=name, **kwargs)
@@ -605,7 +597,6 @@ class Output_ABC(Layer_ABC) :
         """
 
     def __init__(self, cost, backTrckAll=False, **kwargs) :
-        # super(Output_ABC, self).__init__(layerTypes=[MSET.TYPE_OUTPUT_LAYER], **kwargs)
         super(Output_ABC, self).__init__(**kwargs)
         self.targets=MTYPES.Targets()
         self.dependencies=OrderedDict()
@@ -613,8 +604,6 @@ class Output_ABC(Layer_ABC) :
 
         self.cost=cost
         self.loss=None
-        # self.updates=None
-        # self._mustRegularize=True
         self.dependencies=None
 
     def _backTrckDependencies(self, force=False) :
@@ -636,17 +625,16 @@ class Output_ABC(Layer_ABC) :
     def _setTheanoFunctions(self) :
         """
         Sets all the theano function.
-        Calls self._setLosses() before if either self.cost or self.testCost is None.
-        self._applyRegularizations()
-        Calls self._setUpdates() if self.updates is None.
         """
-        # print self
         self._backTrckDependencies()
         super(Output_ABC, self)._setTheanoFunctions()
         self.loss = MTYPES.Losses(self, self.cost, self.targets, self.outputs)
         
-        self.train = MWRAP.TheanoFunctionHandle("train", self, self.loss, stream="train", update=True, allow_input_downcast=True)
-        self.test = MWRAP.TheanoFunctionHandle("test", self, self.loss, stream="test", allow_input_downcast=True)
+        self.drive = MWRAP.TheanoFunctionGroup("drive", self, self.loss, allow_input_downcast=True)
+        self.drive.allowUpdates("train")
+
+        self.train = self.drive["train"]
+        self.test = self.drive["test"]
 
 class DenseOutput_ABC(Output_ABC, Dense):
     """Generic output layer with weight and bias"""
@@ -662,7 +650,7 @@ class SoftmaxClassifier(DenseOutput_ABC) :
         super(SoftmaxClassifier, self).__init__(nbUnits, cost=cost, learningScenari=learningScenari, activation=MA.Softmax(temperature=temperature), **kwargs)
         self.targets=MTYPES.Targets(tt.ivector) #tt.ivector(name="targets_" + self.name)
 
-    def _setCustomTheanoFunctions(self) :
+    def _setTheanoFunctions(self) :
         """defines::
 
             * classify: return the argmax of the outputs applying all the decorators.
@@ -670,27 +658,25 @@ class SoftmaxClassifier(DenseOutput_ABC) :
             * classificationAccuracy: returns the accuracy (between [0, 1]) of the model, computed on outputs.
             * predictionAccuracy: returns the accuracy (between [0, 1]) of the model, computed on test outputs.
         """
-        Output_ABC._setCustomTheanoFunctions(self)
-        clas=tt.argmax(self.outputs["train"], axis=1)
-        pred=tt.argmax(self.outputs["test"], axis=1)
+        super(SoftmaxClassifier, self)._setTheanoFunctions()
+        pred= {
+            "train": tt.argmax(self.outputs["train"], axis=1),
+            "test": tt.argmax(self.outputs["test"], axis=1)
+        }
+        acc={
+            "train": tt.mean( tt.eq(self.targets["train"], pred['train'] ) ),
+            "test": tt.mean( tt.eq(self.targets["test"], pred["test"] ) )
+        }
 
-        self.classify=MWRAP.TheanoFunction("classify", self, [ ("class", clas) ], flow="train", allow_input_downcast=True)
-        self.predict=MWRAP.TheanoFunction("predict", self, [ ("class", pred) ], flow="test", allow_input_downcast=True)
-
-        clasAcc=tt.mean( tt.eq(self.targets, clas ) )
-        predAcc=tt.mean( tt.eq(self.targets, pred ) )
-
-        self.classificationAccuracy=MWRAP.TheanoFunction("classificationAccuracy", self, [("accuracy", clasAcc)], additional_input_expressions={ "targets" : self.targets }, flow="train", allow_input_downcast=True)
-        self.predictionAccuracy=MWRAP.TheanoFunction("predictionAccuracy", self, [("accuracy", predAcc)], additional_input_expressions={ "targets" : self.targets }, flow="test", allow_input_downcast=True)
-
-        self.trainAndAccuracy=MWRAP.TheanoFunction("trainAndAccuracy", self, [("score", self.cost), ("accuracy", clasAcc)], additional_input_expressions={ "targets" : self.targets },  updates=self.updates, flow="train", allow_input_downcast=True)
-        self.testAndAccuracy=MWRAP.TheanoFunction("testAndAccuracy", self, [("score", self.testCost), ("accuracy", predAcc)], additional_input_expressions={ "targets" : self.targets }, flow="test", allow_input_downcast=True)
+        self.predict = MWRAP.TheanoFunctionGroup("predict", self, pred, allow_input_downcast=True)
+        self.accuracy = MWRAP.TheanoFunctionGroup("accuracy", self, acc, allow_input_downcast=True)
+        
 
 class Regression(DenseOutput_ABC) :
     """For regressions, works great with a mean squared error cost"""
     def __init__(self, nbUnits, activation, learningScenari, cost, name=None, **kwargs) :
         super(Regression, self).__init__(nbUnits, activation=activation, learningScenari=learningScenari, cost=cost, name=name, **kwargs)
-        self.targets=tt.matrix(name="targets")
+        self.targets=MTYPES.Targets(tt.matrix)
 
 class Autoencode(DenseOutput_ABC) :
     """An auto encoding layer. This one takes another layer as inputs and tries to reconstruct its activations.
@@ -700,17 +686,10 @@ class Autoencode(DenseOutput_ABC) :
         super(Autoencode, self).__init__(None, activation=activation, learningScenari=learningScenari, cost=cost, name=name, **kwargs)
         self.targetLayerName=targetLayerName
 
-    def _setNbOutputs(self) :
-        self.nbOutputs=self.network[self.targetLayerName].nbOutputs
-        
-    def _initParameters(self, forceReset=False) :
-        self._setNbOutputs()
-        super(Autoencode, self)._initParameters(forceReset)
-
     def _whateverFirstInit(self) :
-        self.targets=self.network[self.targetLayerName].outputs["train"]
+        self.targets=self.network[self.targetLayerName].outputs
     
-    def _setCustomTheanoFunctions(self) :
-        super(Autoencode, self)._setCustomTheanoFunctions()
-        self.train=MWRAP.TheanoFunction("train", self, [("score", self.cost)], {}, updates=self.updates, flow="train", allow_input_downcast=True)
-        self.test=MWRAP.TheanoFunction("test", self, [("score", self.testCost)], {}, flow="test", allow_input_downcast=True)
+    # def _setCustomTheanoFunctions(self) :
+    #     super(Autoencode, self)._setCustomTheanoFunctions()
+    #     self.train=MWRAP.TheanoFunction("train", self, [("score", self.cost)], {}, updates=self.updates, flow="train", allow_input_downcast=True)
+    #     self.test=MWRAP.TheanoFunction("test", self, [("score", self.testCost)], {}, flow="test", allow_input_downcast=True)
