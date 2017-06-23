@@ -283,7 +283,6 @@ class TheanoFunction(object) :
 
     def _parseInputs(self, inputs = {}) :
         """parse function inputs and raises SyntaxError exceptions with friendly, human readable errors"""
-        nbArgs = 0
         fct_inputs = OrderedDict()
         if len(inputs) != len(self.inputs_varToName) :
             givens = set(inputs.keys())
@@ -292,14 +291,15 @@ class TheanoFunction(object) :
             notInvited = list(givens - expected)
             msg = []
             if len(missing) > 0 :
-                msg.append("Missing arguments: %s " % str(missing)[1:-1])
+                msg.append("Missing arguments: %s" % str(missing)[1:-1])
             if len(notInvited) > 0 :
-                msg.append("Unexpected arguments: %s " % str(notInvited)[1:-1])
+                msg.append("Unexpected arguments: %s" % str(notInvited)[1:-1])
             if len(msg) > 0 :
                 raise SyntaxError('\n'.join(msg))
   
         for param, pname in self.inputs_varToName.iteritems() :
             fct_inputs[param] = inputs[pname]
+        
         return fct_inputs
 
     def run(self, inputs = {}) :

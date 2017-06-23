@@ -56,6 +56,10 @@ class MLPTests(unittest.TestCase):
     def test_missing_args(self) :
         mlp = self.trainMLP_xor()
         self.assertRaises(SyntaxError, mlp["out"].train, {} )
+    
+    # @unittest.skip("skipping")
+    def test_unexpected_args(self) :
+        mlp = self.trainMLP_xor()
         self.assertRaises(SyntaxError, mlp["out"].train, {"inp.inputs": self.xor_ins, "out.targets" : self.xor_outs, "lala": 0} )
 
     # @unittest.skip("skipping")
