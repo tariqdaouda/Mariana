@@ -463,7 +463,7 @@ class Input(Layer_ABC) :
             self.shape = tuple([1].extend(list(shape)))
         
         self.broadcastable = [s == 1 for s in self.shape]
-        self.inputs = MTYPES.Inputs(tt.matrix, name="Inp_%s" % self.name)
+        self.inputs = MTYPES.Inputs(tt.matrix, streams=self.streams)
     
     def setInputs(self) :
         pass
@@ -545,7 +545,7 @@ class Embedding(Layer_ABC) :
 
         self.setP("embeddings", MTYPES.Parameter(name="%s.%s" % (self.name, "embeddings")))
 
-        self.inputs=MTYPES.Variable()
+        self.inputs=MTYPES.Variable(streams = self.streams)
 
     def femaleConnect(self, layer) :
         if layer.getDimensionality() != 1 :
@@ -668,7 +668,7 @@ class SoftmaxClassifier(DenseOutput_ABC) :
             "test": tt.mean( tt.eq(self.targets["test"], pred["test"] ) )
         }
 
-        self.predict = MWRAP.TheanoFunctionGroup("predict", self, pred, allow_input_downcast=True)
+        self.predict = MWRAP.TheanoFunctionGroup("predict", self, pred, allow_input_downcast=True, on_unused_input='ignore')
         self.accuracy = MWRAP.TheanoFunctionGroup("accuracy", self, acc, allow_input_downcast=True)
         
 

@@ -1,13 +1,12 @@
 from collections import OrderedDict
-import theano, sys, numpy
-import sys
+import theano
+import theano.tensor as tt
 
 import Mariana.candies as MCAN
 import Mariana.settings as MSET
 import Mariana.custom_types as MTYPES
 
 __all__=["UpdateStore", "Updates", "TheanoFunctionHandle", "TheanoFunction"]
-
 
 class UpdateStore(object):
     """Stores gradients and updates for parameters in convenient interface"""
@@ -139,7 +138,7 @@ class TheanoFunctionHandle(object) :
         """
         super(TheanoFunctionHandle, self).__init__()
         
-        def _bckTrckInputs(current_layer, stream, inputs = OrderedDict()) :
+        def _bckTrckInputs(current_layer, stream, inputs = OrderedDict()) :     
             for k, v in current_layer.__dict__.iteritems() :
                 if v.__class__ is MTYPES.Inputs :
                     inputs["%s.%s" % (current_layer.name, k)] = v[stream]
@@ -186,19 +185,19 @@ class TheanoFunctionHandle(object) :
 
         return TheanoFunction([self, other])
 
-    def _develop(self) :
+    def develop(self) :
         """Compile the inner theano function"""
         if not self.theano_fct :
             self.theano_fct = TheanoFunction([self])
 
     def __call__(self, *args, **kwargs) :
         """Call the inner theano functiom"""
-        self._develop()
+        self.develop()
         return self.theano_fct.run(*args, **kwargs)
 
     def __getattr__(self, k) :
         """return the theano function attributes"""
-        self._develop()
+        self.develop()
         if hasattr(self.theano_fct, k) :
             return getattr(self.theano_fct, k)
 
@@ -228,24 +227,23 @@ class TheanoFunction(object) :
         """Add a handle to the current definition. Losses will be added up and updates will be merged"""
         self.theano_handles.append(theano_handle)
     
-    def _compile(self):
+    def compile(self):
         """Compile the function just-in-time according the definitions given by the handles."""
         self.perfomUpdates = False
 
         if not self.isCompiled() :
             self.inputs = OrderedDict()
+            self.inputs_varToName = OrderedDict()
             self.outputs = OrderedDict()
             self.updates = None
             
-            self.fct_inputs_varToName = OrderedDict()
-            
             self.theano_kwargs = {}
+            varToName = OrderedDict()
             for handle in self.theano_handles :
                 self.theano_kwargs.update(handle.theano_kwargs)
                 
                 for k, v in handle.inputs.iteritems() :
-                    self.inputs[k] = v
-                    self.fct_inputs_varToName[v] = k
+                    varToName[v] = k
                     
                 self.outputs["%s.%s" % (handle.layer.name, handle.name)] = handle.output
                 
@@ -257,6 +255,15 @@ class TheanoFunction(object) :
                 else :
                     self.updates.merge(Updates(handle.layer, handle.stream))
 
+            all_theano_inputs = set(theano.gof.graph.inputs(self.outputs.values()))
+            for inp in all_theano_inputs :
+                try :
+                    name = varToName[inp]
+                    self.inputs[name] = inp
+                    self.inputs_varToName[inp] = name
+                except KeyError :
+                    pass
+
             updates = {}
             if self.updates :
                 self.updates.compile()
@@ -264,43 +271,43 @@ class TheanoFunction(object) :
                     updates = self.updates.store.updates
             
             self.theano_fct = theano.function(inputs = self.inputs.values(), outputs = self.outputs.values(), updates = updates, **self.theano_kwargs)
-
-            if MSET.DEVICE_IS_GPU :
-                if str(self.getToposort()).find("float64") > -1:
-                    msg = "There are some float64s that do not fit on the GPU and will slow down the computations.\nPlease consider:"
-                    msg += "\n\t* Launching with THEANO_FLAGS=device=gpu,floatX=float32 python <your script>.py."
-                    msg += "\n\t* If you have any dmatrix, dvector or dscalar in your code replace them with matrix, vector, scalar."
-                    MCAN.friendly("Run device", msg, warning = True)
+            
+            # if MSET.DEVICE_IS_GPU :
+            #     if str(self.getToposort()).find("float64") > -1:
+            #         msg = "There are some float64s that do not fit on the GPU and will slow down the computations.\nPlease consider:"
+            #         msg += "\n\t* Launching with THEANO_FLAGS=device=gpu,floatX=float32 python <your script>.py."
+            #         msg += "\n\t* If you have any dmatrix, dvector or dscalar in your code replace them with matrix, vector, scalar."
+            #         MCAN.friendly("Run device", msg, warning = True)
             
             self.results = OrderedDict()
 
     def _parseInputs(self, inputs = {}) :
-        """parse the inputs to the function and tells you if there's anything missing, in a friendly and human readable way"""
+        """parse function inputs and raises SyntaxError exceptions with friendly, human readable errors"""
         nbArgs = 0
         fct_inputs = OrderedDict()
-        for param, pname in self.fct_inputs_varToName.iteritems() :
-            try :
-                fct_inputs[param] = inputs[pname]
-            except KeyError :
-                try:
-                    fct_inputs[param] = inputs[param]
-                except KeyError as e:
-                    raise TypeError("missing argument '%s' " % pname)
-            nbArgs += 1
-
-        if nbArgs != len(self.fct_inputs_varToName) :
-            args = str(fct_inputs.keys()).replace("[", "").replace("]", "")
-            raise TypeError("Function expects the following arguments: %s, %d provided" % (args, nbArgs) )
-
+        if len(inputs) != len(self.inputs_varToName) :
+            givens = set(inputs.keys())
+            expected = set(self.inputs_varToName.values())
+            missing = list(expected - givens)
+            notInvited = list(givens - expected)
+            msg = []
+            if len(missing) > 0 :
+                msg.append("Missing arguments: %s " % str(missing)[1:-1])
+            if len(notInvited) > 0 :
+                msg.append("Unexpected arguments: %s " % str(notInvited)[1:-1])
+            if len(msg) > 0 :
+                raise SyntaxError('\n'.join(msg))
+  
+        for param, pname in self.inputs_varToName.iteritems() :
+            fct_inputs[param] = inputs[pname]
         return fct_inputs
 
     def run(self, inputs = {}) :
         """run the function and return the results"""
-        self._compile()
+        self.compile()
         fct_inputs = self._parseInputs(inputs)
 
         fres = iter(self.theano_fct(*fct_inputs.values()))
-        
         for k in self.outputs.iterkeys() :
             self.results[k] = fres.next()
 
@@ -308,7 +315,7 @@ class TheanoFunction(object) :
 
     def getGradients(self, inputs={}) :
         """return the gradients that would be performed"""
-        self._compile()
+        self.compile()
         if not self.updates :
             raise TypeError("Function has no updates, cannot have gradients")
 
@@ -325,7 +332,7 @@ class TheanoFunction(object) :
         
     def getUpdates(self, inputs={}) :
         """return the updates that would be performed"""
-        self._compile()
+        self.compile()
         if not self.updates :
             raise TypeError("Function has no updates")
         fct_inputs = self._parseInputs(inputs)
@@ -362,10 +369,14 @@ class TheanoFunction(object) :
         return self.run(*args, **kwargs)
 
     def __repr__(self) :
-        return "<Mariana Theano Fct '%s'>" % self.name
+        if not self.isCompiled :
+            return "<Uncompiled Mariana Theano Fct '%s'>" % id(self)
+        else :
+            args = [] 
+            for k, v in self.inputs_varToName.items() :
+                args.append("%s: %s" %(v, k))
 
-    def __str__(self) :
-        return "<Mariana Theano Fct '%s': %s>" % (self.name, self.theano_fct)
+            return "<Compiled Mariana Theano Fct '%s'. Arguments: '%s'>" % (id(self), ', '.join(args))
 
 class TheanoFunctionGroup(object):
     """docstring for TheanoFunctionGroup"""
@@ -405,10 +416,10 @@ class TheanoFunctionGroup(object):
     def init(self) :
         if self.mustInit :
             for stream in self.functions :
+                update = False
+                if stream in self.updates :
+                    update = True
                 if self.functions[stream] is None :
-                    update = False
-                    if stream in self.updates :
-                        update = True
                     self.functions[stream] = TheanoFunctionHandle("%s.%s" %(self.name, stream), self.layer, self.outputs, stream=stream, update = update, **self.theano_kwargs)
             self.mustInit = False
 

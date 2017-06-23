@@ -49,24 +49,28 @@ class MLPTests(unittest.TestCase):
         self.xor_outs = numpy.array(self.xor_outs)
         for i in xrange(1000) :
             mlp["out"].train({"inp.inputs": self.xor_ins, "out.targets" : self.xor_outs} )
-            # print mlp.propagateTest(o, inp = self.xor_ins)
-
+        
         return mlp
+
+    # @unittest.skip("skipping")
+    def test_missing_args(self) :
+        mlp = self.trainMLP_xor()
+        self.assertRaises(SyntaxError, mlp["out"].train, {} )
+        self.assertRaises(SyntaxError, mlp["out"].train, {"inp.inputs": self.xor_ins, "out.targets" : self.xor_outs, "lala": 0} )
 
     # @unittest.skip("skipping")
     def test_xor(self) :
         mlp = self.trainMLP_xor()
-        o = mlp.outputs.values()[0]
 
         pa = mlp["out"].accuracy["train"]({"inp.inputs": self.xor_ins, "out.targets" : self.xor_outs})["out.accuracy.train"]
         self.assertEqual(pa, 1)
         pc = mlp["out"].accuracy["test"]({"inp.inputs": self.xor_ins, "out.targets" : self.xor_outs})["out.accuracy.test"]
         self.assertEqual(pc, 1)
         
-        self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": self.xor_ins[0]} )["class"], 0 )
-        self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": self.xor_ins[1]} )["class"], 1 )
-        self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": self.xor_ins[2]} )["class"], 1 )
-        self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": self.xor_ins[3]} )["class"], 0 )
+        self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[0]]} )["out.predict.test"], 0 )
+        self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[1]]} )["out.predict.test"], 1 )
+        self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[2]]} )["out.predict.test"], 1 )
+        self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[3]]} )["out.predict.test"], 0 )
 
     @unittest.skip("skipping")
     def test_save_load(self) :
