@@ -7,7 +7,7 @@
 
 .. image:: https://img.shields.io/badge/python-2.7-blue.svg 
 
-.. image:: http://bioinfo.iric.ca/~daoudat/Mariana/_static/MarianaLogo_wbg_50.png 
+.. image:: https://avatars2.githubusercontent.com/u/7224902?v=3&s=460 
 
 MARIANA: The Cutest Deep Learning Framework
 =============================================
