@@ -13,6 +13,7 @@ def iCast_theano(thing) :
 
 def iCast_numpy(thing) :
     """intelligently cast ints and floats into the corresct datatypes (for numpy variables)"""
+    
     if str(thing.dtype).find("int") > -1 :
         return numpy.asarray(thing, dtype=MSET.INTX)
     else :

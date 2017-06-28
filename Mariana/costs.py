@@ -20,10 +20,7 @@ class Cost_ABC(MABS.ApplyAbstraction_ABC) :
     def apply(self, layer, targets, outputs, stream) :
         """Apply to a layer and update networks's log. Purpose is supposed to be a sting such as 'train' or 'test'"""
 
-        message = "%s uses cost %s" % (layer.name, self.__class__.__name__)
-        layer.network.logLayerEvent(layer, message, self.hyperParameters)
-
-        if self.reverse :
+        if self.getHP("reverse") :
             return -self.run(targets, outputs, stream)
         else :
             return self.run(targets, outputs, stream)

@@ -8,9 +8,6 @@ class Activation_ABC(MABS.ApplyAbstraction_ABC):
 
     def apply(self, layer, x) :
         """Apply to a layer and update networks's log"""
-        
-        message = "%s uses activation %s" % (layer.name, self.__class__.__name__)
-        layer.network.logLayerEvent(layer, message, self.hyperParameters)
         for s in x.streams :
             x[s] = self.run(x[s])
 
@@ -22,20 +19,16 @@ class Pass(Activation_ABC):
     """
     simply returns x
     """
-    def __init__(self):
-        Activation_ABC.__init__(self)
-        
+    
     def run(self, x):
         return x
+Linear = Pass
 
 class Sigmoid(Activation_ABC):
     """
     .. math::
 
         1/ (1/ + exp(-x))"""
-    def __init__(self):
-        Activation_ABC.__init__(self)
-        
     def run(self, x):
         return tt.nnet.sigmoid(x)
 
@@ -44,9 +37,6 @@ class Tanh(Activation_ABC):
     .. math::
 
         tanh(x)"""
-    def __init__(self):
-        Activation_ABC.__init__(self)
-
     def run(self, x):
         return tt.tanh(x)
 
@@ -56,11 +46,11 @@ class ReLU(Activation_ABC):
 
         if pre_act < 0 return leakiness; else return pre_act"""
     def __init__(self, leakiness=0):
-        Activation_ABC.__init__(self)
+        super(ReLU, self).__init__()
         self.setHP("leakiness", leakiness)
 
     def run(self, x):
-        return tt.nnet.relu(x, alpha=self.leakiness)
+        return tt.nnet.relu(x, alpha=self.getHP("leakiness"))
         # return tt.maximum(0., x)
 
 class Softmax(Activation_ABC):
@@ -71,9 +61,9 @@ class Softmax(Activation_ABC):
         scale * exp(x_i/T)/ sum_k( exp(x_k/T) )
     """
     def __init__(self, scale = 1, temperature = 1):
-        Activation_ABC.__init__(self)
+        super(Softmax, self).__init__()
         self.setHP("temperature", temperature)
         self.setHP("scale", scale)
 
     def run(self, x):
-        return self.scale * tt.nnet.softmax(x/self.temperature)
+        return self.getHP("scale") * tt.nnet.softmax(x/self.getHP("temperature"))

@@ -11,12 +11,6 @@ import Mariana.activations as MA
 import theano.tensor as tt
 import numpy
 
-class Hidden_layerRef(ML.Hidden) :
-
-    def __init__(self, otherLayer, *args, **kwargs) :
-        ML.Hidden.__init__(self, *args, **kwargs)
-        self.otherLayer = otherLayer
-
 class MLPTests(unittest.TestCase):
 
     def setUp(self) :
@@ -52,17 +46,17 @@ class MLPTests(unittest.TestCase):
         
         return mlp
 
-    # @unittest.skip("skipping")
+    @unittest.skip("skipping")
     def test_missing_args(self) :
         mlp = self.trainMLP_xor()
         self.assertRaises(SyntaxError, mlp["out"].train, {} )
     
-    # @unittest.skip("skipping")
+    @unittest.skip("skipping")
     def test_unexpected_args(self) :
         mlp = self.trainMLP_xor()
         self.assertRaises(SyntaxError, mlp["out"].train, {"inp.inputs": self.xor_ins, "out.targets" : self.xor_outs, "lala": 0} )
 
-    # @unittest.skip("skipping")
+    @unittest.skip("skipping")
     def test_xor(self) :
         mlp = self.trainMLP_xor()
 
@@ -76,8 +70,8 @@ class MLPTests(unittest.TestCase):
         self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[2]]} )["out.predict.test"], 1 )
         self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[3]]} )["out.predict.test"], 0 )
 
-    @unittest.skip("skipping")
-    def test_save_load(self) :
+    # @unittest.skip("skipping")
+    def test_save_load_64h(self) :
         import os
         import Mariana.network as MN
 
@@ -85,27 +79,25 @@ class MLPTests(unittest.TestCase):
         cost = MC.NegativeLogLikelihood()
 
         i = ML.Input(2, 'inp')
-        h = Hidden_layerRef(i, 10, activation = MA.ReLU(), name = "Hidden_0.500705866892")
-        o = ML.SoftmaxClassifier(2, learningScenario = ls, cost = cost, name = "out")
+        o = ML.SoftmaxClassifier(nbUnits=2, cost=cost, learningScenari=[ls], name = "out")
 
-        mlp = i > h > o
+        prev = i
+        for i in xrange(64) :
+            h = ML.Hidden(nbUnits=10, activation = MA.ReLU(), name = "Hidden_%s" %i)
+            prev > h
+            prev = h
         
-        self.xor_ins = numpy.array(self.xor_ins)
-        self.xor_outs = numpy.array(self.xor_outs)
-        for i in xrange(1000) :
-            mlp.train(o, inp = self.xor_ins, targets = self.xor_outs )
-
+        mlp = prev > o
+        mlp.init()
         mlp.save("test_save")
-        mlp2 = MN.loadModel("test_save.mar.mdl.pkl")
         
-        o = mlp.outputs.values()[0]
-        
-        v1 = mlp.propagate( o.name, inp = self.xor_ins )["outputs"]
-        v2 = mlp2.propagate( o.name, inp = self.xor_ins )["outputs"]
-        self.assertEqual(numpy.sum(v1), numpy.sum(v2))
-        self.assertEqual(mlp["Hidden_0.500705866892"].otherLayer.name, mlp2["Hidden_0.500705866892"].otherLayer.name)
-        
-        os.remove('test_save.mar.mdl.pkl')
+        mlp2 = MN.loadModel("test_save.mar")
+        mlp2.init()
+
+        v1 = mlp["out"].propagate["test"]( {"inp.inputs": self.xor_ins} )["out.propagate.test"]
+        v2 = mlp2["out"].propagate["test"]( {"inp.inputs": self.xor_ins} )["out.propagate.test"]
+        self.assertTrue((v1==v2).all())
+        os.remove('test_save.mar')
 
     @unittest.skip("skipping")
     def test_ae(self) :

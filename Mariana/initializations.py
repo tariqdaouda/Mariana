@@ -30,29 +30,26 @@ class Initialization_ABC(MABS.ApplyAbstraction_ABC) :
     :param float parameter: how sparse should the result be. 0 => no sparsity, 1 => a matrix of zeros
     """
 
-    def __init__(self, parameter, sparsity=0., *args, **kwargs):
-        super(Initialization_ABC, self).__init__(*args, **kwargs)
+    def __init__(self, parameter, sparsity=0., **kwargs):
+        super(Initialization_ABC, self).__init__(**kwargs)
         
         self.addHyperParameters({
             "parameter": parameter,
             "sparsity": sparsity
         })
-        
-    def apply(self, layer) :
-        message = "%s was initialized using %s" % (layer.name, self.__class__.__name__)
-        
-        message = "Applying init: '%s' to param: '%s' of layer: '%s'" % (self.__class__.__name__, self.parameter, layer.name)
-        layer.network.logLayerEvent(layer, message, self.hyperParameters)
-        
-        retShape = layer.getParameterShape_abs(self.parameter)
+    
+    def logApply(self, layer, **kwargs) :
+        message = "Applying '%s' on parameter: '%s' of layer '%s'" % (self.name, self.getHP('parameter'), layer.name)
+        self.logEvent(message)
+
+    def apply(self, abstraction) :
+        retShape = abstraction.getParameterShape_abs(self.getHP("parameter"))
         v = MUSE.iCast_numpy(self.run(retShape))
         if (v.shape != retShape) :
             raise ValueError("Initialization has a wrong shape: %s, parameter shape is: %s " % (v.shape, retShape))
         
-        v = MUSE.sparsify(v, self.sparsity)
-        
-        layer.parameters[self.parameter].setValue(v)
-
+        v = MUSE.sparsify(v, self.getHP("sparsity"))        
+        abstraction.setP(self.getHP("parameter"), v)
         
     def run(self, shape) :
         """The function that all Initialization_ABCs must implement"""
@@ -87,7 +84,7 @@ class SingleValue(Initialization_ABC) :
         self.setHP("value", value)
     
     def run(self, shape) :
-        return numpy.ones(shape) * self.value
+        return numpy.ones(shape) * self.getHP("value")
         
 class Normal(Initialization_ABC):
     """
@@ -130,7 +127,7 @@ class FanInFanOut_ABC(Initialization_ABC) :
     Over the time people have introduced
     ways to make it work with other various activation functions by modifying a gain factor.
     You can force the gain using the *forceGain* argument, otherwise Mariana will choose
-    one for you depending on the layer's activation.
+    one for you depending on the abstraction's activation.
 
         * ReLU: sqrt(2)
         
@@ -155,19 +152,19 @@ class FanInFanOut_ABC(Initialization_ABC) :
                 return numpy.sqrt(2/(1+activation.leakiness**2))
         return 1.0
 
-    def set(self, layer) :
-        self.gain = self._getGain(layer.abstractions["activation"])
+    def set(self, abstraction) :
+        self.gain = self._getGain(abstraction.abstractions["activation"])
 
-    def apply(self, layer) :
+    def apply(self, abstraction) :
         import Mariana.activations as MA
 
-        forceGain = self.forceGain
+        forceGain = self.getHP("forceGain")
         if forceGain :
             self.gain = forceGain
         else :
-            self.gain = self._getGain(layer.abstractions["activation"])
+            self.gain = self._getGain(abstraction.abstractions["activation"])
         
-        return super(FanInFanOut_ABC, self).apply(layer)
+        return super(FanInFanOut_ABC, self).apply(abstraction)
 
 class GlorotNormal(FanInFanOut_ABC) :
     """
@@ -177,6 +174,9 @@ class GlorotNormal(FanInFanOut_ABC) :
     def run(self, shape) :
         return LI.GlorotNormal(gain = self.gain).sample(shape)
 
+XNormal = GlorotNormal
+XavierNormal = GlorotNormal
+
 class GlorotUniform(FanInFanOut_ABC) :
     """
     Initialization strategy introduced by Glorot et al. 2010 on a Uniform distribution.
@@ -185,6 +185,9 @@ class GlorotUniform(FanInFanOut_ABC) :
     """ 
     def run(self, shape) :
         return LI.GlorotUniform(gain = self.gain).sample(shape)
+
+XUniform = GlorotUniform
+XavierUniform = GlorotUniform
 
 class HeNormal(FanInFanOut_ABC) :
     """

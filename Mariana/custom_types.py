@@ -47,6 +47,9 @@ class Variable(object):
         """check if the stream is supported"""
         return stream in self.streams
 
+    def __repr__(self) :
+        return "< Mariana %s, streams: %s>" % (self.__class__.__name__, self.streams)
+
 class Inputs(Variable):
     """docstring for Input"""
 
@@ -101,10 +104,10 @@ class Parameter(object):
         return self.getValue().shape
 
     def __repr__(self) :
-        return "< Parameter: %s, %s>" % (self.name, self.getShape())
+        return "< Mariana Parameter: %s, %s>" % (self.name, self.getShape())
 
 class Losses(object):
-    """docstring for Losses"""
+    """Contains the loss for every stream"""
     def __init__(self, layer, cost, targets, outputs):
         super(Losses, self).__init__()
         self.streams=targets.streams
@@ -127,3 +130,7 @@ class Losses(object):
     def __contains__(self, stream) :
         """check if the stream is supported"""
         return stream in self.streams
+
+    def __repr__(self) :
+        return "< Mariana %s, streams: %s>" % (self.__class__.__name__, self.streams)
+

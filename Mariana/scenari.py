@@ -98,9 +98,6 @@ class LearningScenario_ABC(MABS.ApplyAbstraction_ABC):
 
         if self.applyTo is not None and paramName not in self.applyTo :
             return None
-        
-        message = "%s uses optimizer %s of layer %s" % (entity, self.__class__.__name__, layer.name)
-        layer.network.logLayerEvent(layer, message, self.hyperParameters)
 
         try:
             param = entity.parameters[paramName]
@@ -143,25 +140,25 @@ class GradientDescent(LearningScenario_ABC):
         })
         
     def run(self, param, loss, more) :
-        if self.momentum > 0 :
+        if self.getHP("momentum")> 0 :
             gparam = tt.grad(loss, param())
             momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable, name="momentum.%s" % (more["paramName"]))
             
-            param_update = self.momentum * momentum_param + (1-self.hps["momentum"])*gparam
+            param_update = self.momentum * momentum_param + (1-self.getHP("momentum"))*gparam
             
-            if self.reverse :
-                momentum_update = param + self.lr * momentum_param
+            if self.getHP("reverse") :
+                momentum_update = param + self.getHP("lr") * momentum_param
             else :
-                momentum_update = param - self.lr * momentum_param
+                momentum_update = param - self.getHP("lr") * momentum_param
                     
             ret = OptimizerResult(param, more["paramName"], param_update, gparam)
             ret.addCoParameter(momentum_param, "momentum", momentum_update, None)
         else :
             gparam = tt.grad(loss, param())
-            if self.reverse:
-                update = param() + self.lr * gparam
+            if self.getHP("reverse"):
+                update = param() + self.getHP("lr") * gparam
             else :
-                update = param() - self.lr * gparam
+                update = param() - self.getHP("lr") * gparam
             ret = OptimizerResult(param(), more["paramName"], update, gparam)
 
         return ret

@@ -20,8 +20,6 @@ class Decorator_ABC(MABS.ApplyAbstraction_ABC) :
     def apply(self, layer, stream) :
         """Apply to a layer and update networks's log"""
         
-        message = "%s is decorated by %s on stream %s" % (layer.name, self.__class__.__name__, stream)
-        layer.network.logLayerEvent(layer, message, self.hyperParameters)
         return self.run(layer)
 
     def run(self, layer, stream) :

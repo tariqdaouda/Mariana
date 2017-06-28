@@ -19,8 +19,6 @@ class SingleLayerRegularizer_ABC(Abstraction_ABC) :
         """Apply to a layer and update networks's log"""
 
         for s in self.streams :
-            message = "%s uses %s regularization in stream: %s" % (layer.name, self.__class__.__name__, s)
-            layer.network.logLayerEvent(layer, message, self.getHyperParameters())
             variable[s] += self.run(layer)
 
         return variable

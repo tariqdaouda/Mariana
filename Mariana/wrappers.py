@@ -195,12 +195,12 @@ class TheanoFunctionHandle(object) :
         self.develop()
         return self.theano_fct.run(*args, **kwargs)
 
-    def __getattr__(self, k) :
-        """return the theano function attributes"""
-        self.develop()
-        if hasattr(self.theano_fct, k) :
-            return getattr(self.theano_fct, k)
-
+    # def __getattr__(self, k) :
+    #     """return the theano function attributes"""
+    #     self.develop()
+    #     if hasattr(self.theano_fct, k) :
+    #         return getattr(self.theano_fct, k)
+    
 class TheanoFunction(object) :
     """
     This class encapsulates a just-in-time compiled Theano function.
