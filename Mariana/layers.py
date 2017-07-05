@@ -487,18 +487,22 @@ class Input(Layer_ABC) :
         super(Input, self).__init__(name=name, **kwargs)
         
         if isinstance(shape, int) :
-            self.shape = (1, shape)
+            sh = (1, shape)
         else :
-            self.shape = tuple([1].extend(list(shape)))
+            sh = [1]
+            sh.extend(list(shape))
+            sh = tuple(sh)
         
-        self.broadcastable = [s == 1 for s in self.shape]
+        self.setHP("shape", sh)
+        
+        # self.broadcastable = [s == 1 for s in self.shape]
         self.inputs = MTYPES.Inputs(tt.matrix, streams=self.streams)
     
     def setInputs(self) :
         pass
 
     def getShape_abs(self) :
-        return self.shape
+        return self.getHP("shape")
 
     def setOutputs_abs(self) :
         "initializes the output to be the same as the inputs"
@@ -571,27 +575,80 @@ class Pass(Layer_ABC) :
         for f in layer.outputs.streams :
             self.outputs[f] = layer.outputs[f]
 
+# class Dense(Layer_ABC) :
+#     """A layer with weigth and bias. If would like to disable either one of them do not provide an initialization"""
+
+#     def __init__(self, nbUnits, initializations=[MI.GlorotNormal('W'), MI.SingleValue('b', 0)], **kwargs) :
+#         super(Dense, self).__init__(initializations=initializations, **kwargs)
+#         self.addParameters({
+#             "W": MTYPES.Parameter("%s.W" % (self.name)),
+#             "b": MTYPES.Parameter("%s.b" % (self.name))
+#         })
+
+#         self.setHP("nbUnits", nbUnits)
+#         self.nbInputs=None
+
+#     def femaleConnect(self, layer) :
+#         if layer.getDimensionality() != 1 :
+#             raise ValueError("Input layer must be a vector, got %s dimensions" % layer.getDimensionality())
+#         self.nbInputs = layer.getShape_abs()[1]
+
+#     def getShape_abs(self) :
+#         """defines the number of inputs"""
+#         return (1, self.getHP("nbUnits"))
+
+#     def setOutputs_abs(self) :
+#         """Defines, self.outputs["train"] and self.outputs["test"]"""
+#         if self.parameters["W"] is not None:
+#             for s in self.inputs.streams :
+#                 self.outputs[s]=tt.dot(self.inputs[s], self.parameters["W"]())
+#                 if self.parameters["b"] is not None:
+#                     self.outputs[s]=self.outputs[s] + self.parameters["b"]()
+
+#     def getParameterShape_abs(self, param) :
+#         if param == "W" :
+#             return (self.nbInputs, self.getHP("nbUnits"))
+#         elif param == "b" :
+#             return (self.getHP("nbUnits"),)
+#         else :
+#             raise ValueError("Unknown parameter: %s" % param)
+
 class Dense(Layer_ABC) :
     """A layer with weigth and bias. If would like to disable either one of them do not provide an initialization"""
 
-    def __init__(self, nbUnits, initializations=[MI.GlorotNormal('W'), MI.SingleValue('b', 0)], **kwargs) :
+    def __init__(self, shape, initializations=[MI.GlorotNormal('W'), MI.SingleValue('b', 0)], **kwargs) :
         super(Dense, self).__init__(initializations=initializations, **kwargs)
+        if isinstance(shape, int) :
+            sh = (1, shape)
+        else :
+            sh = [1]
+            sh.extend(list(shape))
+            sh = tuple(sh)
+        self.setHP("shape", sh)
+
         self.addParameters({
             "W": MTYPES.Parameter("%s.W" % (self.name)),
             "b": MTYPES.Parameter("%s.b" % (self.name))
         })
 
-        self.setHP("nbUnits", nbUnits)
-        self.nbInputs=None
+        self.inputShape=None
 
     def femaleConnect(self, layer) :
-        if layer.getDimensionality() != 1 :
-            raise ValueError("Input layer must be a vector, got %s dimensions" % layer.getDimensionality())
-        self.nbInputs = layer.getShape_abs()[1]
+        # if layer.getDimensionality() != 1 :
+            # raise ValueError("Input layer must be a vector, got %s dimensions" % layer.getDimensionality())
+        self.inputShape = tuple(layer.getShape_abs()[1:])
 
     def getShape_abs(self) :
         """defines the number of inputs"""
-        return (1, self.getHP("nbUnits"))
+        return self.getHP("shape")
+
+    def getParameterShape_abs(self, param) :
+        if param == "W" :
+            return self.inputShape + self.getHP("shape")[1:]
+        elif param == "b" :
+            return self.getHP("shape")[1:]
+        else :
+            raise ValueError("Unknown parameter: %s" % param)
 
     def setOutputs_abs(self) :
         """Defines, self.outputs["train"] and self.outputs["test"]"""
@@ -600,14 +657,6 @@ class Dense(Layer_ABC) :
                 self.outputs[s]=tt.dot(self.inputs[s], self.parameters["W"]())
                 if self.parameters["b"] is not None:
                     self.outputs[s]=self.outputs[s] + self.parameters["b"]()
-
-    def getParameterShape_abs(self, param) :
-        if param == "W" :
-            return (self.nbInputs, self.getHP("nbUnits"))
-        elif param == "b" :
-            return (self.getHP("nbUnits"),)
-        else :
-            raise ValueError("Unknown parameter: %s" % param)
 
 Hidden = Dense
  
@@ -651,8 +700,8 @@ class Output_ABC(Layer_ABC) :
         """
         Sets all the theano function.
         """
-        self._backTrckDependencies()
         super(Output_ABC, self)._setTheanoFunctions()
+        self._backTrckDependencies()
         
         self.loss = MTYPES.Losses(self, self.cost, self.targets, self.outputs)
         
@@ -664,16 +713,19 @@ class Output_ABC(Layer_ABC) :
 
 class DenseOutput_ABC(Output_ABC, Dense):
     """Generic output layer with weight and bias"""
-    def __init__(self, nbUnits, cost, learningScenari, activation, **kwargs):
-        super(DenseOutput_ABC, self).__init__(nbUnits=nbUnits, cost=cost, learningScenari=learningScenari, activation=activation, **kwargs)
+    def __init__(self, shape, cost, learningScenari, activation, **kwargs):
+        super(DenseOutput_ABC, self).__init__(shape=shape, cost=cost, learningScenari=learningScenari, activation=activation, **kwargs)
 
     def setOutputs_abs(self) :
         Dense.setOutputs_abs(self)
  
 class SoftmaxClassifier(DenseOutput_ABC) :
     """A softmax (probabilistic) Classifier"""
-    def __init__(self, nbUnits, cost, learningScenari, temperature=1, **kwargs) :
-        super(SoftmaxClassifier, self).__init__(nbUnits, cost=cost, learningScenari=learningScenari, activation=MA.Softmax(temperature=temperature), **kwargs)
+    def __init__(self, nbClasses, cost, learningScenari, temperature=1, **kwargs) :
+        if not isinstance(nbClasses, int) :
+            raise ValueError("nbClasses must be an integer")
+
+        super(SoftmaxClassifier, self).__init__(nbClasses, cost=cost, learningScenari=learningScenari, activation=MA.Softmax(temperature=temperature), **kwargs)
         self.targets=MTYPES.Targets(tt.ivector) #tt.ivector(name="targets_" + self.name)
 
     def _setTheanoFunctions(self) :
@@ -696,21 +748,27 @@ class SoftmaxClassifier(DenseOutput_ABC) :
 
         self.predict = MWRAP.TheanoFunctionGroup("predict", self, pred, allow_input_downcast=True, on_unused_input='ignore')
         self.accuracy = MWRAP.TheanoFunctionGroup("accuracy", self, acc, allow_input_downcast=True)
-        
+    
+    def setOutputs_abs(self) :
+        """Defines, self.outputs["train"] and self.outputs["test"]"""
+        super(SoftmaxClassifier, self).setOutputs_abs()
+        for s in self.inputs.streams :
+            self.outputs[s]=self.outputs[s].flatten(2)
 
 class Regression(DenseOutput_ABC) :
     """For regressions, works great with a mean squared error cost"""
-    def __init__(self, nbUnits, activation, learningScenari, cost, name=None, **kwargs) :
-        super(Regression, self).__init__(nbUnits, activation=activation, learningScenari=learningScenari, cost=cost, name=name, **kwargs)
+    def __init__(self, shape, activation, learningScenari, cost, name=None, **kwargs) :
+        super(Regression, self).__init__(shape, activation=activation, learningScenari=learningScenari, cost=cost, name=name, **kwargs)
         self.targets=MTYPES.Targets(tt.matrix)
 
 class Autoencode(DenseOutput_ABC) :
     """An auto encoding layer. This one takes another layer as inputs and tries to reconstruct its activations.
     You could achieve the same result with a Regression layer, but this one has the advantage of not needing to be fed specific inputs"""
 
-    def __init__(self, targetLayerName, activation, learningScenari, cost, name=None, **kwargs) :
-        super(Autoencode, self).__init__(None, activation=activation, learningScenari=learningScenari, cost=cost, name=name, **kwargs)
-        self.targetLayerName=targetLayerName
+    def __init__(self, targetLayer, activation, learningScenari, cost, name=None, **kwargs) :
+        # print targetLayer
+        super(Autoencode, self).__init__(targetLayer.getShape_abs(), activation=activation, learningScenari=learningScenari, cost=cost, name=name, **kwargs)
+        self.targetLayerName=targetLayer.name
 
     def _whateverFirstInit(self) :
         self.targets=self.network[self.targetLayerName].outputs

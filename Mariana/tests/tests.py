@@ -33,8 +33,8 @@ class MLPTests(unittest.TestCase):
         cost = MC.NegativeLogLikelihood()
 
         i = ML.Input(2, 'inp')
-        h = ML.Hidden(10, activation = MA.ReLU(), name = "Hidden_0.500705866892")
-        o = ML.SoftmaxClassifier(nbUnits=2, cost=cost, learningScenari=[ls], name = "out")
+        h = ML.Hidden(shape = (2, 4), activation = MA.ReLU(), name = "Hidden_0.500705866892")
+        o = ML.SoftmaxClassifier(nbClasses=2, cost=cost, learningScenari=[ls], name = "out")
 
         mlp = i > h > o
         mlp.init()
@@ -70,7 +70,7 @@ class MLPTests(unittest.TestCase):
         self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[2]]} )["out.predict.test"], 1 )
         self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[3]]} )["out.predict.test"], 0 )
 
-    # @unittest.skip("skipping")
+    @unittest.skip("skipping")
     def test_save_load_64h(self) :
         import os
         import Mariana.network as MN
@@ -79,11 +79,11 @@ class MLPTests(unittest.TestCase):
         cost = MC.NegativeLogLikelihood()
 
         i = ML.Input(2, 'inp')
-        o = ML.SoftmaxClassifier(nbUnits=2, cost=cost, learningScenari=[ls], name = "out")
+        o = ML.SoftmaxClassifier(shape=2, cost=cost, learningScenari=[ls], name = "out")
 
         prev = i
         for i in xrange(64) :
-            h = ML.Hidden(nbUnits=10, activation = MA.ReLU(), name = "Hidden_%s" %i)
+            h = ML.Hidden(shape=10, activation = MA.ReLU(), name = "Hidden_%s" %i)
             prev > h
             prev = h
         
@@ -99,6 +99,40 @@ class MLPTests(unittest.TestCase):
         self.assertTrue((v1==v2).all())
         os.remove('test_save.mar')
 
+    # @unittest.skip("skipping")
+    def test_ae_reg(self) :
+
+        data = []
+        for i in xrange(8) :
+            zeros = numpy.zeros(8)
+            zeros[i] = 1
+            data.append(zeros)
+
+        ls = MS.GradientDescent(lr = 0.1)
+        cost = MC.MeanSquaredError()
+
+        i = ML.Input(8, name = 'inp')
+        h = ML.Hidden(3, activation = MA.ReLU(), name = "hid")
+        o = ML.Regression(8, activation = MA.ReLU(), learningScenari = [ls], cost = cost, name = "out" )
+
+        ae = i > h > o
+        ae.init()
+
+        miniBatchSize = 1
+        for e in xrange(200) :
+            for i in xrange(0, len(data), miniBatchSize) :
+                print data[i:i+miniBatchSize]
+                print ae["out"].train({"inp.inputs": data[i:i+miniBatchSize], "out.targets":data[i:i+miniBatchSize]} )
+                print ae["hid"].propagate["test"]({"inp.inputs": data})["hid.propagate.test"]
+                # print ae["out"].train.getGradients({"inp.inputs": data[i:i+miniBatchSize], "out.targets":data[i:i+miniBatchSize]} )
+                # ae["out"].propagate["test"]({"inp.inputs": data})["out.propagate.test"]
+
+        res = ae["out"].propagate["test"]({"inp.inputs": data})["out.propagate.test"]
+        # print res
+        for i in xrange(len(res)) :
+            print numpy.argmax(data[i]), numpy.argmax(res[i])
+            self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
+
     @unittest.skip("skipping")
     def test_ae(self) :
 
@@ -112,43 +146,17 @@ class MLPTests(unittest.TestCase):
         cost = MC.MeanSquaredError()
 
         i = ML.Input(8, name = 'inp')
-        h = ML.Hidden(3, activation = MA.ReLU(), initializations=[MI.SmallUniformWeights(), MI.ZeroBias()], name = "hid")
-        o = ML.Autoencode(targetLayerName = "inp", activation = MA.ReLU(), initializations=[MI.SmallUniformWeights(), MI.ZeroBias()], learningScenario = ls, cost = cost, name = "out" )
+        h = ML.Hidden(3, activation = MA.ReLU(), name = "hid")
+        o = ML.Autoencode(targetLayer = i, activation = MA.ReLU(), learningScenari=[ls], cost = cost, name = "out" )
 
         ae = i > h > o
+        ae.init()
 
         miniBatchSize = 1
         for e in xrange(2000) :
             for i in xrange(0, len(data), miniBatchSize) :
-                ae.train(o, inp = data[i:i+miniBatchSize])
-
-        res = ae.propagate(o, inp = data)["outputs"]
-        for i in xrange(len(res)) :
-            self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
-
-    @unittest.skip("skipping")
-    def test_ae_reg(self) :
-
-        data = []
-        for i in xrange(8) :
-            zeros = numpy.zeros(8)
-            zeros[i] = 1
-            data.append(zeros)
-
-        ls = MS.GradientDescent(lr = 0.1)
-        cost = MC.MeanSquaredError()
-
-        i = ML.Input(8, name = 'inp')
-        h = ML.Hidden(3, activation = MA.ReLU(), initializations=[MI.SmallUniformWeights(), MI.ZeroBias()], name = "hid")
-        o = ML.Regression(8, activation = MA.ReLU(), initializations=[MI.SmallUniformWeights(), MI.ZeroBias()], learningScenario = ls, cost = cost, name = "out" )
-
-        ae = i > h > o
-
-        miniBatchSize = 1
-        for e in xrange(2000) :
-            for i in xrange(0, len(data), miniBatchSize) :
-                ae.train(o, inp = data[i:i+miniBatchSize], targets = data[i:i+miniBatchSize] )
-
+                ae["out"].train({"inp.inputs":data[i:i+miniBatchSize]} )
+ 
         res = ae.propagate(o, inp = data)["outputs"]
         for i in xrange(len(res)) :
             self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))

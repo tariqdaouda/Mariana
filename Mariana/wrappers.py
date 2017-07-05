@@ -195,11 +195,11 @@ class TheanoFunctionHandle(object) :
         self.develop()
         return self.theano_fct.run(*args, **kwargs)
 
-    # def __getattr__(self, k) :
-    #     """return the theano function attributes"""
-    #     self.develop()
-    #     if hasattr(self.theano_fct, k) :
-    #         return getattr(self.theano_fct, k)
+    def __getattr__(self, k) :
+        """return the theano function attributes"""
+        self.develop()
+        if hasattr(self.theano_fct, k) :
+            return getattr(self.theano_fct, k)
     
 class TheanoFunction(object) :
     """
@@ -249,11 +249,10 @@ class TheanoFunction(object) :
                 
                 if handle.hasUpdates() :
                     self.perfomUpdates = True
-
-                if self.updates is None :
-                    self.updates = Updates(handle.layer, handle.stream)
-                else :
-                    self.updates.merge(Updates(handle.layer, handle.stream))
+                    if self.updates is None :
+                        self.updates = Updates(handle.layer, handle.stream)
+                    else :
+                        self.updates.merge(Updates(handle.layer, handle.stream))
 
             all_theano_inputs = set(theano.gof.graph.inputs(self.outputs.values()))
             for inp in all_theano_inputs :

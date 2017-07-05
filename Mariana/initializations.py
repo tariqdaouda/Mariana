@@ -38,6 +38,9 @@ class Initialization_ABC(MABS.ApplyAbstraction_ABC) :
             "sparsity": sparsity
         })
     
+    def attach(self, abstraction) :
+        pass
+
     def logApply(self, layer, **kwargs) :
         message = "Applying '%s' on parameter: '%s' of layer '%s'" % (self.name, self.getHP('parameter'), layer.name)
         self.logEvent(message)
@@ -152,7 +155,7 @@ class FanInFanOut_ABC(Initialization_ABC) :
                 return numpy.sqrt(2/(1+activation.leakiness**2))
         return 1.0
 
-    def set(self, abstraction) :
+    def attach(self, abstraction) :
         self.gain = self._getGain(abstraction.abstractions["activation"])
 
     def apply(self, abstraction) :
