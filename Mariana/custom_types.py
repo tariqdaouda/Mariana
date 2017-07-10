@@ -61,13 +61,16 @@ class Parameter(object):
     def __init__(self, name):
         super(Parameter, self).__init__()
         self.name = name
-        self.value = None
+        self.theano_var = None
 
     def __call__(self) :
-        return self.value
+        return self.getVar()
+
+    def getVar(self) :
+        return self.theano_var
 
     def hasValue(self) :
-        return self.value is not None
+        return self.theano_var is not None
     
     def setValue(self, value, forceCast = True) :
         if isinstance(value, theano.Variable) :
@@ -81,7 +84,7 @@ class Parameter(object):
             else :
                 v = theano.shared(value = value, name = self.name)
 
-        self.value = v
+        self.theano_var = v
 
     def updateValue(self, value, forceCast=False) :
         if forceCast :
@@ -91,15 +94,15 @@ class Parameter(object):
 
         if v.shape != self.getShape() :
             print("Warning update has a different shape: %s -> %s" %(self.shape, v.shape))
-        self.value.set_value(v)
+        self.theano_var.set_value(v)
     
     def getValue(self) :
-        if self.value is None :
+        if self.theano_var is None :
             return None
-        return self.value.get_value()
+        return self.theano_var.get_value()
 
     def getShape(self) :
-        if self.value is None :
+        if self.theano_var is None :
             return None
         return self.getValue().shape
 

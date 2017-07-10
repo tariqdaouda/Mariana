@@ -252,8 +252,7 @@ class Layer_ABC(MABS.Abstraction_ABC) :
         self.abstractions["activation"][0]._apply(self, x=self.outputs)
 
     def _setTheanoFunctions(self) :
-        """Creates propagate/propagateTest theano function that returns the layer's outputs."""
-        
+        """Creates propagate theano function that returns the layer's outputs."""
         self.propagate = MWRAP.TheanoFunctionGroup("propagate", self, self.outputs, allow_input_downcast=True)
 
     def _parametersSanityCheck(self) :

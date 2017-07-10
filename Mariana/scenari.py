@@ -93,18 +93,18 @@ class LearningScenario_ABC(MABS.ApplyAbstraction_ABC):
         self.conflictResolve = conflictResolve
         self.freeParameters = OptimizerFreeResults()
 
-    def apply(self, layer, entity, paramName, loss, previous=None) :
+    def apply(self, layer, abstraction, paramName, loss, previous=None) :
         """Apply to a layer and update networks's log"""
 
         if self.applyTo is not None and paramName not in self.applyTo :
             return None
 
         try:
-            param = entity.parameters[paramName]
+            param = abstraction.getP(paramName)
         except :
-            raise KeyError("%s has no parameter %s"%(entity, paramName))
+            raise KeyError("%s has no parameter %s"%(abstraction, paramName))
 
-        v = self.run(param, loss, more={"layer": layer, "paramName": paramName, "previous": previous, "entity": entity})
+        v = self.run(param, loss, **{"layer": layer, "paramName": paramName, "previous": previous, "abstraction": abstraction})
         if previous :
             try :
                 return self.conflictResolve.apply(previous, v)
@@ -112,7 +112,7 @@ class LearningScenario_ABC(MABS.ApplyAbstraction_ABC):
                 raise IncompatibleLearningScenarios("Learning scenario: '%s' is incompatible with previous updates (layer: '%s')" % (self.__class__.__name__, layer.name))
         return v
 
-    def run(self, param, loss, more={}) :
+    def run(self, param, loss, abstraction, layer, paramName, previous) :
         """return the updates for the parameters of layer. Must be implemented in child"""
         raise NotImplemented("Must be implemented in child")
 
@@ -121,7 +121,7 @@ class Fixed(LearningScenario_ABC):
     def __init__(self, applyTo=None, inheritable=False, conflictResolve=Overwrite(), **kwargs):
        super(Fixed, self).__init__(applyTo, inheritable, conflictResolve, **kwargs)
         
-    def run(self, param, *args, **kwargs) :
+    def run(self, param, **kwargs) :
         ret = OptimizerResult(param, None, None, None)
         return ret
 
@@ -139,26 +139,18 @@ class GradientDescent(LearningScenario_ABC):
         	"reverse": reverse
         })
         
-    def run(self, param, loss, more) :
-        if self.getHP("momentum")> 0 :
-            gparam = tt.grad(loss, param())
-            momentum_param = theano.shared(param.get_value()*0., broadcastable=param.broadcastable, name="momentum.%s" % (more["paramName"]))
-            
-            param_update = self.momentum * momentum_param + (1-self.getHP("momentum"))*gparam
-            
-            if self.getHP("reverse") :
-                momentum_update = param + self.getHP("lr") * momentum_param
-            else :
-                momentum_update = param - self.getHP("lr") * momentum_param
-                    
-            ret = OptimizerResult(param, more["paramName"], param_update, gparam)
-            ret.addCoParameter(momentum_param, "momentum", momentum_update, None)
+    def run(self, param, loss, paramName, **kwargs) :
+        gparam = tt.grad(loss, param.getVar())
+        if self.getHP("momentum") <= 0 :
+            param_update = param.getVar() - self.getHP("lr") * gparam
         else :
-            gparam = tt.grad(loss, param())
-            if self.getHP("reverse"):
-                update = param() + self.getHP("lr") * gparam
-            else :
-                update = param() - self.getHP("lr") * gparam
-            ret = OptimizerResult(param(), more["paramName"], update, gparam)
+            momentum_param = theano.shared(param.getVar()*0., broadcastable=param.broadcastable, name="momentum.%s" % (paramName))
+            momentum_update = self.momentum * momentum_param + (1-self.getHP("momentum"))*gparam
+            param_update = param.getVar() + self.getHP("lr") * momentum_param
+            ret.addCoParameter(momentum_param, "momentum", momentum_update, None)
 
+        if self.getHP("reverse") :
+            param_update = -param_update
+
+        ret = OptimizerResult(param.getVar(), paramName, param_update, gparam)
         return ret

@@ -101,36 +101,33 @@ class MLPTests(unittest.TestCase):
 
     # @unittest.skip("skipping")
     def test_ae_reg(self) :
+        powerOf2 = 2
+        nbUnits = 2**powerOf2
 
         data = []
-        for i in xrange(8) :
-            zeros = numpy.zeros(8)
+        for i in xrange(nbUnits) :
+            zeros = numpy.zeros(nbUnits)
             zeros[i] = 1
             data.append(zeros)
 
         ls = MS.GradientDescent(lr = 0.1)
         cost = MC.MeanSquaredError()
 
-        i = ML.Input(8, name = 'inp')
-        h = ML.Hidden(3, activation = MA.ReLU(), name = "hid")
-        o = ML.Regression(8, activation = MA.ReLU(), learningScenari = [ls], cost = cost, name = "out" )
+        i = ML.Input(nbUnits, name = 'inp')
+        h = ML.Hidden(powerOf2, activation = MA.Tanh(), name = "hid")
+        o = ML.Regression(nbUnits, activation = MA.Tanh(), learningScenari = [ls], cost = cost, name = "out" )
 
         ae = i > h > o
         ae.init()
-
+        
         miniBatchSize = 1
-        for e in xrange(200) :
+        for e in xrange(100) :
             for i in xrange(0, len(data), miniBatchSize) :
-                print data[i:i+miniBatchSize]
-                print ae["out"].train({"inp.inputs": data[i:i+miniBatchSize], "out.targets":data[i:i+miniBatchSize]} )
-                print ae["hid"].propagate["test"]({"inp.inputs": data})["hid.propagate.test"]
-                # print ae["out"].train.getGradients({"inp.inputs": data[i:i+miniBatchSize], "out.targets":data[i:i+miniBatchSize]} )
-                # ae["out"].propagate["test"]({"inp.inputs": data})["out.propagate.test"]
+                miniBatch = data[i:i+miniBatchSize]
+                ae["out"].train({"inp.inputs": miniBatch, "out.targets":miniBatch} )
 
         res = ae["out"].propagate["test"]({"inp.inputs": data})["out.propagate.test"]
-        # print res
         for i in xrange(len(res)) :
-            print numpy.argmax(data[i]), numpy.argmax(res[i])
             self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
 
     @unittest.skip("skipping")

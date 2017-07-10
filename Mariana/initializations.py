@@ -111,16 +111,17 @@ class Normal(Initialization_ABC):
 class Uniform(Initialization_ABC):
     """
     Initializes using a uniform distribution
-    **Small** uses my personal initialization than I works very well in most cases, simply divides by the sum of the weights.
+    **Small** uses my personal initialization than I find can work very well, simply divides by the sum of the weights.
     """
     def __init__(self, parameter, low=0, high=1, small=False, *args, **kwargs):
         super(Uniform, self).__init__(parameter, *args, **kwargs)
         self.setHP("low", low)
         self.setHP("high", high)
+        self.setHP("small", small)
     
     def run(self, shape) :
-        v = numpy.random.uniform(high=self.high, low=self.low, size=shape)
-        if self.small :
+        v = numpy.random.uniform(high=self.getHP("high"), low=self.getHP("low"), size=shape)
+        if self.getHP("small") :
             return v / numpy.sum(v)
         return v
 

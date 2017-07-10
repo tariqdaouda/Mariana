@@ -12,13 +12,16 @@ class Cost_ABC(MABS.ApplyAbstraction_ABC) :
     def __init__(self, reverse=False, streams=["test", "train"], **kwargs) :
         """use reverse = True, to have the opposite of cost"""
         super(Cost_ABC, self).__init__(**kwargs)
-        self.streams = streams
         self.setHP("reverse", reverse)
-        self.streams = set(self.streams)
-        self.setHP("streams", streams)
+       
+    def logApply(self, layer, **kwargs) :
+        message = "Applying '%s' on layer '%s'" % (self.name, self.getHP('parameter'), layer.name)
+        if self.getHP("reverse") :
+            message += " (reverse)"
+        self.logEvent(message)
 
     def apply(self, layer, targets, outputs, stream) :
-        """Apply to a layer and update networks's log. Purpose is supposed to be a sting such as 'train' or 'test'"""
+        """Apply to a layer and update networks's log"""
 
         if self.getHP("reverse") :
             return -self.run(targets, outputs, stream)
