@@ -23,7 +23,7 @@ __all__= [
     "HeUniform",
 ]
 
-class Initialization_ABC(MABS.ApplyAbstraction_ABC) :
+class Initialization_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC) :
     """This class defines the interface that an Initialization must offer.
     
     :param string parameter: the name of the parameter to be initialized
@@ -73,8 +73,8 @@ class Identity(Initialization_ABC) :
 
 class HardSet(Initialization_ABC) :
     """Sets the parameter to value. It's your job to make sure that the shape is correct"""
-    def __init__(self, parameter, value, *args, **kwargs) :
-        super(HardSet, self).__init__(*args, **kwargs)
+    def __init__(self, parameter, value, **kwargs) :
+        super(HardSet, self).__init__(**kwargs)
         self.value = numpy.asarray(value, dtype=theano.config.floatX)
         
     def run(self, shape) :
@@ -82,8 +82,8 @@ class HardSet(Initialization_ABC) :
 
 class SingleValue(Initialization_ABC) :
     """Initialize to a given value"""
-    def __init__(self, parameter, value, *args, **kwargs) :
-        super(SingleValue, self).__init__(parameter, *args, **kwargs)
+    def __init__(self, parameter, value, **kwargs) :
+        super(SingleValue, self).__init__(parameter, **kwargs)
         self.setHP("value", value)
     
     def run(self, shape) :
@@ -94,8 +94,8 @@ class Normal(Initialization_ABC):
     Initializes using a random normal distribution.
     **Small** uses my personal initialization than I find works very well in most cases with a uniform distribution, simply divides by the sum of the weights.
     """
-    def __init__(self, parameter, std, mean, small=False, *args, **kwargs):
-        super(Normal, self).__init__(parameter, *args, **kwargs)
+    def __init__(self, parameter, std, mean, small=False, **kwargs):
+        super(Normal, self).__init__(parameter, **kwargs)
         self.addHyperParameters({
             "std": std,
             "mean": mean,
@@ -113,8 +113,8 @@ class Uniform(Initialization_ABC):
     Initializes using a uniform distribution
     **Small** uses my personal initialization than I find can work very well, simply divides by the sum of the weights.
     """
-    def __init__(self, parameter, low=0, high=1, small=False, *args, **kwargs):
-        super(Uniform, self).__init__(parameter, *args, **kwargs)
+    def __init__(self, parameter, low=0, high=1, small=False, **kwargs):
+        super(Uniform, self).__init__(parameter, **kwargs)
         self.setHP("low", low)
         self.setHP("high", high)
         self.setHP("small", small)
@@ -141,8 +141,8 @@ class FanInFanOut_ABC(Initialization_ABC) :
     
     This is an abtract class: see *GlorotNormal*, *GlorotUniform*
     """
-    def __init__(self, parameter, forceGain=None, *args, **kwargs) :
-        super(FanInFanOut_ABC, self).__init__(parameter, *args, **kwargs)
+    def __init__(self, parameter, forceGain=None, **kwargs) :
+        super(FanInFanOut_ABC, self).__init__(parameter, **kwargs)
         self.setHP("forceGain", forceGain)
         self.gain = None
 

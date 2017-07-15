@@ -79,16 +79,17 @@ class MLPTests(unittest.TestCase):
         cost = MC.NegativeLogLikelihood()
 
         i = ML.Input(2, 'inp')
-        o = ML.SoftmaxClassifier(shape=2, cost=cost, learningScenari=[ls], name = "out")
+        o = ML.SoftmaxClassifier(nbClasses=2, cost=cost, learningScenari=[ls], name = "out")
 
         prev = i
-        for i in xrange(64) :
-            h = ML.Hidden(shape=10, activation = MA.ReLU(), name = "Hidden_%s" %i)
-            prev > h
-            prev = h
+        # for i in xrange(1) :
+        #     h = ML.Hidden(shape=10, activation = MA.ReLU(), name = "Hidden_%s" %i)
+        #     prev > h
+        #     prev = h
         
         mlp = prev > o
         mlp.init()
+        # print mlp.toJson("mlp")
         mlp.save("test_save")
         
         mlp2 = MN.loadModel("test_save.mar")
@@ -99,9 +100,9 @@ class MLPTests(unittest.TestCase):
         self.assertTrue((v1==v2).all())
         os.remove('test_save.mar')
 
-    # @unittest.skip("skipping")
+    @unittest.skip("skipping")
     def test_ae_reg(self) :
-        powerOf2 = 2
+        powerOf2 = 4
         nbUnits = 2**powerOf2
 
         data = []
@@ -110,24 +111,49 @@ class MLPTests(unittest.TestCase):
             zeros[i] = 1
             data.append(zeros)
 
-        ls = MS.GradientDescent(lr = 0.1)
+        ls = MS.GradientDescent(lr = 0.01)
         cost = MC.MeanSquaredError()
 
         i = ML.Input(nbUnits, name = 'inp')
         h = ML.Hidden(powerOf2, activation = MA.Tanh(), name = "hid")
-        o = ML.Regression(nbUnits, activation = MA.Tanh(), learningScenari = [ls], cost = cost, name = "out" )
+        o = ML.Regression(nbUnits, activation = MA.ReLU(), learningScenari = [ls], cost = cost, name = "out" )
 
         ae = i > h > o
         ae.init()
         
+        print ae.getFullParameters()
+        
+        print h.getP("W").getValue()
+        print h.getP("b").getValue()
+
+        print o.getP("W").getValue()
+        print o.getP("b").getValue()
+        
         miniBatchSize = 1
-        for e in xrange(100) :
+        for e in xrange(10) :
             for i in xrange(0, len(data), miniBatchSize) :
                 miniBatch = data[i:i+miniBatchSize]
-                ae["out"].train({"inp.inputs": miniBatch, "out.targets":miniBatch} )
+                print "======="
+                print "target:", numpy.argmax(miniBatch)
+                a1 = ae["out"].propagate["train"]({"inp.inputs": miniBatch})["out.propagate.train"]
+                print 'gradients'
+                g = ae["out"].train.getGradients({"inp.inputs": miniBatch, "out.targets":miniBatch})
+                for k in g :
+                    print "\t", k, numpy.mean(g[k])
 
+                loss = ae["out"].train({"inp.inputs": miniBatch, "out.targets":miniBatch} )["out.drive.train"]
+                print "loss", loss
+                a2 = ae["out"].propagate["train"]({"inp.inputs": miniBatch})["out.propagate.train"]
+                
+                print "---\n\tbefore", a1, numpy.argmax(a1), "\n\tafter", a2, numpy.argmax(a2)
+                print ae["inp"].propagate["train"]({"inp.inputs": miniBatch})["inp.propagate.train"], miniBatch
+                print ae["hid"].propagate["train"]({"inp.inputs": miniBatch})["hid.propagate.train"]
+
+        print "=============================" 
         res = ae["out"].propagate["test"]({"inp.inputs": data})["out.propagate.test"]
+        print res
         for i in xrange(len(res)) :
+            print numpy.argmax(data[i]), numpy.argmax(res[i])
             self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
 
     @unittest.skip("skipping")

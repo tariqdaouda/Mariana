@@ -99,7 +99,7 @@ class ArithmeticMerge(object):
     def __repr__(self):
         return "(" + repr(self.a) + self.op + repr(self.b) + ")"
 
-class Layer_ABC(MABS.Abstraction_ABC) :
+class Layer_ABC(MABS.TrainableAbstraction_ABC) :
     "The interface that every layer should expose"
 
     __metaclass__=ABCMeta
@@ -158,7 +158,8 @@ class Layer_ABC(MABS.Abstraction_ABC) :
             super(Layer_ABC, self)._initParameters(forceReset=forceReset)
             for absType, abstractions in self.abstractions.iteritems() :
                 for abstraction in abstractions :
-                    abstraction._initParameters(forceReset=forceReset)
+                    if abstraction.isTrainable() :
+                        abstraction._initParameters(forceReset=forceReset)
         self._mustInit = False
 
     def getLog(self) :
@@ -314,7 +315,7 @@ class Layer_ABC(MABS.Abstraction_ABC) :
             self._mustReset=False
 
     def _initB(self) :
-        """Initialize the fancy attributes of the layer such as: regularizers, decorators and theano functions. This function is automatically called before train/test etc..."""
+        """Initialize theano functions. This function is automatically called before train/test etc..."""
         self.logEvent("%s: initB" % (self.name))
         self.logEvent("%s: _setTheanoFunctions" % (self.name))
         self._setTheanoFunctions()
@@ -353,6 +354,36 @@ class Layer_ABC(MABS.Abstraction_ABC) :
         except Exception as e:
             res["shape"] = e.message
 
+        return res
+
+    def getFullParameters(self) :
+        from collections import Counter
+
+        params = dict(self.parameters)
+        for absType, abstractions in self.abstractions.iteritems() :
+            cnt = Counter()
+            for abstraction in abstractions :
+                cnt[abstraction.name] += 1
+                if cnt[abstraction.name] > 1 :
+                    nameId = "%d" % (cnt[abstraction.name]-1)
+                else :
+                    nameId = ""
+
+                for paramName, param in abstraction.getParameters() :
+                    k = "{type}.{name}{nameId}.{paramName}".format(type=absType, name=abstraction.name, nameId=nameId, paramName=paramName)
+                    params[k] = param
+
+        return params
+
+    def getTrainableAbstractions(self, includeEmpty = False) :
+        """return a list of all trainable abstractions within. By default will exclude all abstractions of trainable type
+        with no parameters. To change that behaviour set use: includeEmpty=True"""
+        res = []
+        for k, v in self.abstractions.iteritems() :
+            for vv in v :
+                if vv.isTrainable() :
+                    if len(vv.getParameters()) > 0 or includeEmpty :
+                        res.append(vv)
         return res
 
     def _dot_representation(self) :
@@ -574,44 +605,6 @@ class Pass(Layer_ABC) :
         for f in layer.outputs.streams :
             self.outputs[f] = layer.outputs[f]
 
-# class Dense(Layer_ABC) :
-#     """A layer with weigth and bias. If would like to disable either one of them do not provide an initialization"""
-
-#     def __init__(self, nbUnits, initializations=[MI.GlorotNormal('W'), MI.SingleValue('b', 0)], **kwargs) :
-#         super(Dense, self).__init__(initializations=initializations, **kwargs)
-#         self.addParameters({
-#             "W": MTYPES.Parameter("%s.W" % (self.name)),
-#             "b": MTYPES.Parameter("%s.b" % (self.name))
-#         })
-
-#         self.setHP("nbUnits", nbUnits)
-#         self.nbInputs=None
-
-#     def femaleConnect(self, layer) :
-#         if layer.getDimensionality() != 1 :
-#             raise ValueError("Input layer must be a vector, got %s dimensions" % layer.getDimensionality())
-#         self.nbInputs = layer.getShape_abs()[1]
-
-#     def getShape_abs(self) :
-#         """defines the number of inputs"""
-#         return (1, self.getHP("nbUnits"))
-
-#     def setOutputs_abs(self) :
-#         """Defines, self.outputs["train"] and self.outputs["test"]"""
-#         if self.parameters["W"] is not None:
-#             for s in self.inputs.streams :
-#                 self.outputs[s]=tt.dot(self.inputs[s], self.parameters["W"]())
-#                 if self.parameters["b"] is not None:
-#                     self.outputs[s]=self.outputs[s] + self.parameters["b"]()
-
-#     def getParameterShape_abs(self, param) :
-#         if param == "W" :
-#             return (self.nbInputs, self.getHP("nbUnits"))
-#         elif param == "b" :
-#             return (self.getHP("nbUnits"),)
-#         else :
-#             raise ValueError("Unknown parameter: %s" % param)
-
 class Dense(Layer_ABC) :
     """A layer with weigth and bias. If would like to disable either one of them do not provide an initialization"""
 
@@ -651,11 +644,11 @@ class Dense(Layer_ABC) :
 
     def setOutputs_abs(self) :
         """Defines, self.outputs["train"] and self.outputs["test"]"""
-        if self.parameters["W"] is not None:
+        if self.getP("W") is not None:
             for s in self.inputs.streams :
-                self.outputs[s]=tt.dot(self.inputs[s], self.parameters["W"]())
-                if self.parameters["b"] is not None:
-                    self.outputs[s]=self.outputs[s] + self.parameters["b"]()
+                self.outputs[s]=tt.dot(self.inputs[s], self.getP("W")())
+                if self.getP("b") is not None:
+                    self.outputs[s]=self.outputs[s] + self.getP("b")()
 
 Hidden = Dense
  
@@ -675,7 +668,7 @@ class Output_ABC(Layer_ABC) :
         self.dependencies=OrderedDict()
         self.backTrckAll=backTrckAll
 
-        self.cost=cost
+        self.abstractions["cost"] = [cost]
         self.loss=None
         self.dependencies=None
 
@@ -702,7 +695,7 @@ class Output_ABC(Layer_ABC) :
         super(Output_ABC, self)._setTheanoFunctions()
         self._backTrckDependencies()
         
-        self.loss = MTYPES.Losses(self, self.cost, self.targets, self.outputs)
+        self.loss = MTYPES.Losses(self, self.abstractions["cost"][0], self.targets, self.outputs)
         
         self.drive = MWRAP.TheanoFunctionGroup("drive", self, self.loss, allow_input_downcast=True)
         self.drive.allowUpdates("train")
@@ -741,8 +734,8 @@ class SoftmaxClassifier(DenseOutput_ABC) :
             "test": tt.argmax(self.outputs["test"], axis=1)
         }
         acc={
-            "train": tt.mean( tt.eq(self.targets["train"], pred['train'] ) ),
-            "test": tt.mean( tt.eq(self.targets["test"], pred["test"] ) )
+            "train": tt.mean( tt.eq(self.targets["train"], pred['train']) ),
+            "test": tt.mean( tt.eq(self.targets["test"], pred["test"]) )
         }
 
         self.predict = MWRAP.TheanoFunctionGroup("predict", self, pred, allow_input_downcast=True, on_unused_input='ignore')
@@ -774,5 +767,5 @@ class Autoencode(DenseOutput_ABC) :
     
     # def _setCustomTheanoFunctions(self) :
     #     super(Autoencode, self)._setCustomTheanoFunctions()
-    #     self.train=MWRAP.TheanoFunction("train", self, [("score", self.cost)], {}, updates=self.updates, flow="train", allow_input_downcast=True)
+    #     self.train=MWRAP.TheanoFunction("train", self, [("score", self.abstractions["cost"])], {}, updates=self.updates, flow="train", allow_input_downcast=True)
     #     self.test=MWRAP.TheanoFunction("test", self, [("score", self.testCost)], {}, flow="test", allow_input_downcast=True)

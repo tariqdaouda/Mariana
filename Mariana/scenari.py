@@ -49,40 +49,29 @@ class Die(ConflictResolve):
 
 class ParameterGradUpdates(object):
     """docstring for ParameterGradUpdates"""
-    def __init__(self, parameter, name, update, gradient):
+    def __init__(self, parameter, name, gradient, update):
         super(ParameterGradUpdates, self).__init__()
         self.name = name
         self.parameter = parameter
         self.update = update
         self.gradient = gradient
-        
-class OptimizerFreeResults(object):
-    """Parameters of a scenario that need to be updated"""
-    def __init__(self):
-        super(OptimizerFreeResults, self).__init__()
-        self.parameters = []
-    
-    def add(self, parameter, name, update, gradient) :
-        param = ParameterGradUpdates(parameter, name, update, gradient)
-        self.parameters.append(param)
 
-class OptimizerResult(object):
+class OptimizerResult(ParameterGradUpdates):
     """use this a return object for an optimizer"""
-    def __init__(self, parameter, parameterName, update, gradient):
-        super(OptimizerResult, self).__init__()
-        self.parameter = ParameterGradUpdates(parameter, "parameterName", update, gradient)
+    def __init__(self, parameter, name, gradient, update):
+        super(OptimizerResult, self).__init__(parameter, name, gradient, update)
         self.coParameters = []
    
-    def addCoParameter(self, parameter, name, update, gradient) :
-        param = ParameterGradUpdates(parameter, name, update, gradient)
+    def addCoParameter(self, parameter, name, gradient, update) :
+        param = ParameterGradUpdates(parameter, name, gradient, update)
         self.coParameters.append(param)
         
-class LearningScenario_ABC(MABS.ApplyAbstraction_ABC):
+class LearningScenario_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC):
     """
-    This is the interface all scenari must expose.
+    This is the interface all optimizations rules must expose.
     """
-    def __init__(self, applyTo=None, inheritable=True, conflictResolve=Die(), *args, **kwargs) :
-        super(LearningScenario_ABC, self).__init__(*args, **kwargs)
+    def __init__(self, applyTo=None, inheritable=True, conflictResolve=Die(), **kwargs) :
+        super(LearningScenario_ABC, self).__init__(**kwargs)
         if applyTo :
             self.applyTo = set(applyTo)
             self.setHP("applyTo", applyTo)
@@ -91,43 +80,42 @@ class LearningScenario_ABC(MABS.ApplyAbstraction_ABC):
 
         self.inheritable = inheritable
         self.conflictResolve = conflictResolve
-        self.freeParameters = OptimizerFreeResults()
 
-    def apply(self, layer, abstraction, paramName, loss, previous=None) :
-        """Apply to a layer and update networks's log"""
+    def apply(self, abstraction, parameterName, loss, previous=None) :
+        """Apply to a abstraction and update networks's log"""
 
-        if self.applyTo is not None and paramName not in self.applyTo :
+        if self.applyTo is not None and parameterName not in self.applyTo :
             return None
 
         try:
-            param = abstraction.getP(paramName)
+            parameter = abstraction.getP(parameterName)
         except :
-            raise KeyError("%s has no parameter %s"%(abstraction, paramName))
+            raise KeyError("%s has no parameter %s"%(abstraction, parameterName))
 
-        v = self.run(param, loss, **{"layer": layer, "paramName": paramName, "previous": previous, "abstraction": abstraction})
+        v = self.run(parameter=parameter, parameterName=parameterName, loss=loss, abstraction=abstraction, previous=previous)
         if previous :
             try :
                 return self.conflictResolve.apply(previous, v)
             except IncompatibleLearningScenarios :
-                raise IncompatibleLearningScenarios("Learning scenario: '%s' is incompatible with previous updates (layer: '%s')" % (self.__class__.__name__, layer.name))
+                raise IncompatibleLearningScenarios("Learning scenario: '%s' is incompatible with previous updates (abstraction: '%s')" % (self.__class__.__name__, abstraction.name))
         return v
 
-    def run(self, param, loss, abstraction, layer, paramName, previous) :
-        """return the updates for the parameters of layer. Must be implemented in child"""
+    def run(self, parameter, parameterName, loss, abstraction, previous) :
+        """return the updates for the parameters of abstraction. Must be implemented in child"""
         raise NotImplemented("Must be implemented in child")
 
 class Fixed(LearningScenario_ABC):
-    "No learning, the layer weights stay fixed"
+    "No learning, the abstraction parameteres stay fixed"
     def __init__(self, applyTo=None, inheritable=False, conflictResolve=Overwrite(), **kwargs):
        super(Fixed, self).__init__(applyTo, inheritable, conflictResolve, **kwargs)
         
-    def run(self, param, **kwargs) :
-        ret = OptimizerResult(param, None, None, None)
+    def run(self, parameter, **kwargs) :
+        ret = OptimizerResult(parameter, None, None, None)
         return ret
 
 class GradientDescent(LearningScenario_ABC):
     "The GradientDescent scenario has a fixed learning rate."
-    def __init__(self, lr, momentum=0, reverse=False, **kwargs):
+    def __init__(self, lr, momentum=0, reverse=False, conflictResolve=Die(), **kwargs):
         """
         use reverse = True for gradient ascent.
         """
@@ -139,18 +127,20 @@ class GradientDescent(LearningScenario_ABC):
         	"reverse": reverse
         })
         
-    def run(self, param, loss, paramName, **kwargs) :
-        gparam = tt.grad(loss, param.getVar())
+    def run(self, parameter, parameterName, loss, **kwargs) :
+        gparam = tt.grad(loss, parameter.getVar())
         if self.getHP("momentum") <= 0 :
-            param_update = param.getVar() - self.getHP("lr") * gparam
+            param_update = parameter.getVar() - self.getHP("lr") * gparam
+            if self.getHP("reverse") :
+                param_update = -param_update
+            ret = OptimizerResult(parameter.getVar(), parameterName, gparam, param_update)
         else :
-            momentum_param = theano.shared(param.getVar()*0., broadcastable=param.broadcastable, name="momentum.%s" % (paramName))
+            momentum_param = theano.shared(parameter.getVar()*0., broadcastable=parameter.broadcastable, name="momentum.%s" % (parameterName))
             momentum_update = self.momentum * momentum_param + (1-self.getHP("momentum"))*gparam
-            param_update = param.getVar() + self.getHP("lr") * momentum_param
-            ret.addCoParameter(momentum_param, "momentum", momentum_update, None)
+            param_update = parameter.getVar() + self.getHP("lr") * momentum_param
+            if self.getHP("reverse") :
+                param_update = -param_update
+            ret = OptimizerResult(parameter.getVar(), parameterName, gparam, param_update)
+            ret.addCoParameter(momentum_param, "momentum", None, momentum_update)
 
-        if self.getHP("reverse") :
-            param_update = -param_update
-
-        ret = OptimizerResult(param.getVar(), paramName, param_update, gparam)
         return ret

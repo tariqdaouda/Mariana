@@ -3,7 +3,7 @@ import Mariana.abstraction as MABS
 
 __all__ = ["Activation_ABC", "Pass", "Sigmoid", "Tanh", "ReLU", "Softmax"]
 
-class Activation_ABC(MABS.ApplyAbstraction_ABC):
+class Activation_ABC(MABS.TrainableAbstraction_ABC, MABS.Apply_ABC):
     """All activations must inherit from this class"""
 
     def apply(self, layer, x) :

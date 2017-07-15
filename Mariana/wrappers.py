@@ -19,7 +19,7 @@ class UpdateStore(object):
         self.updates = OrderedDict()
         self.gradients = OrderedDict()
     
-    def add(self, parameter, update, gradient, name) :
+    def add(self, parameter, gradient, update, name) :
         if update is None: 
             if parameter in self.updates :
                 del self.updates[parameter]
@@ -44,83 +44,74 @@ class Updates(object):
         self.loss = 0
         self.stream = stream
         self.store = UpdateStore()
+        self.isCompiled = False
 
     def merge(self, updates) :
         """Merge tow updates by combining their outputs and adding theirs losses. Must be None or another Updates instance"""
-        if updates is None :
+        if self.isCompiled :
+            raise ValueError("Impossible to merge with already compiled updates")
+
+        if updates is not None :
             if not isinstance(updates, self.__class__) :
-                raise ValueError("Parameter must be an instance of '%s" % self.__class__.__name__)
+                raise ValueError("Parameter must be an instance of '%s" % self.__class__)
             self.output_layers.extend(updates.output_layers)
-            self.loss += updates.loss
+            # self.loss += updates.loss
 
     def compile(self) :
         """Derive the updates and gradients for every parameter in the network"""
-        def _apply(sc, store, layer, entity, param_name, cute_name, loss) :
-            try :
-                previous = store[cute_name]
-            except KeyError :
-                previous = None
+        
+        # def _apply(sc, store, layer, entity, param_name, cute_name, loss) :
+        #     try :
+        #         previous = store[cute_name]
+        #     except KeyError :
+        #         previous = None
 
-            store[cute_name] = sc.apply(layer, entity, param_name, loss, previous)
-            
+        #     store[cute_name] = sc.apply(layer, entity, param_name, loss, previous)
+        
+        #append outputs optimization rules at the top level
         self.loss = 0
         optimizers = {}
+        names = {}
         for o in self.output_layers :
             self.loss += o.loss[self.stream]
             optimizers[o] = o.abstractions["learningScenari"]
+            names[o] = o.name
+            for abstraction in o.getTrainableAbstractions() :
+                optimizers[abstraction] = o.abstractions["learningScenari"]
+                names[abstraction] = "%s.%s" % (o.name. abstraction.name)
+            
             for l in o.dependencies.itervalues() :
-                for sc in o.abstractions["learningScenari"] :
-                    if sc.inheritable :
-                        try :
-                            optimizers[l].append(sc)
-                        except KeyError :
-                            optimizers[l] = [sc]
-                
-        for o in self.output_layers :
-            for l in o.dependencies.itervalues() :
+                names[l] = l.name
                 try :
-                    optimizers[l].extend(l.abstractions["learningScenari"])
+                    optimizers[l].extend(o.abstractions["learningScenari"])
                 except KeyError :
-                    if len(l.abstractions["learningScenari"]) == 0 and len(l.parameters) > 0 :
-                        raise ValueError("Layer: '%s' has trainable parameters but no defined learning scenario. If you don't want to train it, give it the Fixed() scenario." % l.name)
-                    else :
-                        optimizers[l] = l.abstractions["learningScenari"]
+                    optimizers[l] = o.abstractions["learningScenari"]
+    
+                for abstraction in l.getTrainableAbstractions() :
+                    names[abstraction] = "%s.%s" % (l.name. abstraction.name)
+                    try :
+                        optimizers[abstraction].extend(o.abstractions["learningScenari"])
+                    except KeyError :
+                        optimizers[abstraction] = o.abstractions["learningScenari"]
 
-                for reg in l.abstractions["regularizations"] :
-                    self.loss = reg.apply(l, self.loss)
+        #append specific optimization rules
+        for abstraction in optimizers :
+            if abstraction not in self.output_layers :
+                optimizers[abstraction].extend(abstraction.abstractions["learningScenari"])
+                for reg in abstraction.abstractions["regularizations"] :
+                    self.loss = reg.apply(abstraction, self.loss)
 
-        scCheck = set()
-        tmpStore = {}
-        for layer, scenari in optimizers.iteritems() :
-            for sc in scenari :
-                if sc not in scCheck :
-                    for gup_free in sc.freeParameters.parameters :
-                        pname = "%s.%s.%s" %(output_layer.name, sc.__class__.__name__, gup_free.name)
-                        self.store.add(gup_free.parameter, gup_free.update, gup_free.gradient, pname)
-                    scCheck.add(sc)
-
-                for k in layer.parameters.iterkeys() :
-                    pname = "%s.%s" %(layer.name, k)
-                    _apply(sc, tmpStore, layer, layer, k, pname, self.loss)
-
-                for abst in layer.abstractions.itervalues() :
-                    if isinstance(abst, list) :
-                        for abstt in abst :
-                            for k in abstt.parameters.iterkeys() :
-                                pname = "%s.%s.%s" %(layer.name, abst.__class__.__name__, k)
-                                _apply(sc, tmpStore, layer, abst, k, pname, self.loss)
-                    else :
-                        for k in abst.parameters.iterkeys() :
-                            pname = "%s.%s.%s" %(layer.name, abst.__class__.__name__, k)
-                            _apply(sc, tmpStore, layer, abst, k, pname, self.loss)
+        for abstraction, scenari in optimizers.iteritems() :
+            for paramName in abstraction.getParameters() :
+                previousOptim=None
+                for sc in scenari :
+                    optim = sc.apply(abstraction=abstraction, parameterName=paramName, loss=self.loss, previous=previousOptim)
+                    self.store.add( optim.parameter, optim.gradient, optim.update, "%s.%s" % (names[abstraction], paramName) )
+                    for coParam in optim.coParameters :
+                        self.store.add( coParam.parameter, coParam.gradient, coParam.update, "%s.%s.%s" % (names[abstraction], paramName, coParam.name) )
+                    previousOptim = optim
         
-        for cute_name, res in tmpStore.iteritems() :
-            if res is not None :
-                gup = res.parameter
-                self.store.add(gup.parameter, gup.update, gup.gradient, cute_name)
-                for gup_co in res.coParameters :
-                    cute_name2 = "%s.%s" %(cute_name, gup_co.name)
-                    self.store.add(gup_co.parameter, gup_co.update, gup_co.gradient, cute_name)
+        self.isCompiled = True
 
 class TheanoFunctionHandle(object) :
     """
@@ -164,51 +155,51 @@ class TheanoFunctionHandle(object) :
         except :
             raise ValueError("Output does not have a stream: '%s'" % stream)
 
-        self.theano_fct = None
+        # self.theano_fct = None
 
     def hasUpdates(self) :
         """returns True if the function updates the parameters, False other wise."""
         return self.update
 
-    def __add__(self, other) :
-        """Add two handles together using the '+' operator. Losses will be added up and updates re-calculated"""
-        if self.stream != other.stream :
-            raise TypeError("All functions must be in the same stream %s != %s" %(self.stream, other.stream))
+    # def __add__(self, other) :
+    #     """Add two handles together using the '+' operator. Losses will be added up and updates re-calculated"""
+    #     if self.stream != other.stream :
+    #         raise TypeError("All functions must be in the same stream %s != %s" %(self.stream, other.stream))
         
-        if other.__class__ is TheanoFunction :
-            if other.isCompiled() :
-                raise TypeError("Cannot add an already compiled function")
-            other._addHandle(self)
-            return other
-        elif other.__class__ is not TheanoFunctionHandle :
-            raise TypeError("Added value must be another valid function")
+    #     if other.__class__ is TheanoFunction :
+    #         if other.isCompiled() :
+    #             raise TypeError("Cannot add an already compiled function")
+    #         other._addHandle(self)
+    #         return other
+    #     elif other.__class__ is not TheanoFunctionHandle :
+    #         raise TypeError("Added value must be another valid function")
 
-        return TheanoFunction([self, other])
+    #     return TheanoFunction([self, other])
 
-    def develop(self) :
-        """Compile the inner theano function"""
-        if not self.theano_fct :
-            self.theano_fct = TheanoFunction([self])
+    # def develop(self) :
+    #     """Compile the inner theano function"""
+    #     if not self.theano_fct :
+    #         self.theano_fct = TheanoFunction([self])
 
-    def __call__(self, *args, **kwargs) :
-        """Call the inner theano functiom"""
-        self.develop()
-        return self.theano_fct.run(*args, **kwargs)
+    # def __call__(self, *args, **kwargs) :
+    #     """Call the inner theano functiom"""
+    #     self.develop()
+    #     return self.theano_fct.run(*args, **kwargs)
 
-    def __getattr__(self, k) :
-        """return the theano function attributes"""
-        self.develop()
-        if hasattr(self.theano_fct, k) :
-            return getattr(self.theano_fct, k)
+    # def __getattribute__(self, k) :
+    #     """return the theano function attributes"""
+    #     self.develop()
+    #     if hasattr(self.theano_fct, k) :
+    #         return getattr(self.theano_fct, k)
     
 class TheanoFunction(object) :
     """
     This class encapsulates a just-in-time compiled Theano function.
     """
-    def __init__(self, theano_handles) :
+    def __init__(self, name, layer, output, stream, update=False, **theano_kwargs) :
         super(TheanoFunction, self).__init__()
 
-        self.theano_handles = theano_handles
+        self.theano_handles = [TheanoFunctionHandle(name, layer, output, stream, update=update, **theano_kwargs)]
         self.theano_fct = None
         self.gradients_fct = None
         self.updates_fct = None
@@ -223,15 +214,21 @@ class TheanoFunction(object) :
         """Has the compildation already happend?"""
         return self.theano_fct is not None
 
+    def __add__(self, theano_handle) :
+        self._addHandle(theano_handle)
+    
     def _addHandle(self, theano_handle) :
         """Add a handle to the current definition. Losses will be added up and updates will be merged"""
+        if not isinstance(theano_handle, TheanoFunctionHandle) :
+            raise ValueError("theano_handle must be an instance of TheanoFunctionHandle")
+
         self.theano_handles.append(theano_handle)
     
     def compile(self):
         """Compile the function just-in-time according the definitions given by the handles."""
-        self.perfomUpdates = False
-
         if not self.isCompiled() :
+            self.perfomUpdates = False
+            
             self.inputs = OrderedDict()
             self.inputs_varToName = OrderedDict()
             self.outputs = OrderedDict()
@@ -419,7 +416,7 @@ class TheanoFunctionGroup(object):
                 if stream in self.updates :
                     update = True
                 if self.functions[stream] is None :
-                    self.functions[stream] = TheanoFunctionHandle("%s.%s" %(self.name, stream), self.layer, self.outputs, stream=stream, update = update, **self.theano_kwargs)
+                    self.functions[stream] = TheanoFunction("%s.%s" %(self.name, stream), self.layer, self.outputs, stream=stream, update = update, **self.theano_kwargs)
             self.mustInit = False
 
     def __getitem__(self, stream) :

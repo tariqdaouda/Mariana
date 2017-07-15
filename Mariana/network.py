@@ -28,7 +28,7 @@ class Network(MABS.Logger_ABC) :
         self.parameters = []
 
         self._mustInit = True
-        self.outputMaps = {}
+        # self.outputMaps = {}
 
     def getLog(self) :
         log = {
@@ -146,12 +146,12 @@ class Network(MABS.Logger_ABC) :
                 l._initB()
                 self.parameters.extend(l.parameters.values())
     
-            for o in self.layers.itervalues() :
-                for k, v in o.__dict__.iteritems() :
-                    if ( v.__class__ is TheanoFunction ) or issubclass(v.__class__, TheanoFunction) :
-                        if k not in self.outputMaps :
-                            self.outputMaps[k] = OutputMap(k, self)
-                        self.outputMaps[k].addOutput(o, v)
+            # for o in self.layers.itervalues() :
+            #     for k, v in o.__dict__.iteritems() :
+            #         if ( v.__class__ is TheanoFunction ) or issubclass(v.__class__, TheanoFunction) :
+            #             if k not in self.outputMaps :
+            #                 self.outputMaps[k] = OutputMap(k, self)
+            #             self.outputMaps[k].addOutput(o, v)
             
             self._mustInit = False
     
@@ -170,7 +170,6 @@ class Network(MABS.Logger_ABC) :
         for l in self.layers.itervalues() :
             l.network = Network()
             res["layers"][l.name] = l
-            l.network = self
 
         ext = '.mar'
         if filename.find(ext) < 0 :
@@ -181,6 +180,9 @@ class Network(MABS.Logger_ABC) :
         f = open(fn, 'wb', pickle.HIGHEST_PROTOCOL)
         cPickle.dump(res, f)
         f.close()
+
+        for l in self.layers.itervalues() :
+            l.network = self
 
     @classmethod
     def load(cls, filename) :
@@ -267,7 +269,14 @@ class Network(MABS.Logger_ABC) :
 
         return res
 
-    def toJson(self, pretty=False) :
+    def getFullParameters(self) :
+        params = {}
+        for layer in self.layers.itervalues() :
+            for k, v in layer.getFullParameters().iteritems() :
+                params["%s.%s" % (layer.name, k)] = v
+        return params
+
+    def toJson(self, name, pretty=True) :
         import json
         """return a json representation of the network"""
         if pretty :

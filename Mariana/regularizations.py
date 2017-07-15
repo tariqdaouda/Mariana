@@ -1,14 +1,8 @@
-from Mariana.abstraction import Abstraction_ABC
+import Mariana.abstraction as MABS
 
 __all__ = ["SingleLayerRegularizer_ABC", "L1", "L2", "ActivationL1"]
-
-class ClassName(object):
-    """docstring for ClassName"""
-    def __init__(self, arg):
-        super(ClassName, self).__init__()
-        self.arg = arg
         
-class SingleLayerRegularizer_ABC(Abstraction_ABC) :
+class SingleLayerRegularizer_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC) :
     """An abstract regularization to be applied to a layer."""
 
     def __init__(self, streams=["train"], **kwargs):

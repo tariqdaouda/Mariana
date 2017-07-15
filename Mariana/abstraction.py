@@ -1,15 +1,17 @@
 from collections import OrderedDict
 import Mariana.custom_types as MTYPES
 
-__all__ = ["Abstraction_ABC", "ApplyAbstraction_ABC"]
+__all__ = ["Logger_ABC", "Abstraction_ABC", "UntrainableAbstraction_ABC", "TrainableAbstraction_ABC", "Apply_ABC"]
 
 class Logger_ABC(object):
     """Interface for objects that log events"""
     def __init__(self, **kwargs):
         super(Logger_ABC, self).__init__()
         self.log = []
+        self.notes = OrderedDict()
 
     def logEvent(self, message, **moreStuff) :
+        """log an event"""
         import time
             
         entry = {
@@ -21,7 +23,12 @@ class Logger_ABC(object):
         self.log.append(entry)
 
     def getLog(self) :
-        raise NotImplemented("Must be implemented in child")
+        """return the log"""
+        return self.log
+
+    def addNote(self, title, text) :
+        """add a note"""
+        self.notes[title] = text
 
     def printLog(self) :
         """JSON pretty printed log"""
@@ -39,28 +46,18 @@ class Abstraction_ABC(Logger_ABC):
         
         self.streams = streams
         self.hyperParameters = OrderedDict()
-        self.parameters = OrderedDict()
-        self.notes = OrderedDict()
-
-        self.abstractions={
-            "initializations": [],
-        }
 
         self._mustInit=True
 
-    def getLog(self) :
-        return self.log
+    def isTrainable(self) :
+        raise NotImplemented("Must be implemented in child")
 
-    def addNote(self, title, text) :
-        self.notes[title] = text
+    def getParameters(self) :
+        raise NotImplemented("Must be implemented in child")
 
     def addHyperParameters(self, dct) :
         """adds to the list of hyper params, dct must be a dict"""
         self.hyperParameters.update(dct)
-    
-    def addParameters(self, dct) :
-        for k, v in dct.iteritems() :
-            self.setP(k, v)
 
     def setHyperparameter(k, v) :
         """sets a single hyper parameter"""
@@ -78,9 +75,55 @@ class Abstraction_ABC(Logger_ABC):
         """getHyperparameter() alias"""
         return self.hyperParameters[k]
 
+    def getHyperParameters(k, v) :
+        """return all hyper parameter"""
+        return self.hyperParameters
+
+    def toDictionary(self) :
+        """A dct representation of the object"""
+        res = {
+            "name": str(self.name),
+            "hyperParameters": OrderedDict(self.hyperParameters),
+            "notes": OrderedDict(self.notes),
+        }
+        
+        return res
+
+    def __repr__(self) :
+        return "< %s: %s >" % (self.__class__.__name__, dict(self.hyperParameters))
+
+class UntrainableAbstraction_ABC(Abstraction_ABC):
+    """docstring for UntrainableAbstraction_ABC"""
+    
+    def isTrainable(self) :
+        return False
+
+    def getParameters(self) :
+        return {}
+
+class TrainableAbstraction_ABC(Abstraction_ABC):
+    """docstring for TrainableAbstraction_ABC"""
+    def __init__(self, initializations=[], learningScenari=[], regularizations=[], **kwargs):
+        super(TrainableAbstraction_ABC, self).__init__(**kwargs)
+
+        self.abstractions={
+            "initializations": initializations,
+            "learningScenari": learningScenari,
+            "regularizations": regularizations,
+        }
+
+        self.parameters = OrderedDict()
+
+    def isTrainable(self) :
+        return True
+
     def setParameter(k, v) :
         """Brutally set the value of a parameter. No checks applied"""
         self.setP(k, v)
+    
+    def addParameters(self, dct) :
+        for k, v in dct.iteritems() :
+            self.setP(k, v)
 
     def getParameter(k, v) :
         """get a single parameter"""
@@ -97,6 +140,10 @@ class Abstraction_ABC(Logger_ABC):
         """getParameter() alias"""
         return self.parameters[k]
 
+    def getParameters(self) :
+        """return all parameter"""
+        return self.parameters
+
     def getParameterShape_abs(self, param) :
         """Should return the shape of the parameter. This has to be implemented in order for the initializations to work (and maybe some other stuff as well)"""
         raise NotImplemented("Should be implemented in child")
@@ -108,35 +155,10 @@ class Abstraction_ABC(Logger_ABC):
                 init._apply(self)
         self._mustInit=False
 
-    # def __getattribute__(self, k) :
-    #     if k == "__getstate__" or k == "__slots__" :
-    #         print "----", k, self
-    #         print ">>>", super(Abstraction_ABC, self).__getattribute__(k) is None
-    #         print "========="
-
-    #     hps = object.__getattribute__(self, "hyperParameters")
-    #     if k in hps :
-    #         return hps[k]
-    #     ps = super(Abstraction_ABC, self).__getattribute__("parameters")
-    #     if k in ps :
-    #         return ps[k]
-    #     # try :
-    #     # ret = super(Abstraction_ABC, self).__getattribute__(k)
-    #     # print "=====", k, ret
-    #     # return ret
-    #     # except AttributeError :
-    #         # raise AttributeError("Abstraction of Class '%s' has no attribute '%s'" % (self.__class__.__name__, k))
-
     def toDictionary(self) :
         """A dct representation of the object"""
-        if self.__class__ is Abstraction_ABC :
-            raise AttributeError("This function cannot be launched from an instance of Abstraction_ABC")
-
-        res = {
-            "name": str(self.name),
-            "hyperParameters": OrderedDict(self.hyperParameters),
-            "notes": OrderedDict(self.notes),
-        }
+        
+        res = super(TrainableAbstraction_ABC, self).toDictionary()
         ps = OrderedDict()
         for k, v in self.parameters.iteritems() :
             ps[k] = {"shape": self.getParameterShape_abs(k)}
@@ -145,23 +167,12 @@ class Abstraction_ABC(Logger_ABC):
         
         return res
 
-    def __repr__(self) :
-        return "< %s: %s >" % (self.__class__.__name__, dict(self.hyperParameters))
-
-class ApplyAbstraction_ABC(Abstraction_ABC):
+class Apply_ABC(object):
+    """Interface for abstractions that are applyied to other abstractions (all but layers)"""
 
     def __init__(self, **kwargs):
-        super(ApplyAbstraction_ABC, self).__init__()
+        super(Apply_ABC, self).__init__()
         self._mustInit=True
-
-    def _initialize(self, layer) :
-        if self._mustInit :
-            self.initialize(layer)
-            self._mustInit=False
-
-    def initialize(self, layer) :
-        """Last setup before apply, default: does nothing. Parameter initializations must be put here"""
-        pass
 
     def logApply(self, layer, **kwargs) :
         message = "Applying : '%s' on layer '%s'" % (self.name, layer.name)
@@ -169,7 +180,6 @@ class ApplyAbstraction_ABC(Abstraction_ABC):
         
     def _apply(self, layer, **kwargs) :
         """does self.set() + self.apply()"""
-        self._initialize(layer)
         self.logApply(layer)
         self.apply(layer, **kwargs)
 

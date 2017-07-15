@@ -8,7 +8,7 @@ import Mariana.useful as MUSE
 
 __all__= ["Decorator_ABC", "BatchNormalization", "Center", "Normalize", "Mask", "RandomMask", "BinomialDropout", "Clip", "AdditiveGaussianNoise", "MultiplicativeGaussianNoise"]
 
-class Decorator_ABC(MABS.ApplyAbstraction_ABC) :
+class Decorator_ABC(MABS.TrainableAbstraction_ABC, MABS.Apply_ABC) :
     """A decorator is a modifier that is applied on a layer's output. They are always the last the abstraction to be applied."""
 
     def __init__(self, streams, **kwargs):

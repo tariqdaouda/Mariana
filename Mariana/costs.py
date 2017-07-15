@@ -4,14 +4,14 @@ import Mariana.abstraction as MABS
 
 __all__ = ["Cost_ABC", "Null", "NegativeLogLikelihood", "MeanSquaredError", "CrossEntropy", "CategoricalCrossEntropy", "BinaryCrossEntropy"]
 
-class Cost_ABC(MABS.ApplyAbstraction_ABC) :
+class Cost_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC) :
     """This is the interface a Cost must expose. In order for the trainer/recorder to know which attributes are hyper-parameters,
     this class must also include a list attribute **self.hyperParameters** containing the names of all attributes that must be considered
     as hyper-parameters."""
 
     def __init__(self, reverse=False, streams=["test", "train"], **kwargs) :
         """use reverse = True, to have the opposite of cost"""
-        super(Cost_ABC, self).__init__(**kwargs)
+        super(Cost_ABC, self).__init__(streams=streams, **kwargs)
         self.setHP("reverse", reverse)
        
     def logApply(self, layer, **kwargs) :
