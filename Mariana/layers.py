@@ -126,8 +126,6 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         # self.isLayer=True
         self.maxInConnections=maxInConnections
 
-        self.network=MNET.Network()
-        
         #a unique tag associated to the layer
         self.appelido=str(uuid.uuid1())
 
@@ -149,8 +147,11 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         }
         
         self._inputRegistrations=set()
+        self._resetNetwork()
 
+    def _resetNetwork(self) :
         self._mustReset=True
+        self.network=MNET.Network()
         self.network._addLayer(self)
 
     def _initParameters(self, forceReset=False) :
@@ -413,14 +414,8 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         return self.nbOutputs
 
     def __setattr__(self, k, v) :
-        if k == "name" and hasattr(self, k) :
-            if len(self.network.layers) > 1 :
-                raise ValueError("You can't change the name of a connected layer")
-            else :
-                MABS.Abstraction_ABC.__setattr__(self, k, v)
-                self.network=MNET.Network()
-                self.network._addLayer(self)
-
+        if k == 'name' and hasattr(self, k) and self.name != v and name is not None :
+            raise ValueError("You can't change the name of a layer")    
         MABS.Abstraction_ABC.__setattr__(self, k, v)
 
 class MergeLayer(Layer_ABC):

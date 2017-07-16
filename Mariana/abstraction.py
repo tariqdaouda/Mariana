@@ -42,7 +42,6 @@ class Abstraction_ABC(Logger_ABC):
     """
     def __init__(self, streams=["train", "test"], **kwargs):
         super(Abstraction_ABC, self).__init__()
-        self.name = self.__class__.__name__
         
         self.streams = streams
         self.hyperParameters = OrderedDict()
@@ -172,6 +171,7 @@ class Apply_ABC(object):
 
     def __init__(self, **kwargs):
         super(Apply_ABC, self).__init__()
+        self.name = self.__class__.__name__
         self._mustInit=True
 
     def logApply(self, layer, **kwargs) :

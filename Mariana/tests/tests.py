@@ -70,7 +70,7 @@ class MLPTests(unittest.TestCase):
         self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[2]]} )["out.predict.test"], 1 )
         self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[3]]} )["out.predict.test"], 0 )
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_save_load_64h(self) :
         import os
         import Mariana.network as MN
@@ -82,10 +82,10 @@ class MLPTests(unittest.TestCase):
         o = ML.SoftmaxClassifier(nbClasses=2, cost=cost, learningScenari=[ls], name = "out")
 
         prev = i
-        # for i in xrange(1) :
-        #     h = ML.Hidden(shape=10, activation = MA.ReLU(), name = "Hidden_%s" %i)
-        #     prev > h
-        #     prev = h
+        for i in xrange(64) :
+            h = ML.Hidden(shape=10, activation = MA.ReLU(), name = "Hidden_%s" %i)
+            prev > h
+            prev = h
         
         mlp = prev > o
         mlp.init()

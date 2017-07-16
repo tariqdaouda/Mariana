@@ -168,8 +168,9 @@ class Network(MABS.Logger_ABC) :
         }
 
         for l in self.layers.itervalues() :
-            l.network = Network()
+            l._resetNetwork()
             res["layers"][l.name] = l
+            # l.network = self
 
         ext = '.mar'
         if filename.find(ext) < 0 :
@@ -182,6 +183,7 @@ class Network(MABS.Logger_ABC) :
         f.close()
 
         for l in self.layers.itervalues() :
+            # print l, self
             l.network = self
 
     @classmethod
