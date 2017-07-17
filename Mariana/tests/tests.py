@@ -65,11 +65,9 @@ class MLPTests(unittest.TestCase):
         pc = mlp["out"].accuracy["test"]({"inp.inputs": self.xor_ins, "out.targets" : self.xor_outs})["out.accuracy.test"]
         self.assertEqual(pc, 1)
         
-        self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[0]]} )["out.predict.test"], 0 )
-        self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[1]]} )["out.predict.test"], 1 )
-        self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[2]]} )["out.predict.test"], 1 )
-        self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[3]]} )["out.predict.test"], 0 )
-
+        for i in xrange(len(self.xor_ins)) :
+            self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[i]]} )["out.predict.test"], self.xor_outs[i] )
+        
     @unittest.skip("skipping")
     def test_save_load_64h(self) :
         import os
@@ -124,13 +122,13 @@ class MLPTests(unittest.TestCase):
         for e in xrange(2000) :
             for i in xrange(0, len(data), miniBatchSize) :
                 miniBatch = data[i:i+miniBatchSize]
-                loss = ae["out"].train({"inp.inputs": miniBatch, "out.targets":miniBatch} )["out.drive.train"]
+                ae["out"].train({"inp.inputs": miniBatch, "out.targets":miniBatch} )["out.drive.train"]
                 
         res = ae["out"].propagate["test"]({"inp.inputs": data})["out.propagate.test"]
         for i in xrange(len(res)) :
             self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
 
-    # @unittest.skip("skipping")
+    @unittest.skip("skipping")
     def test_ae(self) :
         powerOf2 = 3
         nbUnits = 2**powerOf2
@@ -161,31 +159,33 @@ class MLPTests(unittest.TestCase):
         for i in xrange(len(res)) :
             self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
 
-    @unittest.skip("skipping")
-    def test_composite(self) :
+    # @unittest.skip("skipping")
+    def test_concatenation(self) :
         ls = MS.GradientDescent(lr = 0.1)
         cost = MC.NegativeLogLikelihood()
 
         inp = ML.Input(2, 'inp')
         h1 = ML.Hidden(5, activation = MA.Tanh(), name = "h1")
         h2 = ML.Hidden(5, activation = MA.Tanh(), name = "h2")
-        o = ML.SoftmaxClassifier(2, learningScenario = ls, cost = cost, name = "out")
-        c = ML.Composite(name = "Comp")
-
-        inp > h1 > c
-        inp > h2 > c
+        o = ML.SoftmaxClassifier(nbClasses=2, cost=cost, learningScenari=[ls], name = "out")
+        
+        inp > h1
+        inp > h2
+        c = ML.C([h1, h2], name="concat")
         mlp = c > o
+        mlp.init()
 
+        self.assertEqual( c.getIntrinsicShape()[0], h1.getIntrinsicShape()[0] + h2.getIntrinsicShape()[0])
         for i in xrange(10000) :
             ii = i%len(self.xor_ins)
-            mlp.train(o, inp = [ self.xor_ins[ ii ] ], targets = [ self.xor_outs[ ii ] ])
+            miniBatch = [ self.xor_ins[ ii ] ]
+            targets = [ self.xor_outs[ ii ] ]
+            mlp["out"].train({"inp.inputs": miniBatch, "out.targets":targets} )["out.drive.train"]
 
-        self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[0] ] )["class"], 0 )
-        self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[1] ] )["class"], 1 )
-        self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[2] ] )["class"], 1 )
-        self.assertEqual(mlp.predict( o, inp = [ self.xor_ins[3] ] )["class"], 0 )
+        for i in xrange(len(self.xor_ins)) :
+            self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[i]]} )["out.predict.test"], self.xor_outs[i] )
 
-
+    
     @unittest.skip("skipping")
     def test_multiinputs(self) :
         ls = MS.GradientDescent(lr = 0.1)
