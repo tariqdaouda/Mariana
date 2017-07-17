@@ -131,7 +131,7 @@ class TheanoFunctionHandle(object) :
         
         def _bckTrckInputs(current_layer, stream, inputs = OrderedDict()) :     
             for k, v in current_layer.__dict__.iteritems() :
-                if isinstance(v, MTYPES.Inputs) and not v.isTied():
+                if isinstance(v, MTYPES.Inputs) and not v.isTied(stream):
                     inputs["%s.%s" % (current_layer.name, k)] = v[stream]
   
             for layer in current_layer.network.inConnections[current_layer] :
@@ -147,10 +147,8 @@ class TheanoFunctionHandle(object) :
 
         self.inputs = _bckTrckInputs(layer, stream)
         for k, v in layer.__dict__.iteritems() :
-            if isinstance(v, MTYPES.Targets) and not v.isTied() :
-                print name, self.inputs.keys()
+            if isinstance(v, MTYPES.Targets) and not v.isTied(stream) :
                 self.inputs["%s.%s" % (layer.name, k)] = v[stream]
-                print self.inputs.keys()
 
         try :
             self.output = output[stream]

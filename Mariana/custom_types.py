@@ -8,6 +8,8 @@ class Variable(object):
         self.streams = streams
         self.variables = {}
         self.variableType = variableType
+        self.ties = set()
+
         if variableType :
             self.set(variableType, **theano_kwargs)
         else :
@@ -17,23 +19,27 @@ class Variable(object):
         
         self.tied = False
 
-    def isTied(self) :
-        return self.tied
+    def isTied(self, stream) :
+        return stream in self.ties
 
-    def tie(self, var) :
-        if self.streams != var.streams :
-            raise ValueError( "%s does not have the same streams. Self: %s, var: %s" % (var, self.streams, var.streams) )
+    def tie(self, var, stream = None) :
+        if stream is None :
+            if self.streams != var.streams :
+                raise ValueError( "%s does not have the same streams. Self: %s, var: %s" % (var, self.streams, var.streams) )
+            for f in self.streams :
+                self.variables[f] = var.variables[f]
+                self.ties.add(f)
+        else :
+            self.variables[stream] = var[stream]
+            self.ties.add(stream)
 
-        for f in self.streams :
-            self.variables[f] = var.variables[f]
-        self.tied = True
-        
     def set(self, variableType, *theano_args, **theano_kwargs) :
         self.variableType = variableType
         for f in self.streams :
             self.variables[f] = variableType(*theano_args, **theano_kwargs)
+            if f in self.ties :
+                self.ties.remove(f)
         self.dtype = self.variables[f].dtype
-        self.tied = False
     
     def getValue(self, stream) :
         v = self[stream]
@@ -47,7 +53,8 @@ class Variable(object):
             raise KeyError("There is no stream by the name of: '%s'" % stream)
         
         self[stream].set_value(value)
-        self.tied = False
+        if stream in self.ties :
+            self.ties.remove(stream)
 
     def __getitem__(self, stream) :
         try :
@@ -60,7 +67,8 @@ class Variable(object):
             self.variables[stream] = newVal
         except KeyError :
             raise KeyError("There is no stream by the name of: '%s'" % stream)
-        self.tied = False
+        if stream in self.ties :
+            self.ties.remove(stream)
 
     def __contains__(self, stream) :
         """check if the stream is supported"""
