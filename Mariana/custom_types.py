@@ -3,23 +3,37 @@ import Mariana.useful as MUSE
 
 class Variable(object):
     """docstring for Variable"""
-    def __init__(self, variableType=None, streams=["train", "test"], *theano_args, **theano_kwargs):
+    def __init__(self, variableType=None, streams=["train", "test"], **theano_kwargs):
         super(Variable, self).__init__()
         self.streams = streams
         self.variables = {}
         self.variableType = variableType
         if variableType :
-            self.set(variableType, *theano_args, **theano_kwargs)
+            self.set(variableType, **theano_kwargs)
         else :
             self.dtype = None
             for f in self.streams :
                 self.variables[f] = None    
-    
+        
+        self.tied = False
+
+    def isTied(self) :
+        return self.tied
+
+    def tie(self, var) :
+        if self.streams != var.streams :
+            raise ValueError( "%s does not have the same streams. Self: %s, var: %s" % (var, self.streams, var.streams) )
+
+        for f in self.streams :
+            self.variables[f] = var.variables[f]
+        self.tied = True
+        
     def set(self, variableType, *theano_args, **theano_kwargs) :
         self.variableType = variableType
         for f in self.streams :
             self.variables[f] = variableType(*theano_args, **theano_kwargs)
         self.dtype = self.variables[f].dtype
+        self.tied = False
     
     def getValue(self, stream) :
         v = self[stream]
@@ -29,19 +43,24 @@ class Variable(object):
         return self[stream].get_value()
 
     def setValue(self, stream, value) :
+        if stream not in self.streams :
+            raise KeyError("There is no stream by the name of: '%s'" % stream)
+        
         self[stream].set_value(value)
+        self.tied = False
 
     def __getitem__(self, stream) :
         try :
             return self.variables[stream]
         except KeyError :
-            raise KeyError("There is no stream by the name of: '%s'" % f)
+            raise KeyError("There is no stream by the name of: '%s'" % stream)
     
     def __setitem__(self, stream, newVal) :
         try :
             self.variables[stream] = newVal
         except KeyError :
-            raise KeyError("There is no stream by the name of: '%s'" % f)
+            raise KeyError("There is no stream by the name of: '%s'" % stream)
+        self.tied = False
 
     def __contains__(self, stream) :
         """check if the stream is supported"""

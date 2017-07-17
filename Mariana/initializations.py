@@ -122,7 +122,7 @@ class Uniform(Initialization_ABC):
     def run(self, shape) :
         v = numpy.random.uniform(high=self.getHP("high"), low=self.getHP("low"), size=shape)
         if self.getHP("small") :
-            return v / numpy.sum(v)
+            return v / sum(v)
         return v
 
 class FanInFanOut_ABC(Initialization_ABC) :

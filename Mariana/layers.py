@@ -214,9 +214,13 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         return self.network.outConnections[self]
 
     def getShape_abs(self) :
-        """returns the shape of the layer. The first dimentios is for the minibatch"""
+        """returns the shape of the layer. The first dimension is for the minibatch"""
         raise NotImplementedError("Must be implemented in child: %s" % self.name)        
     
+    def getIntrinsicShape(self) :
+        """return dimensionality without the minibatch"""
+        return self.getShape_abs()[1:]
+
     def getDimensionality(self) :
         """returns the layer intrinsic dimensionality (without the minibatch dimension), by default len(shape)-1"""
         return len(self.getShape_abs()) -1
@@ -753,14 +757,8 @@ class Autoencode(DenseOutput_ABC) :
     You could achieve the same result with a Regression layer, but this one has the advantage of not needing to be fed specific inputs"""
 
     def __init__(self, targetLayer, activation, learningScenari, cost, name=None, **kwargs) :
-        # print targetLayer
-        super(Autoencode, self).__init__(targetLayer.getShape_abs(), activation=activation, learningScenari=learningScenari, cost=cost, name=name, **kwargs)
+        super(Autoencode, self).__init__(targetLayer.getIntrinsicShape(), activation=activation, learningScenari=learningScenari, cost=cost, name=name, **kwargs)
         self.targetLayerName=targetLayer.name
-
+ 
     def _whateverFirstInit(self) :
-        self.targets=self.network[self.targetLayerName].outputs
-    
-    # def _setCustomTheanoFunctions(self) :
-    #     super(Autoencode, self)._setCustomTheanoFunctions()
-    #     self.train=MWRAP.TheanoFunction("train", self, [("score", self.abstractions["cost"])], {}, updates=self.updates, flow="train", allow_input_downcast=True)
-    #     self.test=MWRAP.TheanoFunction("test", self, [("score", self.testCost)], {}, flow="test", allow_input_downcast=True)
+        self.targets.tie(self.network[self.targetLayerName].outputs)
