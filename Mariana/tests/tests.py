@@ -185,7 +185,23 @@ class MLPTests(unittest.TestCase):
         for i in xrange(len(self.xor_ins)) :
             self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[i]]} )["out.predict.test"], self.xor_outs[i] )
 
-    
+    # @unittest.skip("skipping")
+    def test_merge(self) :
+        ls = MS.GradientDescent(lr = 0.1)
+        cost = MC.NegativeLogLikelihood()
+
+        inp1 = ML.Input(1, 'inp1')
+        inp2 = ML.Input(1, 'inp2')
+        merge = ML.M((inp1 + inp2) / 3 * 10 -1, name = "merge")
+
+        inp1 > merge
+        mdl = inp2 > merge
+        mdl.init()
+
+        self.assertEqual( merge.getIntrinsicShape(), inp1.getIntrinsicShape())
+        v = mdl["merge"].propagate["test"]({"inp1.inputs": [[1]],"inp2.inputs": [[8]]} )["merge.propagate.test"]
+        self.assertEqual(v, 29)
+
     @unittest.skip("skipping")
     def test_multiinputs(self) :
         ls = MS.GradientDescent(lr = 0.1)

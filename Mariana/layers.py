@@ -21,55 +21,98 @@ class ArithmeticMerge(object):
     def __init__(self, a, b, op):
         super(ArithmeticMerge, self).__init__()
         
-        aStreams = set(a.streams)
-        streams  = aStreams & set(b.streams)
-        if len(streams) < 1 :
-            raise ValueError("Parameters have no common streams")
-        if len(aStreams) != len(streams) :
-            print MCAN.warning("Parameter have different streams, will take the intersection")
-        
-        self.streams = list(streams)
-        
-        aShape = a.getShape_abs()
-        bShape = b.getShape_abs()
-        if aShape != bShape :
-            raise ValueError("All parameters nust have the same shape")
-
-        self.shape = aShape
+        allowedCls = [ArithmeticMerge, Layer_ABC]
+        variables = [a, b]
+        preStreams = {}
+        preShapes = {}
 
         self.a = a
         self.b = b
         self.op = op
 
+        count = False
+        for var in variables :
+            for cl in allowedCls :
+                if isinstance(var, cl) :
+                    preStreams[var] = set(var.streams)
+                    preShapes[var] = var.getShape_abs()
+            
+        if len(preStreams) == 2 :
+            streams  = preStreams[a] & preStreams[b]
+            if len(streams) < 1 :
+                raise ValueError("Parameters have no common streams")
+            if len(preStreams[a]) != len(streams) :
+                print MCAN.warning("Parameter have different streams, will take the intersection")
+            self.streams = list(streams)
+
+            if preShapes[a] != preShapes[b] :
+                raise ValueError("All parameters nust have the same shape")        
+        elif len(preStreams) == 1 :
+            self.streams = list(preStreams.values()[0])
+        else :
+            raise ValueError("At least a or b must of class: %s" % allowedCls)
+
+        self.shape = preShapes.values()[0]
+
+        # for s in self.streams :
+        #     if a in preStreams :
+        #         self.a[s] = a.getOutputs()[s]
+        #     else :
+        #         self.a[s] = a
+        #     if b in preStreams :
+        #         self.b[s] = b.getOutputs()[s]
+        #     else :
+        #         self.b[s] = b
+
     def getShape_abs(self):
         return self.shape
 
     def getDependencies(self) :
+        """returns layers needed by the computation"""
         deps = []
         if isinstance(self.a, ArithmeticMerge):
             deps.extend(self.a.getDependencies())
-        else :
+        elif isinstance(self.a, Layer_ABC):
             deps.append(self.a)
             
         if isinstance(self.b, ArithmeticMerge):
             deps.extend(self.b.getDependencies())
-        else :
+        elif isinstance(self.b, Layer_ABC):
             deps.append(self.b)
 
         return deps
 
+    # @propertys
     def getOutputs(self) :
         
-        if isinstance(self.a, ArithmeticMerge):
-            aOuts = self.a.getOutputs()
-        else :
-            aOuts = self.a.outputs
+        aOuts = {}
+        bOuts = {}
+        # if isinstance(self.a, ArithmeticMerge):
+        #     aOuts = self.a.getOutputs()
+        # elif isinstance(self.a, Layer_ABC):
+        #     aOuts = self.a.outputs
+        # else :
+        #     aOuts = self.a
             
-        if isinstance(self.b, ArithmeticMerge):
+        # if isinstance(self.b, ArithmeticMerge):
+        #     bOuts = self.b.getOutputs()
+        # elif isinstance(self.b, Layer_ABC):
+        #     bOuts = self.b.outputs
+        # else :
+        #     bOuts = self.b
+        
+        try:
+            aOuts = self.a.getOutputs()
+        except Exception as e:
+            for s in self.streams :
+                aOuts[s] = self.a
+
+        try:
             bOuts = self.b.getOutputs()
-        else :
-            bOuts = self.b.outputs
-      
+        except Exception as e:
+            for s in self.streams :
+                bOuts[s] = self.b
+
         outputs = MTYPES.Variable(streams = self.streams)
         for s in self.streams :
             outputs[s] = 0
@@ -277,6 +320,10 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
             if not v :
                 raise AttributeError("Layers %s has invalid ouput: %s for stream: %s" % (self.name, v, s))
  
+    def getOutputs(self) :
+        """return layer outputs"""
+        return self.outputs
+
     def getTypes(self) :
         """Browses layer parameters to see if it is an input, hidden or output layer"""
         types = set()
