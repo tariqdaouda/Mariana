@@ -113,6 +113,13 @@ class TrainableAbstraction_ABC(Abstraction_ABC):
 
         self.parameters = OrderedDict()
 
+    def getAbstractions(self) :
+        res = []
+        for absts in self.abstractions.itervalues() :
+            for ab in absts :
+                res.append(ab)
+        return res
+
     def isTrainable(self) :
         return True
 
@@ -143,10 +150,21 @@ class TrainableAbstraction_ABC(Abstraction_ABC):
         """return all parameter"""
         return self.parameters
 
+    def _getParameterShape_abs(self, param) :
+        if param not in self.parameters :
+            raise ValueError("Unknown parameter: %s for %s" % (param, self))
+        return self.getParameterShape_abs(param)
+
     def getParameterShape_abs(self, param) :
         """Should return the shape of the parameter. This has to be implemented in order for the initializations to work (and maybe some other stuff as well)"""
         raise NotImplemented("Should be implemented in child")
 
+    def _parametersSanityCheck(self) :
+        "perform basic parameter checks on layers, automatically called on initialization"
+        for k, v in self.getParameters().iteritems() :
+            if not v.isSet() :
+                raise ValueError("Parameter '%s' of '%s' has not been initialized" % (k, self.name) )
+        
     def _initParameters(self, forceReset=False) :
         """creates the parameters if necessary"""
         if self._mustInit or forceReset :

@@ -219,10 +219,6 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
 
         return log
 
-    # def getParameterShape_abs(self, param) :
-    #     """Should return the shape of the parameter. This has to be implemented in order for the initializations to work (and maybe some other stuff as well)"""
-    #     raise NotImplementedError("Must be implemented in child: %s" % self.name)
-
     def clone(self, **kwargs) :
         """Returns a free layer with the same parameters."""
         creationArguments=dict(self.creationArguments["kwargs"])
@@ -306,13 +302,10 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
 
     def _parametersSanityCheck(self) :
         "perform basic parameter checks on layers, automatically called on initialization"
-        for k, v in self.parameters.iteritems() :
-            if v is None :
-                raise ValueError("Parameter '%s' of layer '%s' has invalid value %s" % (k, self.name, self.getParameterShape_abs(k)))
-        
-            if None in self.getParameterShape_abs(k) :
-                raise ValueError("Parameter '%s' of layer '%s' has invalid shape %s. That can cause initializations to crash." % (k, self.name, self.getParameterShape_abs(k)))
-        
+        super(Layer_ABC, self)._parametersSanityCheck()
+        for ab in self.getTrainableAbstractions() :
+            ab._parametersSanityCheck()
+
     def _outputsSanityCheck(self) :
         "perform basic output checks on layers, automatically called on initialization"
         for s in self.outputs.streams :
@@ -347,10 +340,10 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
             self._whateverFirstInit()
             self.logEvent("%s: setInputs" % (self.name))
             self.setInputs()
-            self.logEvent("%s: _parametersSanityCheck" % (self.name))
-            self._parametersSanityCheck()
             self.logEvent("%s: _initParameters" % (self.name))
             self._initParameters()
+            self.logEvent("%s: _parametersSanityCheck" % (self.name))
+            self._parametersSanityCheck()
             self.logEvent("%s: setOutputs_abs" % (self.name))
             self.setOutputs_abs()
             self.logEvent("%s: _activate" % (self.name))
@@ -469,6 +462,42 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
             raise ValueError("You can't change the name of a layer")    
         MABS.Abstraction_ABC.__setattr__(self, k, v)
 
+class Input(Layer_ABC) :
+    """"General representation of an input layer for creating taylored input layers on the fly.
+    This one is not abstract an can instanciated wthout risk.
+    
+    :param int/tuple shape: the shape of the layer, can be a int if its just to specify a number of units. Do not add the minibatch to the shape. Mariana is smart enough to add it for you.
+    :param dtype: the numpy data type 
+    """
+    def __init__(self, shape, name=None, dtype=theano.config.floatX,  **kwargs) :
+        super(Input, self).__init__(name=name, **kwargs)
+        
+        if isinstance(shape, int) :
+            sh = (1, shape)
+        else :
+            sh = [1]
+            sh.extend(list(shape))
+            sh = tuple(sh)
+        
+        self.setHP("shape", sh)
+        
+        # self.broadcastable = [s == 1 for s in self.shape]
+        self.inputs = MTYPES.Inputs(tt.matrix, streams=self.streams)
+    
+    def setInputs(self) :
+        pass
+
+    def getShape_abs(self) :
+        return self.getHP("shape")
+
+    def setOutputs_abs(self) :
+        "initializes the output to be the same as the inputs"
+        for f in self.streams :
+            self.outputs[f]=self.inputs[f]
+    
+    def femaleConnect(self, *args) :
+        raise ValueError("Nothing can be connected to an input layer")
+
 class MergeLayer(Layer_ABC):
     """docstring for MergeLayer"""
     def __init__(self, operations, **kwargs):
@@ -534,9 +563,6 @@ class Concatenation(Layer_ABC):
 
         self.outputs = MTYPES.Variable(streams = self.streams)
 
-    def _femaleConnect(self, layer) :
-        pass
-
     def getShape_abs(self) :
         return self.shape
 
@@ -551,42 +577,6 @@ class Concatenation(Layer_ABC):
 #Shortcut
 C = Concatenation
 # C( [a, b, c], ...)
-
-class Input(Layer_ABC) :
-    """"General representation of an input layer for creating taylored input layers on the fly.
-    This one is not abstract an can instanciated wthout risk.
-    
-    :param int/tuple shape: the shape of the layer, can be a int if its just to specify a number of units. Do not add the minibatch to the shape. Mariana is smart enough to add it for you.
-    :param dtype: the numpy data type 
-    """
-    def __init__(self, shape, name=None, dtype=theano.config.floatX,  **kwargs) :
-        super(Input, self).__init__(name=name, **kwargs)
-        
-        if isinstance(shape, int) :
-            sh = (1, shape)
-        else :
-            sh = [1]
-            sh.extend(list(shape))
-            sh = tuple(sh)
-        
-        self.setHP("shape", sh)
-        
-        # self.broadcastable = [s == 1 for s in self.shape]
-        self.inputs = MTYPES.Inputs(tt.matrix, streams=self.streams)
-    
-    def setInputs(self) :
-        pass
-
-    def getShape_abs(self) :
-        return self.getHP("shape")
-
-    def setOutputs_abs(self) :
-        "initializes the output to be the same as the inputs"
-        for f in self.streams :
-            self.outputs[f]=self.inputs[f]
-    
-    def femaleConnect(self, *args) :
-        raise ValueError("Nothing can be connected to an input layer")
 
 class Embedding(Layer_ABC) :
     """Embeddings are learned representations of the inputs that are much loved in NLP.
@@ -618,10 +608,14 @@ class Embedding(Layer_ABC) :
         self.nbInputs = layer.getShape_abs()[1]
 
     def getShape_abs(self) :
-        return (1, self.nbInputs * self.nbDimensions)
+        return (1, self.nbInputs * self.getHP("nbDimensions"))
+
+    def getParameterShape_abs(self, param) :
+        if param == "embeddings" :
+            return (self.getHP("dictSize"), self.getHP("nbDimensions"))
 
     def setInputs(self) :
-        inpLayer = self.getInLayers()[0]
+        inpLayer = list(self.getInLayers())[0]
         if inpLayer.outputs[self.streams[0]].dtype.find("int") != 0 :
             for f in self.streams :
                 self.inputs[f] = tt.cast(inpLayer.outputs[f], dtype=MSET.INTX)
@@ -631,13 +625,13 @@ class Embedding(Layer_ABC) :
         
     def setOutputs_abs(self) :
         if self.zeroForNull :
-            self.null=numpy.zeros((1, self.nbDimensions))
+            self.null=numpy.zeros((1, self.getHP("nbDimensions")))
             embs = self.parameters["embeddings"].getValue()
             self.parameters["embeddings"].setValue( tt.concatenate( [self.null, embs], axis=0) )
        
-        for f in self.streams :
-            preOutputs=self.parameters["fullEmbeddings"][self.inputs[f]]
-            self.outputs[f] = preOutputs.reshape((self.inputs[f].shape[0], self.nbOutputs))
+        for s in self.streams :
+            preOutputs=self.parameters["embeddings"].getVar()[self.inputs[s]]
+            self.outputs[s] = preOutputs.reshape((self.inputs[s].shape[0], self.getHP("nbDimensions")))
 
 class Pass(Layer_ABC) :
     def __init__(self, name=None, **kwargs):

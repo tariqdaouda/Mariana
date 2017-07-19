@@ -159,7 +159,7 @@ class MLPTests(unittest.TestCase):
         for i in xrange(len(res)) :
             self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
 
-    # @unittest.skip("skipping")
+    @unittest.skip("skipping")
     def test_concatenation(self) :
         ls = MS.GradientDescent(lr = 0.1)
         cost = MC.NegativeLogLikelihood()
@@ -185,7 +185,7 @@ class MLPTests(unittest.TestCase):
         for i in xrange(len(self.xor_ins)) :
             self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[i]]} )["out.predict.test"], self.xor_outs[i] )
 
-    # @unittest.skip("skipping")
+    @unittest.skip("skipping")
     def test_merge(self) :
         ls = MS.GradientDescent(lr = 0.1)
         cost = MC.NegativeLogLikelihood()
@@ -201,32 +201,8 @@ class MLPTests(unittest.TestCase):
         self.assertEqual( merge.getIntrinsicShape(), inp1.getIntrinsicShape())
         v = mdl["merge"].propagate["test"]({"inp1.inputs": [[1]],"inp2.inputs": [[8]]} )["merge.propagate.test"]
         self.assertEqual(v, 29)
-
-    @unittest.skip("skipping")
-    def test_multiinputs(self) :
-        ls = MS.GradientDescent(lr = 0.1)
-
-        inpA = ML.Embedding(2, 2, 2, name="IA")
-        inpB = ML.Input(2, name="IB")
-        inpNexus = ML.Composite(name = "InputNexus")
-
-        h1 = ML.Hidden(32, activation = MA.ReLU(), decorators = [], regularizations = [], name = "Fully-connected1" )
-        
-        o = ML.Regression(2,
-            decorators = [],
-            activation=MA.ReLU(),
-            learningScenario = ls,
-            cost = MC.CrossEntropy(),
-            name = "Out",
-            regularizations = []
-        )
-
-        inpA > inpNexus
-        inpB > inpNexus
-        m = inpNexus > h1 > o
-        m.init()
-
-    @unittest.skip("skipping")
+    
+    # @unittest.skip("skipping")
     def test_embedding(self) :
         """the first 3 and the last 3 should be diametrically opposed"""
         data = [[0], [1], [2], [3], [4], [5]]
@@ -234,17 +210,19 @@ class MLPTests(unittest.TestCase):
 
         ls = MS.GradientDescent(lr = 0.5)
         cost = MC.NegativeLogLikelihood()
+        # MS.Fixed()
+        inp = ML.Input(1, 'inp')
+        emb = ML.Embedding(nbDimensions=2, dictSize=len(data), learningScenari = [ls], name="emb")
+        o = ML.SoftmaxClassifier(2, learningScenari = [], cost = cost, name = "out")
+        net = inp > emb > o
+        net.init()
 
-        emb = ML.Embedding(1, 2, len(data), learningScenario = ls, name="emb")
-        o = ML.SoftmaxClassifier(2, learningScenario = MS.Fixed(), cost = cost, name = "out")
-        net = emb > o
-        
         miniBatchSize = 2
         for i in xrange(2000) :
             for i in xrange(0, len(data), miniBatchSize) :
-                net.train(o, emb=data[i:i+miniBatchSize], targets=targets[i:i+miniBatchSize])
-        
-        embeddings = emb.getEmbeddings()
+                net["out"].train({"inp.inputs": data[i:i+miniBatchSize], "out.targets":targets[i:i+miniBatchSize]} )["out.drive.train"]
+
+        embeddings = emb.getP("embeddings").getValue()
         for i in xrange(0, len(data)/2) :
             v = numpy.dot(embeddings[i], embeddings[i+len(data)/2])
             self.assertTrue(v < -1)

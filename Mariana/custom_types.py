@@ -15,9 +15,15 @@ class Variable(object):
         else :
             self.dtype = None
             for f in self.streams :
-                self.variables[f] = None    
+                self.variables[f] = None
         
         self.tied = False
+
+    def isSet(self) :
+        for f in self.streams :
+            if not self.variables[f] : return False
+
+        return True
 
     def isTied(self, stream) :
         return stream in self.ties
@@ -89,6 +95,9 @@ class Parameter(object):
         super(Parameter, self).__init__()
         self.name = name
         self.theano_var = None
+
+    def isSet(self) :
+        return self.theano_var is not None
 
     def __call__(self) :
         return self.getVar()

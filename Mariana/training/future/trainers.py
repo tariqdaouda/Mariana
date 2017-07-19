@@ -170,6 +170,8 @@ class DefaultTrainer(Trainer_ABC) :
         stopCriteria=[],
         onEpochStart=[],
         onEpochEnd=[],
+        onBatchStart=[], #TODO
+        onBatchEnd=[], #TODO
         onStart=[],
         onEnd=[],
         ) :

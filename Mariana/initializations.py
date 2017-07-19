@@ -46,7 +46,7 @@ class Initialization_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC) :
         self.logEvent(message)
 
     def apply(self, abstraction) :
-        retShape = abstraction.getParameterShape_abs(self.getHP("parameter"))
+        retShape = abstraction._getParameterShape_abs(self.getHP("parameter"))
         v = MUSE.iCast_numpy(self.run(retShape))
         if (v.shape != retShape) :
             raise ValueError("Initialization has a wrong shape: %s, parameter shape is: %s " % (v.shape, retShape))

@@ -76,9 +76,14 @@ class Updates(object):
             self.loss += o.loss[self.stream]
             optimizers[o] = o.abstractions["learningScenari"]
             names[o] = o.name
-            for abstraction in o.getTrainableAbstractions() :
-                optimizers[abstraction] = o.abstractions["learningScenari"]
-                names[abstraction] = "%s.%s" % (o.name. abstraction.name)
+            inheritables = []
+            for ls in o.abstractions["learningScenari"] :
+                if ls.isInheritable() : inheritables.append(ls)
+
+            if len(inheritables) > 0 :
+                for abstraction in o.getTrainableAbstractions() :
+                    optimizers[abstraction] = inheritables
+                    names[abstraction] = "%s.%s" % (o.name. abstraction.name)
             
             for l in o.dependencies.itervalues() :
                 names[l] = l.name

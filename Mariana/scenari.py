@@ -81,6 +81,9 @@ class LearningScenario_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC):
         self.inheritable = inheritable
         self.conflictResolve = conflictResolve
 
+    def isInheritable(self) :
+        return self.inheritable
+
     def apply(self, abstraction, parameterName, loss, previous=None) :
         """Apply to a abstraction and update networks's log"""
 
