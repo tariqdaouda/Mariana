@@ -89,7 +89,7 @@ class Abstraction_ABC(Logger_ABC):
         return res
 
     def __repr__(self) :
-        return "< %s: %s >" % (self.__class__.__name__, dict(self.hyperParameters))
+        return "< %s, hps: %s >" % (self.__class__.__name__, dict(self.hyperParameters))
 
 class UntrainableAbstraction_ABC(Abstraction_ABC):
     """docstring for UntrainableAbstraction_ABC"""
@@ -183,6 +183,9 @@ class TrainableAbstraction_ABC(Abstraction_ABC):
         res["parameters"] = ps    
         
         return res
+
+    def __repr__(self) :
+        return "< %s, hps: %s, ps: %s >" % (self.__class__.__name__, self.hyperParameters, self.parameters)
 
 class Apply_ABC(object):
     """Interface for abstractions that are applyied to other abstractions (all but layers)"""

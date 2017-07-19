@@ -210,10 +210,10 @@ class MLPTests(unittest.TestCase):
 
         ls = MS.GradientDescent(lr = 0.5)
         cost = MC.NegativeLogLikelihood()
-        # MS.Fixed()
+        # 
         inp = ML.Input(1, 'inp')
         emb = ML.Embedding(nbDimensions=2, dictSize=len(data), learningScenari = [ls], name="emb")
-        o = ML.SoftmaxClassifier(2, learningScenari = [], cost = cost, name = "out")
+        o = ML.SoftmaxClassifier(2, learningScenari = [MS.Fixed()], cost = cost, name = "out")
         net = inp > emb > o
         net.init()
 

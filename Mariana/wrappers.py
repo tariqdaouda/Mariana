@@ -80,24 +80,21 @@ class Updates(object):
             for ls in o.abstractions["learningScenari"] :
                 if ls.isInheritable() : inheritables.append(ls)
 
-            if len(inheritables) > 0 :
-                for abstraction in o.getTrainableAbstractions() :
-                    optimizers[abstraction] = inheritables
-                    names[abstraction] = "%s.%s" % (o.name. abstraction.name)
-            
+            for abstraction in o.getTrainableAbstractions() :
+                optimizers[abstraction] = list(inheritables)
+                names[abstraction] = "%s.%s" % (o.name. abstraction.name)
+        
             for l in o.dependencies.itervalues() :
-                names[l] = l.name
-                try :
-                    optimizers[l].extend(o.abstractions["learningScenari"])
-                except KeyError :
-                    optimizers[l] = o.abstractions["learningScenari"]
+                if l not in optimizers :
+                    names[l] = l.name
+                    optimizers[l] = []
+                optimizers[l].extend(inheritables)
     
                 for abstraction in l.getTrainableAbstractions() :
-                    names[abstraction] = "%s.%s" % (l.name. abstraction.name)
-                    try :
-                        optimizers[abstraction].extend(o.abstractions["learningScenari"])
-                    except KeyError :
-                        optimizers[abstraction] = o.abstractions["learningScenari"]
+                    if abstraction not in optimizers :
+                        names[abstraction] = "%s.%s" % (l.name. abstraction.name)
+                        optimizers[abstraction] = []
+                    optimizers[abstraction].extend(inheritables)
 
         #append specific optimization rules
         for abstraction in optimizers :
@@ -105,11 +102,12 @@ class Updates(object):
                 optimizers[abstraction].extend(abstraction.abstractions["learningScenari"])
                 for reg in abstraction.abstractions["regularizations"] :
                     self.loss = reg.apply(abstraction, self.loss)
-
+        
         for abstraction, scenari in optimizers.iteritems() :
             for paramName in abstraction.getParameters() :
                 previousOptim=None
                 for sc in scenari :
+                    # print sc, abstraction, previousOptim
                     optim = sc.apply(abstraction=abstraction, parameterName=paramName, loss=self.loss, previous=previousOptim)
                     self.store.add( optim.parameter, optim.gradient, optim.update, "%s.%s" % (names[abstraction], paramName) )
                     for coParam in optim.coParameters :
