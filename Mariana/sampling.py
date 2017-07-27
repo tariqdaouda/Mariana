@@ -1,7 +1,7 @@
 import Mariana.initializations as MI
 
 import Mariana.compatibility.lasagne as MLASAGNE
-import lasagne.layers.conv as LasagneCONV
+import lasagne.layers.pool as LasagnePOOL
 
 __all__ = ["MaxPooling1D", "MaxPooling2D", "MaxPooling3D", "AveragePooling1D", "AveragePooling2D", "AveragePooling3D", "RepeatedUpscaling1D", "DilatedUpscaling1D", "RepeatedUpscaling2D", "DilatedUpscaling2D", "RepeatedUpscaling3D", "DilatedUpscaling3D", "WinnerTakesAll", "MaxSpatialPyramidPooling", "AverageSpatialPyramidPooling"]
 
@@ -18,7 +18,7 @@ class MaxPooling1D(MLASAGNE.LasagneLayer):
     ):
       
         super(MaxPooling1D, self).__init__(
-                LasagneCONV.MaxPool1DLayer,
+                LasagnePOOL.MaxPool1DLayer,
                 lasagneHyperParameters={
                     "pool_size": poolSize,
                     "stride": stride,
@@ -40,7 +40,7 @@ class MaxPooling2D(MLASAGNE.LasagneLayer):
         **kwargs
     ):
         super(MaxPooling2D, self).__init__(
-                LasagneCONV.MaxPool2DLayer,
+                LasagnePOOL.MaxPool2DLayer,
                 lasagneHyperParameters={
                     "pool_size": (poolHeight, poolWidth),
                     "stride": stride,
@@ -63,7 +63,7 @@ class MaxPooling3D(MLASAGNE.LasagneLayer):
         **kwargs
     ):
         super(MaxPooling3D, self).__init__(
-                LasagneCONV.MaxPool3DLayer,
+                LasagnePOOL.MaxPool3DLayer,
                 lasagneHyperParameters={
                     "pool_size": (poolHeight, poolWidth, poolDepth),
                     "stride": stride,
@@ -90,7 +90,7 @@ class AveragePooling1D(MLASAGNE.LasagneLayer):
             mode = "average_exc_pad"
 
         super(AveragePooling1D, self).__init__(
-                LasagneCONV.Pool1DLayer,
+                LasagnePOOL.Pool1DLayer,
                 lasagneHyperParameters={
                     "pool_size": poolSize,
                     "stride": stride,
@@ -119,7 +119,7 @@ class AveragePooling2D(MLASAGNE.LasagneLayer):
             mode = "average_exc_pad"
 
         super(AveragePooling2D, self).__init__(
-                LasagneCONV.Pool2DLayer,
+                LasagnePOOL.Pool2DLayer,
                 lasagneHyperParameters={
                     "pool_size": (poolHeight, poolWidth),
                     "stride": stride,
@@ -149,7 +149,7 @@ class AveragePooling3D(MLASAGNE.LasagneLayer):
             mode = "average_exc_pad"
 
         super(AveragePooling3D, self).__init__(
-                LasagneCONV.Pool3DLayer,
+                LasagnePOOL.Pool3DLayer,
                 lasagneHyperParameters={
                     "pool_size": (poolHeight, poolWidth, poolDepth),
                     "stride": stride,
@@ -170,7 +170,7 @@ class RepeatedUpscaling1D(MLASAGNE.LasagneLayer):
     ):
 
         super(Upscale1D, self).__init__(
-                LasagneCONV.Upscale1DLayer,
+                LasagnePOOL.Upscale1DLayer,
                 lasagneHyperParameters={
                     "scale_factor": scaleFactor,
                     "mode": "repeat"
@@ -188,7 +188,7 @@ class DilatedUpscaling1D(MLASAGNE.LasagneLayer):
     ):
 
         super(Upscale1D, self).__init__(
-                LasagneCONV.Upscale1DLayer,
+                LasagnePOOL.Upscale1DLayer,
                 lasagneHyperParameters={
                     "scale_factor": scaleFactor,
                     "mode": "dilate"
@@ -207,7 +207,7 @@ class RepeatedUpscaling2D(MLASAGNE.LasagneLayer):
     ):
 
         super(Upscale2D, self).__init__(
-                LasagneCONV.Upscale2DLayer,
+                LasagnePOOL.Upscale2DLayer,
                 lasagneHyperParameters={
                     "scale_factor": (heightScaleFactor, widthScaleFactor),
                     "mode": "repeat"
@@ -226,7 +226,7 @@ class DilatedUpscaling2D(MLASAGNE.LasagneLayer):
     ):
 
         super(Upscale2D, self).__init__(
-                LasagneCONV.Upscale2DLayer,
+                LasagnePOOL.Upscale2DLayer,
                 lasagneHyperParameters={
                     "scale_factor": (heightScaleFactor, widthScaleFactor),
                     "mode": "dilate"
@@ -247,7 +247,7 @@ class RepeatedUpscaling3D(MLASAGNE.LasagneLayer):
     ):
 
         super(Upscale3D, self).__init__(
-                LasagneCONV.Upscale3DLayer,
+                LasagnePOOL.Upscale3DLayer,
                 lasagneHyperParameters={
                     "scale_factor": (heightScaleFactor, widthScaleFactor, depthScaleFactor),
                     "mode": "repeat"
@@ -266,7 +266,7 @@ class DilatedUpscaling3D(MLASAGNE.LasagneLayer):
         **kwargs
     ):
         super(Upscale3D, self).__init__(
-                LasagneCONV.Upscale3DLayer,
+                LasagnePOOL.Upscale3DLayer,
                 lasagneHyperParameters={
                     "scale_factor": (heightScaleFactor, widthScaleFactor, depthScaleFactor),
                     "mode": "dilate"
@@ -286,13 +286,12 @@ class WinnerTakesAll(MLASAGNE.LasagneLayer):
     ):
 
         super(Upscale3D, self).__init__(
-                LasagneCONV.FeatureWTALayer,
+                LasagnePOOL.FeatureWTALayer,
                 lasagneHyperParameters={
                     "pool_size": poolSize,
                     "axis": axis
                 },
         )
-
 
 class MaxSpatialPyramidPooling(MLASAGNE.LasagneLayer):
     """This layer wraps lasagnes's FeatureWTALayer layer and performs a 3D average pooling over each channel.
@@ -306,7 +305,7 @@ class MaxSpatialPyramidPooling(MLASAGNE.LasagneLayer):
     ):
 
         super(Upscale3D, self).__init__(
-                LasagneCONV.SpatialPyramidPooling,
+                LasagnePOOL.SpatialPyramidPooling,
                 lasagneHyperParameters={
                     "pool_size": poolSize,
                     "implementation": implementation,
@@ -332,7 +331,7 @@ class AverageSpatialPyramidPooling(MLASAGNE.LasagneLayer):
             mode = "average_exc_pad"
 
         super(Upscale3D, self).__init__(
-                LasagneCONV.SpatialPyramidPooling,
+                LasagnePOOL.SpatialPyramidPooling,
                 lasagneHyperParameters={
                     "pool_size": poolSize,
                     "implementation": implementation,
