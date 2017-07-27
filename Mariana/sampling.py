@@ -1,0 +1,342 @@
+import Mariana.initializations as MI
+
+import Mariana.compatibility.lasagne as MLASAGNE
+import lasagne.layers.conv as LasagneCONV
+
+__all__ = ["MaxPooling1D", "MaxPooling2D", "MaxPooling3D", "AveragePooling1D", "AveragePooling2D", "AveragePooling3D", "RepeatedUpscaling1D", "DilatedUpscaling1D", "RepeatedUpscaling2D", "DilatedUpscaling2D", "RepeatedUpscaling3D", "DilatedUpscaling3D", "WinnerTakesAll", "MaxSpatialPyramidPooling", "AverageSpatialPyramidPooling"]
+
+class MaxPooling1D(MLASAGNE.LasagneLayer):
+    """This layer wraps lasagnes's MaxPool1DLayer layer and performs a 1D max pooling over each channel.
+    For a full explanation of the arguments please checkout lasagne's doc"""
+    def __init__(
+        self,
+        name,
+        poolSize,
+        stride=None,
+        pad=0,
+        **kwargs
+    ):
+      
+        super(MaxPooling1D, self).__init__(
+                LasagneCONV.MaxPool1DLayer,
+                lasagneHyperParameters={
+                    "pool_size": poolSize,
+                    "stride": stride,
+                    "pad": pad,
+                    "ignore_border": True,
+                },
+        )     
+
+class MaxPooling2D(MLASAGNE.LasagneLayer):
+    """This layer wraps lasagnes's MaxPool2DLayer layer and performs a 2D max pooling over each channel.
+    For a full explanation of the arguments please checkout lasagne's doc"""
+    def __init__(
+        self,
+        name,
+        poolHeight,
+        poolWidth,
+        stride=None,
+        pad=(0, 0),
+        **kwargs
+    ):
+        super(MaxPooling2D, self).__init__(
+                LasagneCONV.MaxPool2DLayer,
+                lasagneHyperParameters={
+                    "pool_size": (poolHeight, poolWidth),
+                    "stride": stride,
+                    "pad": pad,
+                    "ignore_border": True,
+                },
+        )       
+
+class MaxPooling3D(MLASAGNE.LasagneLayer):
+    """This layer wraps lasagnes's MaxPool1DLayer layer and performs a 3D max pooling over each channel.
+    For a full explanation of the arguments please checkout lasagne's doc"""
+    def __init__(
+        self,
+        name,
+        poolHeight,
+        poolWidth,
+        poolDepth,
+        stride=None,
+        pad=(0, 0, 0),
+        **kwargs
+    ):
+        super(MaxPooling3D, self).__init__(
+                LasagneCONV.MaxPool3DLayer,
+                lasagneHyperParameters={
+                    "pool_size": (poolHeight, poolWidth, poolDepth),
+                    "stride": stride,
+                    "pad": pad,
+                    "ignore_border": True,
+                },
+        )
+
+class AveragePooling1D(MLASAGNE.LasagneLayer):
+    """This layer wraps lasagnes's MaxPool1DLayer layer and performs a 1D average pooling over each channel.
+    For a full explanation of the arguments please checkout lasagne's doc"""
+    def __init__(
+        self,
+        name,
+        poolSize,
+        stride=None,
+        pad=0,
+        includePadding=False,
+        **kwargs
+    ):
+        if includePadding :
+            mode = "average_inc_pad"
+        else:
+            mode = "average_exc_pad"
+
+        super(AveragePooling1D, self).__init__(
+                LasagneCONV.Pool1DLayer,
+                lasagneHyperParameters={
+                    "pool_size": poolSize,
+                    "stride": stride,
+                    "pad": pad,
+                    "ignore_border": True,
+                    "mode": mode
+                },
+        )     
+
+class AveragePooling2D(MLASAGNE.LasagneLayer):
+    """This layer wraps lasagnes's MaxPool2DLayer layer and performs a 2D average pooling over each channel.
+    For a full explanation of the arguments please checkout lasagne's doc"""
+    def __init__(
+        self,
+        name,
+        poolHeight,
+        poolWidth,
+        stride=None,
+        pad=(0, 0),
+        includePadding=False,
+        **kwargs
+    ):
+        if includePadding :
+            mode = "average_inc_pad"
+        else:
+            mode = "average_exc_pad"
+
+        super(AveragePooling2D, self).__init__(
+                LasagneCONV.Pool2DLayer,
+                lasagneHyperParameters={
+                    "pool_size": (poolHeight, poolWidth),
+                    "stride": stride,
+                    "pad": pad,
+                    "ignore_border": True,
+                    "mode": mode
+                },
+        )       
+
+class AveragePooling3D(MLASAGNE.LasagneLayer):
+    """This layer wraps lasagnes's MaxPool1DLayer layer and performs a 3D average pooling over each channel.
+    For a full explanation of the arguments please checkout lasagne's doc"""
+    def __init__(
+        self,
+        name,
+        poolHeight,
+        poolWidth,
+        poolDepth,
+        stride=None,
+        pad=(0, 0, 0),
+        includePadding=False,
+        **kwargs
+    ):
+        if includePadding :
+            mode = "average_inc_pad"
+        else:
+            mode = "average_exc_pad"
+
+        super(AveragePooling3D, self).__init__(
+                LasagneCONV.Pool3DLayer,
+                lasagneHyperParameters={
+                    "pool_size": (poolHeight, poolWidth, poolDepth),
+                    "stride": stride,
+                    "pad": pad,
+                    "ignore_border": True,
+                    "mode": mode
+                },
+        )
+
+class RepeatedUpscaling1D(MLASAGNE.LasagneLayer):
+    """This layer wraps lasagnes's MaxPool1DLayer layer and performs a 1D average pooling over each channel.
+    For a full explanation of the arguments please checkout lasagne's doc"""
+    def __init__(
+        self,
+        name,
+        scaleFactor,
+        **kwargs
+    ):
+
+        super(Upscale1D, self).__init__(
+                LasagneCONV.Upscale1DLayer,
+                lasagneHyperParameters={
+                    "scale_factor": scaleFactor,
+                    "mode": "repeat"
+                },
+        )
+
+class DilatedUpscaling1D(MLASAGNE.LasagneLayer):
+    """This layer wraps lasagnes's MaxPool1DLayer layer and performs a 1D average pooling over each channel.
+    For a full explanation of the arguments please checkout lasagne's doc"""
+    def __init__(
+        self,
+        name,
+        scaleFactor,
+        **kwargs
+    ):
+
+        super(Upscale1D, self).__init__(
+                LasagneCONV.Upscale1DLayer,
+                lasagneHyperParameters={
+                    "scale_factor": scaleFactor,
+                    "mode": "dilate"
+                },
+        )
+
+class RepeatedUpscaling2D(MLASAGNE.LasagneLayer):
+    """This layer wraps lasagnes's MaxPool2DLayer layer and performs a 2D average pooling over each channel.
+    For a full explanation of the arguments please checkout lasagne's doc"""
+    def __init__(
+        self,
+        name,
+        heightScaleFactor,
+        widthScaleFactor,
+        **kwargs
+    ):
+
+        super(Upscale2D, self).__init__(
+                LasagneCONV.Upscale2DLayer,
+                lasagneHyperParameters={
+                    "scale_factor": (heightScaleFactor, widthScaleFactor),
+                    "mode": "repeat"
+                },
+        )
+
+class DilatedUpscaling2D(MLASAGNE.LasagneLayer):
+    """This layer wraps lasagnes's MaxPool2DLayer layer and performs a 2D average pooling over each channel.
+    For a full explanation of the arguments please checkout lasagne's doc"""
+    def __init__(
+        self,
+        name,
+        heightScaleFactor,
+        widthScaleFactor,
+        **kwargs
+    ):
+
+        super(Upscale2D, self).__init__(
+                LasagneCONV.Upscale2DLayer,
+                lasagneHyperParameters={
+                    "scale_factor": (heightScaleFactor, widthScaleFactor),
+                    "mode": "dilate"
+                },
+        )
+
+
+class RepeatedUpscaling3D(MLASAGNE.LasagneLayer):
+    """This layer wraps lasagnes's Upscale3DLayer layer and performs a 3D average pooling over each channel.
+    For a full explanation of the arguments please checkout lasagne's doc"""
+    def __init__(
+        self,
+        name,
+        heightScaleFactor,
+        widthScaleFactor,
+        depthScaleFactor,
+        **kwargs
+    ):
+
+        super(Upscale3D, self).__init__(
+                LasagneCONV.Upscale3DLayer,
+                lasagneHyperParameters={
+                    "scale_factor": (heightScaleFactor, widthScaleFactor, depthScaleFactor),
+                    "mode": "repeat"
+                },
+        )
+
+class DilatedUpscaling3D(MLASAGNE.LasagneLayer):
+    """This layer wraps lasagnes's Upscale3DLayer layer and performs a 3D average pooling over each channel.
+    For a full explanation of the arguments please checkout lasagne's doc"""
+    def __init__(
+        self,
+        name,
+        heightScaleFactor,
+        widthScaleFactor,
+        depthScaleFactor,
+        **kwargs
+    ):
+        super(Upscale3D, self).__init__(
+                LasagneCONV.Upscale3DLayer,
+                lasagneHyperParameters={
+                    "scale_factor": (heightScaleFactor, widthScaleFactor, depthScaleFactor),
+                    "mode": "dilate"
+                },
+        )
+
+class WinnerTakesAll(MLASAGNE.LasagneLayer):
+    """This layer wraps lasagnes's FeatureWTALayer layer and performs a 3D average pooling over each channel.
+    For a full explanation of the arguments please checkout lasagne's doc"""
+    def __init__(
+        self,
+        name,
+        poolSize,
+        axis=1,
+        depthScaleFactor,
+         **kwargs
+    ):
+
+        super(Upscale3D, self).__init__(
+                LasagneCONV.FeatureWTALayer,
+                lasagneHyperParameters={
+                    "pool_size": poolSize,
+                    "axis": axis
+                },
+        )
+
+
+class MaxSpatialPyramidPooling(MLASAGNE.LasagneLayer):
+    """This layer wraps lasagnes's FeatureWTALayer layer and performs a 3D average pooling over each channel.
+    For a full explanation of the arguments please checkout lasagne's doc"""
+    def __init__(
+        self,
+        name,
+        poolDims=[4, 2, 1],
+        implementation="fast",
+        **kwargs
+    ):
+
+        super(Upscale3D, self).__init__(
+                LasagneCONV.SpatialPyramidPooling,
+                lasagneHyperParameters={
+                    "pool_size": poolSize,
+                    "implementation": implementation,
+                    "mode": 'max'
+                },
+        )
+
+
+class AverageSpatialPyramidPooling(MLASAGNE.LasagneLayer):
+    """This layer wraps lasagnes's FeatureWTALayer layer and performs a 3D average pooling over each channel.
+    For a full explanation of the arguments please checkout lasagne's doc"""
+    def __init__(
+        self,
+        name,
+        poolDims=[4, 2, 1],
+        implementation="fast",
+        includePadding=False
+        **kwargs
+    ):
+        if includePadding :
+            mode = "average_inc_pad"
+        else:
+            mode = "average_exc_pad"
+
+        super(Upscale3D, self).__init__(
+                LasagneCONV.SpatialPyramidPooling,
+                lasagneHyperParameters={
+                    "pool_size": poolSize,
+                    "implementation": implementation,
+                    "mode": mode
+                },
+        )
+

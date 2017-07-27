@@ -14,10 +14,11 @@ import Mariana.network as MNET
 import Mariana.wrappers as MWRAP
 import Mariana.candies as MCAN
 
-__all__=["Layer_ABC", "DenseOutput_ABC", "Dense", "Output_ABC", "Input", "Hidden", "Embedding", "SoftmaxClassifier", "Regression", "Autoencode"]
+__all__=["Layer_ABC", "ArithmeticMerge", "Input", "Embedding", "Dense", "Hidden",  "Merge", "M", "Concatenation", "C", "DenseOutput_ABC", "Output_ABC", "SoftmaxClassifier", "Regression", "Autoencode"]
+
 
 class ArithmeticMerge(object):
-    """docstring for ArithmeticMerge"""
+    """Simple mathematical operations (+, -, *, /) between layers and other stuff"""
     def __init__(self, a, b, op):
         super(ArithmeticMerge, self).__init__()
         
@@ -54,16 +55,6 @@ class ArithmeticMerge(object):
 
         self.shape = preShapes.values()[0]
 
-        # for s in self.streams :
-        #     if a in preStreams :
-        #         self.a[s] = a.getOutputs()[s]
-        #     else :
-        #         self.a[s] = a
-        #     if b in preStreams :
-        #         self.b[s] = b.getOutputs()[s]
-        #     else :
-        #         self.b[s] = b
-
     def getShape_abs(self):
         return self.shape
 
@@ -82,25 +73,10 @@ class ArithmeticMerge(object):
 
         return deps
 
-    # @propertys
     def getOutputs(self) :
         
         aOuts = {}
         bOuts = {}
-        # if isinstance(self.a, ArithmeticMerge):
-        #     aOuts = self.a.getOutputs()
-        # elif isinstance(self.a, Layer_ABC):
-        #     aOuts = self.a.outputs
-        # else :
-        #     aOuts = self.a
-            
-        # if isinstance(self.b, ArithmeticMerge):
-        #     bOuts = self.b.getOutputs()
-        # elif isinstance(self.b, Layer_ABC):
-        #     bOuts = self.b.outputs
-        # else :
-        #     bOuts = self.b
-        
         try:
             aOuts = self.a.getOutputs()
         except Exception as e:
@@ -145,7 +121,7 @@ class ArithmeticMerge(object):
 class Layer_ABC(MABS.TrainableAbstraction_ABC) :
     "The interface that every layer should expose"
 
-    __metaclass__=ABCMeta
+    # __metaclass__=ABCMeta
 
     def __new__(cls, *args, **kwargs) :
         import inspect
@@ -166,7 +142,6 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
 
     def __init__(self, activation=MA.Pass(), regularizations=[], initializations=[], learningScenari=[], decorators=[], name=None, maxInConnections=1, streams=["train", "test"]):
         super(Layer_ABC, self).__init__(initializations=[], streams = streams)
-        # self.isLayer=True
         self.maxInConnections=maxInConnections
 
         #a unique tag associated to the layer
@@ -482,7 +457,18 @@ class Input(Layer_ABC) :
         self.setHP("shape", sh)
         
         # self.broadcastable = [s == 1 for s in self.shape]
-        self.inputs = MTYPES.Inputs(tt.matrix, streams=self.streams)
+        if len(self.getHP("shape")) == 2:
+            typ = tt.matrix
+        elif len(self.getHP("shape")) == 3:
+            typ = tt.tensor3
+        elif len(self.getHP("shape")) == 4:
+            typ = tt.tensor4
+        elif len(self.getHP("shape")) == 5:
+            typ = tt.tensor5
+        else :
+            raise ValueError("The maximum shape size allowed is 5")
+
+        self.inputs = MTYPES.Inputs(typ, streams=self.streams)
     
     def setInputs(self) :
         pass
@@ -648,14 +634,16 @@ class Pass(Layer_ABC) :
 class Dense(Layer_ABC) :
     """A layer with weigth and bias. If would like to disable either one of them do not provide an initialization"""
 
-    def __init__(self, shape, initializations=[MI.GlorotNormal('W'), MI.SingleValue('b', 0)], **kwargs) :
+    def __init__(self, size, initializations=[MI.GlorotNormal('W'), MI.SingleValue('b', 0)], **kwargs) :
         super(Dense, self).__init__(initializations=initializations, **kwargs)
-        if isinstance(shape, int) :
-            sh = (1, shape)
+        if isinstance(size, int) :
+            sh = (1, size)
         else :
             sh = [1]
-            sh.extend(list(shape))
+            sh.extend(list(size))
             sh = tuple(sh)
+            
+        self.size = size
         self.setHP("shape", sh)
 
         self.addParameters({
@@ -664,11 +652,17 @@ class Dense(Layer_ABC) :
         })
 
         self.inputShape=None
+        self.originalInputShape=None
 
     def femaleConnect(self, layer) :
-        # if layer.getDimensionality() != 1 :
-            # raise ValueError("Input layer must be a vector, got %s dimensions" % layer.getDimensionality())
-        self.inputShape = tuple(layer.getShape_abs()[1:])
+        self.originalInputShape = tuple(layer.getShape_abs())
+        if len(self.originalInputShape) > 2 :
+            s = 1
+            for v in self.originalInputShape[1:] :
+                s *= v
+            self.inputShape = (-1, s)
+        else :
+           self.inputShape = self.originalInputShape
 
     def getShape_abs(self) :
         """defines the number of inputs"""
@@ -676,7 +670,7 @@ class Dense(Layer_ABC) :
 
     def getParameterShape_abs(self, param) :
         if param == "W" :
-            return self.inputShape + self.getHP("shape")[1:]
+            return self.inputShape[1:] + self.getHP("shape")[1:]
         elif param == "b" :
             return self.getHP("shape")[1:]
         else :
@@ -686,7 +680,11 @@ class Dense(Layer_ABC) :
         """Defines, self.outputs["train"] and self.outputs["test"]"""
         if self.getP("W") is not None:
             for s in self.inputs.streams :
-                self.outputs[s]=tt.dot(self.inputs[s], self.getP("W")())
+                if self.inputShape != self.originalInputShape :
+                    inp = self.inputs[s].reshape( self.inputShape )
+                else :
+                    inp = self.inputs[s]
+                self.outputs[s]=tt.dot(inp, self.getP("W")())
                 if self.getP("b") is not None:
                     self.outputs[s]=self.outputs[s] + self.getP("b")()
 
@@ -745,8 +743,8 @@ class Output_ABC(Layer_ABC) :
 
 class DenseOutput_ABC(Output_ABC, Dense):
     """Generic output layer with weight and bias"""
-    def __init__(self, shape, cost, learningScenari, activation, **kwargs):
-        super(DenseOutput_ABC, self).__init__(shape=shape, cost=cost, learningScenari=learningScenari, activation=activation, **kwargs)
+    def __init__(self, size, cost, learningScenari, activation, **kwargs):
+        super(DenseOutput_ABC, self).__init__(size=size, cost=cost, learningScenari=learningScenari, activation=activation, **kwargs)
 
     def setOutputs_abs(self) :
         Dense.setOutputs_abs(self)
@@ -756,9 +754,9 @@ class SoftmaxClassifier(DenseOutput_ABC) :
     def __init__(self, nbClasses, cost, learningScenari, temperature=1, **kwargs) :
         if not isinstance(nbClasses, int) :
             raise ValueError("nbClasses must be an integer")
-
+        self.nbClasses = nbClasses
         super(SoftmaxClassifier, self).__init__(nbClasses, cost=cost, learningScenari=learningScenari, activation=MA.Softmax(temperature=temperature), **kwargs)
-        self.targets=MTYPES.Targets(tt.ivector) #tt.ivector(name="targets_" + self.name)
+        self.targets=MTYPES.Targets(tt.ivector)
 
     def _setTheanoFunctions(self) :
         """defines::
@@ -780,17 +778,11 @@ class SoftmaxClassifier(DenseOutput_ABC) :
 
         self.predict = MWRAP.TheanoFunctionGroup("predict", self, pred, allow_input_downcast=True, on_unused_input='ignore')
         self.accuracy = MWRAP.TheanoFunctionGroup("accuracy", self, acc, allow_input_downcast=True)
-    
-    def setOutputs_abs(self) :
-        """Defines, self.outputs["train"] and self.outputs["test"]"""
-        super(SoftmaxClassifier, self).setOutputs_abs()
-        for s in self.inputs.streams :
-            self.outputs[s]=self.outputs[s].flatten(2)
 
 class Regression(DenseOutput_ABC) :
     """For regressions, works great with a mean squared error cost"""
-    def __init__(self, shape, activation, learningScenari, cost, name=None, **kwargs) :
-        super(Regression, self).__init__(shape, activation=activation, learningScenari=learningScenari, cost=cost, name=name, **kwargs)
+    def __init__(self, size, activation, learningScenari, cost, name=None, **kwargs) :
+        super(Regression, self).__init__(size, activation=activation, learningScenari=learningScenari, cost=cost, name=name, **kwargs)
         self.targets=MTYPES.Targets(tt.matrix)
 
 class Autoencode(DenseOutput_ABC) :

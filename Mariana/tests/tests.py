@@ -33,7 +33,7 @@ class MLPTests(unittest.TestCase):
         cost = MC.NegativeLogLikelihood()
 
         i = ML.Input(2, 'inp')
-        h = ML.Hidden(shape = (2, 4), activation = MA.ReLU(), name = "Hidden_0.500705866892")
+        h = ML.Hidden(size = 6, activation = MA.ReLU(), name = "Hidden_0.500705866892")
         o = ML.SoftmaxClassifier(nbClasses=2, cost=cost, learningScenari=[ls], name = "out")
 
         mlp = i > h > o
@@ -46,17 +46,17 @@ class MLPTests(unittest.TestCase):
         
         return mlp
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_missing_args(self) :
         mlp = self.trainMLP_xor()
         self.assertRaises(SyntaxError, mlp["out"].train, {} )
     
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_unexpected_args(self) :
         mlp = self.trainMLP_xor()
         self.assertRaises(SyntaxError, mlp["out"].train, {"inp.inputs": self.xor_ins, "out.targets" : self.xor_outs, "lala": 0} )
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_xor(self) :
         mlp = self.trainMLP_xor()
 
@@ -68,7 +68,7 @@ class MLPTests(unittest.TestCase):
         for i in xrange(len(self.xor_ins)) :
             self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[i]]} )["out.predict.test"], self.xor_outs[i] )
         
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_save_load_64h(self) :
         import os
         import Mariana.network as MN
@@ -81,7 +81,7 @@ class MLPTests(unittest.TestCase):
 
         prev = i
         for i in xrange(64) :
-            h = ML.Hidden(shape=10, activation = MA.ReLU(), name = "Hidden_%s" %i)
+            h = ML.Hidden(size=10, activation = MA.ReLU(), name = "Hidden_%s" %i)
             prev > h
             prev = h
         
@@ -97,7 +97,7 @@ class MLPTests(unittest.TestCase):
         self.assertTrue((v1==v2).all())
         os.remove('test_save.mar')
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_ae_reg(self) :
         powerOf2 = 3
         nbUnits = 2**powerOf2
@@ -128,7 +128,7 @@ class MLPTests(unittest.TestCase):
         for i in xrange(len(res)) :
             self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_ae(self) :
         powerOf2 = 3
         nbUnits = 2**powerOf2
@@ -159,7 +159,7 @@ class MLPTests(unittest.TestCase):
         for i in xrange(len(res)) :
             self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_concatenation(self) :
         ls = MS.GradientDescent(lr = 0.1)
         cost = MC.NegativeLogLikelihood()
@@ -185,7 +185,7 @@ class MLPTests(unittest.TestCase):
         for i in xrange(len(self.xor_ins)) :
             self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[i]]} )["out.predict.test"], self.xor_outs[i] )
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_merge(self) :
         ls = MS.GradientDescent(lr = 0.1)
         cost = MC.NegativeLogLikelihood()
@@ -227,7 +227,7 @@ class MLPTests(unittest.TestCase):
             v = numpy.dot(embeddings[i], embeddings[i+len(data)/2])
             self.assertTrue(v < -1)
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_conv(self) :
         import Mariana.convolution as MCONV
         import theano
@@ -235,39 +235,33 @@ class MLPTests(unittest.TestCase):
         def getModel(inpSize, filterWidth) :
             ls = MS.GradientDescent(lr = 0.5)
             cost = MC.NegativeLogLikelihood()
-            
-            pooler = MCONV.MaxPooling2D(1, 2)
 
-            i = ML.Input(inpSize, name = 'inp')
-            ichan = MCONV.InputChanneler(1, inpSize, name = 'inpChan')
+            i = ML.Input((1, 1, inpSize), name = 'inp')
             
             c1 = MCONV.Convolution2D( 
-                nbFilters = 5,
-                filterHeight = 1,
-                filterWidth = filterWidth,
+                num_filters = 5,
+                filter_height = 1,
+                filter_width = filterWidth,
                 activation = MA.ReLU(),
-                pooler = pooler,
                 name = "conv1"
             )
 
             c2 = MCONV.Convolution2D( 
-                nbFilters = 10,
-                filterHeight = 1,
-                filterWidth = filterWidth,
+                num_filters = 10,
+                filter_height = 1,
+                filter_width = filterWidth,
                 activation = MA.ReLU(),
-                pooler = pooler,
                 name = "conv2"
             )
 
-            f = MCONV.Flatten(name = "flat")
-            h = ML.Hidden(5, activation = MA.ReLU(), decorators = [], regularizations = [ ], name = "hid" )
-            o = ML.SoftmaxClassifier(2, decorators = [], learningScenario = ls, cost = cost, name = "out", regularizations = [ ] )
+            h = ML.Hidden(5, activation = MA.ReLU(), name = "hid" )
+            o = ML.SoftmaxClassifier(nbClasses=2, cost=cost, learningScenari=[ls], name = "out")
             
-            model = i > ichan > c1 > c2 > f > h > o
+            model = i > c1 > c2 >  h > o
             return model
 
         def makeDataset(nbExamples, size, patternSize) :
-            data = numpy.random.randn(nbExamples, size).astype(theano.config.floatX)
+            data = numpy.random.random((nbExamples, 1, 1, size)).astype(theano.config.floatX)
             data = data / numpy.sum(data)
             pattern = numpy.ones(patternSize)
             
@@ -280,7 +274,7 @@ class MLPTests(unittest.TestCase):
                     start = numpy.random.randint(size/2, size - patternSize)
                     targets.append(1)
 
-                data[i][start:start+patternSize] = pattern
+                data[i][0][0][start:start+patternSize] = pattern
 
             targets = numpy.asarray(targets, dtype=theano.config.floatX)
             
@@ -290,12 +284,13 @@ class MLPTests(unittest.TestCase):
 
         examples, targets = makeDataset(1000, 128, 6)
         model = getModel(128, 3)
+        model.init()
         miniBatchSize = 32
         for epoch in xrange(100) :
             for i in xrange(0, len(examples), miniBatchSize) :
-                res = model.train("out", inp = examples[i : i +miniBatchSize], targets = targets[i : i +miniBatchSize] )
+                res = model["out"].train({"inp.inputs": examples[i:i+miniBatchSize], "out.targets":targets[i:i+miniBatchSize]} )["out.drive.train"]
         
-        self.assertTrue(res["score"] < 0.1)
+        self.assertTrue(res < 0.1)
 
 if __name__ == '__main__' :
     import Mariana.settings as MSET
