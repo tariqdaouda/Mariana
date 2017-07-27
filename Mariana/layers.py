@@ -255,13 +255,15 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
     #         self.inputs[s] = layer.outputs[s]
 
     def setInputs(self) :
+        """Sets the inputs to the layer and performs of reshaping of the inputs. The outputs of all input layers are added together"""
         layers = list(self.getInLayers())
         if self.maxInConnections is not None and len(layers) > self.maxInConnections :
             raise ValueError("This layer can only take one single layer as input")
 
-        for layer in layers :
-            for s in layer.outputs.streams :
-                selfNdim = len(self.getShape_abs())
+        selfNdim = len(self.getShape_abs())
+        for s in layer.outputs.streams :
+            self.inputs[s] = 0
+            for layer in layers :
                 inpNdim = len(layer.getShape_abs())
                 if selfNdim < inpNdim :
                     out = layer.outputs[s].flatten(selfNdim)
@@ -270,6 +272,8 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
                     for i in xrange(selfNdim - inpNdim) :
                         pattern.insert(1, 'x')
                     out = layer.outputs[s].dimshuffle(*pattern)
+                else :
+                    out = layer.outputs[s]
                 self.inputs[s] += out
 
     def setOutputs_abs(self) :
@@ -694,15 +698,23 @@ class Dense(Layer_ABC) :
         else :
             raise ValueError("Unknown parameter: %s" % param)
 
+    # def setOutputs_abs(self) :
+    #     """Defines, self.outputs["train"] and self.outputs["test"]"""
+    #     if self.getP("W") is not None:
+    #         for s in self.inputs.streams :
+    #             if self.inputShape != self.originalInputShape :
+    #                 inp = self.inputs[s].reshape( self.inputShape )
+    #             else :
+    #                 inp = self.inputs[s]
+    #             self.outputs[s]=tt.dot(inp, self.getP("W")())
+    #             if self.getP("b") is not None:
+    #                 self.outputs[s]=self.outputs[s] + self.getP("b")()
+
     def setOutputs_abs(self) :
         """Defines, self.outputs["train"] and self.outputs["test"]"""
         if self.getP("W") is not None:
             for s in self.inputs.streams :
-                if self.inputShape != self.originalInputShape :
-                    inp = self.inputs[s].reshape( self.inputShape )
-                else :
-                    inp = self.inputs[s]
-                self.outputs[s]=tt.dot(inp, self.getP("W")())
+                self.outputs[s]=tt.dot(self.inputs[s], self.getP("W")())
                 if self.getP("b") is not None:
                     self.outputs[s]=self.outputs[s] + self.getP("b")()
 
