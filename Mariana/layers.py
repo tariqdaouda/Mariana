@@ -258,7 +258,7 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         """Sets the inputs to the layer and performs of reshaping of the inputs. The outputs of all input layers are added together"""
         layers = list(self.getInLayers())
         if self.maxInConnections is not None and len(layers) > self.maxInConnections :
-            raise ValueError("This layer can only take one single layer as input")
+            raise ValueError("This layer can only take %s layer(s) as input" % self.maxInConnections)
 
         selfNdim = len(self.getShape_abs())
         for s in layer.outputs.streams :
