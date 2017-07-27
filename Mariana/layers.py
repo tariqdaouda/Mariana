@@ -246,13 +246,31 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         else :
             self.parameters[param].setValue(value)
 
+    # def setInputs(self) :
+    #     l = list(self.getInLayers())
+    #     if self.maxInConnections is not None and len(l) > self.maxInConnections :
+    #         raise ValueError("This layer can only take one single layer as input")
+    #     layer = l[0]
+    #     for s in layer.outputs.streams :
+    #         self.inputs[s] = layer.outputs[s]
+
     def setInputs(self) :
-        l = list(self.getInLayers())
-        if self.maxInConnections is not None and len(l) > self.maxInConnections :
+        layers = list(self.getInLayers())
+        if self.maxInConnections is not None and len(layers) > self.maxInConnections :
             raise ValueError("This layer can only take one single layer as input")
-        layer = l[0]
-        for s in layer.outputs.streams :
-            self.inputs[s] = layer.outputs[s]
+
+        for layer in layers :
+            for s in layer.outputs.streams :
+                selfNdim = len(self.getShape_abs())
+                inpNdim = len(layer.getShape_abs())
+                if selfNdim < inpNdim :
+                    out = layer.outputs[s].flatten(selfNdim)
+                elif selfNdim > inpNdim :
+                    pattern = range(len(self.getShape_abs()))
+                    for i in xrange(selfNdim - inpNdim) :
+                        pattern.insert(1, 'x')
+                    out = layer.outputs[s].dimshuffle(*pattern)
+                self.inputs[s] += out
 
     def setOutputs_abs(self) :
         """Defines the outputs and outputs["test"] of the layer before the application of the activation function. This function is called by _init() ans should be written in child."""
