@@ -50,7 +50,7 @@ class MaxPooling2D(MLASAGNE.LasagneLayer):
         )       
 
 class MaxPooling3D(MLASAGNE.LasagneLayer):
-    """This layer wraps lasagnes's MaxPool1DLayer layer and performs a 3D max pooling over each channel.
+    """This layer wraps lasagnes's MaxPool3DLayer layer and performs a 3D max pooling over each channel.
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
@@ -73,7 +73,7 @@ class MaxPooling3D(MLASAGNE.LasagneLayer):
         )
 
 class AveragePooling1D(MLASAGNE.LasagneLayer):
-    """This layer wraps lasagnes's MaxPool1DLayer layer and performs a 1D average pooling over each channel.
+    """This layer wraps lasagnes's Pool1DLayer layer and performs a 1D average pooling over each channel.
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
@@ -101,7 +101,7 @@ class AveragePooling1D(MLASAGNE.LasagneLayer):
         )     
 
 class AveragePooling2D(MLASAGNE.LasagneLayer):
-    """This layer wraps lasagnes's MaxPool2DLayer layer and performs a 2D average pooling over each channel.
+    """This layer wraps lasagnes's Pool2DLayer layer and performs a 2D average pooling over each channel.
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
@@ -130,7 +130,7 @@ class AveragePooling2D(MLASAGNE.LasagneLayer):
         )       
 
 class AveragePooling3D(MLASAGNE.LasagneLayer):
-    """This layer wraps lasagnes's MaxPool1DLayer layer and performs a 3D average pooling over each channel.
+    """This layer wraps lasagnes's Pool3DLayer layer and performs a 3D average pooling over each channel.
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
@@ -160,7 +160,7 @@ class AveragePooling3D(MLASAGNE.LasagneLayer):
         )
 
 class RepeatedUpscaling1D(MLASAGNE.LasagneLayer):
-    """This layer wraps lasagnes's MaxPool1DLayer layer and performs a 1D average pooling over each channel.
+    """This layer wraps lasagnes's Upscale1DLayer layer and performs a 1D repeated upscaling over each channel.
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
@@ -178,7 +178,7 @@ class RepeatedUpscaling1D(MLASAGNE.LasagneLayer):
         )
 
 class DilatedUpscaling1D(MLASAGNE.LasagneLayer):
-    """This layer wraps lasagnes's MaxPool1DLayer layer and performs a 1D average pooling over each channel.
+    """This layer wraps lasagnes's Upscale1DLayer layer and performs a 1D dilated upscaling over each channel.
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
@@ -196,7 +196,7 @@ class DilatedUpscaling1D(MLASAGNE.LasagneLayer):
         )
 
 class RepeatedUpscaling2D(MLASAGNE.LasagneLayer):
-    """This layer wraps lasagnes's MaxPool2DLayer layer and performs a 2D average pooling over each channel.
+    """This layer wraps lasagnes's Upscale2DLayer layer and performs a 2D repeated upscaling over each channel.
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
@@ -215,7 +215,7 @@ class RepeatedUpscaling2D(MLASAGNE.LasagneLayer):
         )
 
 class DilatedUpscaling2D(MLASAGNE.LasagneLayer):
-    """This layer wraps lasagnes's MaxPool2DLayer layer and performs a 2D average pooling over each channel.
+    """This layer wraps lasagnes's Upscale2DLayer layer and performs a 2D dilated upscaling over each channel.
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
@@ -234,7 +234,7 @@ class DilatedUpscaling2D(MLASAGNE.LasagneLayer):
         )
 
 class RepeatedUpscaling3D(MLASAGNE.LasagneLayer):
-    """This layer wraps lasagnes's Upscale3DLayer layer and performs a 3D average pooling over each channel.
+    """This layer wraps lasagnes's Upscale3DLayer layer and performs a 3D repeated upscaling over each channel.
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
@@ -254,7 +254,7 @@ class RepeatedUpscaling3D(MLASAGNE.LasagneLayer):
         )
 
 class DilatedUpscaling3D(MLASAGNE.LasagneLayer):
-    """This layer wraps lasagnes's Upscale3DLayer layer and performs a 3D average pooling over each channel.
+    """This layer wraps lasagnes's Upscale3DLayer layer and performs a 3D dilated upscaling over each channel.
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
@@ -273,7 +273,7 @@ class DilatedUpscaling3D(MLASAGNE.LasagneLayer):
         )
 
 class WinnerTakesAll(MLASAGNE.LasagneLayer):
-    """This layer wraps lasagnes's FeatureWTALayer layer and performs a 3D average pooling over each channel.
+    """This layer wraps lasagnes's FeatureWTALayer layer and performs a Winner takes all pooling over each channel.
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
@@ -293,7 +293,8 @@ class WinnerTakesAll(MLASAGNE.LasagneLayer):
         )
 
 class MaxSpatialPyramidPooling(MLASAGNE.LasagneLayer):
-    """This layer wraps lasagnes's FeatureWTALayer layer and performs a 3D average pooling over each channel.
+    """This layer wraps lasagnes's SpatialPyramidPooling layer and performs a pyramid max pooling over each channel.
+    This variant of max pooling can be applied on inputs of arbitrary lengths.
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
@@ -314,7 +315,8 @@ class MaxSpatialPyramidPooling(MLASAGNE.LasagneLayer):
 
 
 class AverageSpatialPyramidPooling(MLASAGNE.LasagneLayer):
-    """This layer wraps lasagnes's FeatureWTALayer layer and performs a 3D average pooling over each channel.
+    """This layer wraps lasagnes's SpatialPyramidPooling layer and performs a pyramid average pooling over each channel.
+    This variant of average pooling can be applied on inputs of arbitrary lengths.
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
