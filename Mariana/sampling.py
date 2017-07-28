@@ -233,7 +233,6 @@ class DilatedUpscaling2D(MLASAGNE.LasagneLayer):
                 },
         )
 
-
 class RepeatedUpscaling3D(MLASAGNE.LasagneLayer):
     """This layer wraps lasagnes's Upscale3DLayer layer and performs a 3D average pooling over each channel.
     For a full explanation of the arguments please checkout lasagne's doc"""
@@ -280,9 +279,9 @@ class WinnerTakesAll(MLASAGNE.LasagneLayer):
         self,
         name,
         poolSize,
-        axis=1,
         depthScaleFactor,
-         **kwargs
+        axis=1,
+        **kwargs
     ):
 
         super(Upscale3D, self).__init__(
@@ -322,7 +321,7 @@ class AverageSpatialPyramidPooling(MLASAGNE.LasagneLayer):
         name,
         poolDims=[4, 2, 1],
         implementation="fast",
-        includePadding=False
+        includePadding=False,
         **kwargs
     ):
         if includePadding :

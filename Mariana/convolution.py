@@ -64,7 +64,7 @@ class Convolution2D(MLASAGNE.LasagneLayer):
                 name=name,
                 **kwargs
             )
-    
+
 class Convolution3D(MLASAGNE.LasagneLayer):
     """This layer wraps lasagnes's Conv3DLayer layer and performs a 3D convolution over each channel.
     For a full explanation of the arguments please checkout lasagne's doc"""

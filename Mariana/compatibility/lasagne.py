@@ -1,6 +1,7 @@
 from collections import OrderedDict
 import Mariana.layers as ML
 import Mariana.custom_types as MTYPES
+import lasagne
 
 __all__=["LasagneLayer", "LasagneStreamedLayer", "IAmAnnoyed"]
 
@@ -71,6 +72,8 @@ class LasagneLayer(ML.Layer_ABC) :
     """
 
     def __init__(self, lasagneLayerCls, lasagneHyperParameters={}, lasagneKwargs={}, **kwargs) :
+        import inspect
+
         super(LasagneLayer, self).__init__(**kwargs)
 
         self.lasagneLayerCls = lasagneLayerCls
@@ -84,8 +87,8 @@ class LasagneLayer(ML.Layer_ABC) :
             raise IAmAnnoyed("There's an 'incoming' argument in the hyperParameters. Don't tell me how to do my job!")
         
         self.addHyperParameters(self.lasagneHyperParameters)
-        self.lasagneHyperParameters["nonlinearity"] = None
-
+        if "nonlinearity" in inspect.getargspec(lasagneLayerCls.__init__)[0] :
+            self.lasagneHyperParameters["nonlinearity"] = None
         self.lasagneKwargs = lasagneKwargs
         
         self.lasagneLayer  = None
@@ -98,8 +101,9 @@ class LasagneLayer(ML.Layer_ABC) :
 
     def femaleConnect(self, layer) :
         self.inLayer = layer
-        self.lasagneLayer = LasagneStreamedLayer(shape=self.inLayer.getShape_abs(), streams=self.streams, lasagneLayerCls=self.lasagneLayerCls, hyperParameters=self.lasagneHyperParameters, initParameters=self.lasagneParameters)
-    
+        if not self.lasagneLayer :
+            self.lasagneLayer = LasagneStreamedLayer(shape=self.inLayer.getShape_abs(), streams=self.streams, lasagneLayerCls=self.lasagneLayerCls, hyperParameters=self.lasagneHyperParameters, initParameters=self.lasagneParameters)
+        
     def getShape_abs(self) :
         return self.lasagneLayer[self.streams[0]].get_output_shape_for(self.inLayer.getShape_abs())
 

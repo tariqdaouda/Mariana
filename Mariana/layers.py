@@ -232,7 +232,7 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         raise NotImplementedError("Must be implemented in child: %s" % self.name)        
     
     def getIntrinsicShape(self) :
-        """return dimensionality without the minibatch"""
+        """return the shape without the minibatch"""
         return self.getShape_abs()[1:]
 
     def getDimensionality(self) :
@@ -254,27 +254,67 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
     #     for s in layer.outputs.streams :
     #         self.inputs[s] = layer.outputs[s]
 
+    def getInputShape(self, layer) :
+        selfNdim = len(self.getShape_abs())
+        inpNdim = len(layer.getShape_abs())
+        
+        if selfNdim < inpNdim :
+            inShape = layer.getShape_abs()
+            flatSize = 1
+            for i in xrange(selfNdim-1, inpNdim):
+                flatSize *= inShape[i]
+            newShape = list(self.getShape_abs())
+            newShape[0] = -1
+            newShape[-1] = flatSize
+        elif selfNdim > inpNdim :
+            newShape = range(selfNdim)
+            for i in xrange(selfNdim - inpNdim) :
+                newShape.insert(1, -1)
+        else :
+            newShape = self.getShape_abs()
+        
+        return newShape
+    
     def setInputs(self) :
         """Sets the inputs to the layer and performs of reshaping of the inputs. The outputs of all input layers are added together"""
-        layers = list(self.getInLayers())
-        if self.maxInConnections is not None and len(layers) > self.maxInConnections :
-            raise ValueError("This layer can only take %s layer(s) as input" % self.maxInConnections)
+        def getInput(layer, stream) :
+            shape = self.getInputShape(layer)
+            if shape != self.getShape_abs() :
+                return layer.outputs[stream].reshape(shape)
+            else :
+                return layer.outputs[stream]
 
         selfNdim = len(self.getShape_abs())
-        for s in layer.outputs.streams :
+        for s in self.streams :
             self.inputs[s] = 0
-            for layer in layers :
-                inpNdim = len(layer.getShape_abs())
-                if selfNdim < inpNdim :
-                    out = layer.outputs[s].flatten(selfNdim)
-                elif selfNdim > inpNdim :
-                    pattern = range(len(self.getShape_abs()))
-                    for i in xrange(selfNdim - inpNdim) :
-                        pattern.insert(1, 'x')
-                    out = layer.outputs[s].dimshuffle(*pattern)
-                else :
-                    out = layer.outputs[s]
-                self.inputs[s] += out
+            for layer in list(self.getInLayers()) :        
+                self.inputs[s] += getInput(layer, s)
+
+    # def setInputs(self) :
+    #     """Sets the inputs to the layer and performs of reshaping of the inputs. The outputs of all input layers are added together"""
+    
+    #     selfNdim = len(self.getShape_abs())
+    #     for s in self.streams :
+    #         self.inputs[s] = 0
+    #         for layer in list(self.getInLayers()) :
+    #             inpNdim = len(layer.getShape_abs())
+    #             if selfNdim < inpNdim :
+    #                 inShape = layer.getShape_abs()
+    #                 flatSize = 1
+    #                 for i in xrange(selfNdim-1, inpNdim):
+    #                     flatSize *= inShape[i]
+    #                 newShape = list(self.getShape_abs())
+    #                 newShape[0] = -1
+    #                 newShape[-1] = flatSize
+    #                 out = layer.outputs[s].reshape(newShape)
+    #             elif selfNdim > inpNdim :
+    #                 pattern = range(selfNdim)
+    #                 for i in xrange(selfNdim - inpNdim) :
+    #                     pattern.insert(1, 'x')
+    #                 out = layer.outputs[s].dimshuffle(*pattern)
+    #             else :
+    #                 out = layer.outputs[s]
+    #             self.inputs[s] += out
 
     def setOutputs_abs(self) :
         """Defines the outputs and outputs["test"] of the layer before the application of the activation function. This function is called by _init() ans should be written in child."""
