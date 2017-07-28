@@ -150,12 +150,12 @@ class TrainableAbstraction_ABC(Abstraction_ABC):
         """return all parameter"""
         return self.parameters
 
-    def _getParameterShape_abs(self, param) :
+    def _getParameterShape_abs(self, param, parent=None) :
         if param not in self.parameters :
             raise ValueError("Unknown parameter: %s for %s" % (param, self))
-        return self.getParameterShape_abs(param)
+        return self.getParameterShape_abs(param, parent=None)
 
-    def getParameterShape_abs(self, param) :
+    def getParameterShape_abs(self, param, parent=None) :
         """Should return the shape of the parameter. This has to be implemented in order for the initializations to work (and maybe some other stuff as well)"""
         raise NotImplemented("Should be implemented in child")
 
@@ -172,13 +172,13 @@ class TrainableAbstraction_ABC(Abstraction_ABC):
                 init._apply(self)
         self._mustInit=False
 
-    def toDictionary(self) :
+    def toDictionary(self, parent=None) :
         """A dct representation of the object"""
         
         res = super(TrainableAbstraction_ABC, self).toDictionary()
         ps = OrderedDict()
         for k, v in self.parameters.iteritems() :
-            ps[k] = {"shape": self.getParameterShape_abs(k)}
+            ps[k] = {"shape": self.getParameterShape_abs(k, parent=parent)}
 
         res["parameters"] = ps    
         

@@ -658,7 +658,7 @@ class Embedding(Layer_ABC) :
     def getShape_abs(self) :
         return (1, self.nbInputs * self.getHP("nbDimensions"))
 
-    def getParameterShape_abs(self, param) :
+    def getParameterShape_abs(self, param, **kwargs) :
         if param == "embeddings" :
             return (self.getHP("dictSize"), self.getHP("nbDimensions"))
 
@@ -730,7 +730,7 @@ class Dense(Layer_ABC) :
         """defines the number of inputs"""
         return self.getHP("shape")
 
-    def getParameterShape_abs(self, param) :
+    def getParameterShape_abs(self, param, **kwargs) :
         if param == "W" :
             return self.inputShape[1:] + self.getHP("shape")[1:]
         elif param == "b" :

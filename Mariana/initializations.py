@@ -38,21 +38,21 @@ class Initialization_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC) :
             "sparsity": sparsity
         })
     
-    def attach(self, abstraction) :
-        pass
+    # def attach(self, abstraction) :
+    #     pass
 
     def logApply(self, layer, **kwargs) :
         message = "Applying '%s' on parameter: '%s' of layer '%s'" % (self.name, self.getHP('parameter'), layer.name)
         self.logEvent(message)
 
-    def apply(self, abstraction) :
-        retShape = abstraction._getParameterShape_abs(self.getHP("parameter"))
+    def apply(self, parent) :
+        retShape = parent._getParameterShape_abs(self.getHP("parameter"), parent=parent)
         v = MUSE.iCast_numpy(self.run(retShape))
         if (v.shape != retShape) :
             raise ValueError("Initialization has a wrong shape: %s, parameter shape is: %s " % (v.shape, retShape))
         
         v = MUSE.sparsify(v, self.getHP("sparsity"))        
-        abstraction.setP(self.getHP("parameter"), v)
+        parent.setP(self.getHP("parameter"), v)
         
     def run(self, shape) :
         """The function that all Initialization_ABCs must implement"""
@@ -156,8 +156,8 @@ class FanInFanOut_ABC(Initialization_ABC) :
                 return numpy.sqrt(2/(1+activation.leakiness**2))
         return 1.0
 
-    def attach(self, abstraction) :
-        self.gain = self._getGain(abstraction.abstractions["activation"])
+    # def attach(self, abstraction) :
+    #     self.gain = self._getGain(abstraction.abstractions["activation"])
 
     def apply(self, abstraction) :
         import Mariana.activations as MA

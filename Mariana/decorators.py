@@ -19,7 +19,6 @@ class Decorator_ABC(MABS.TrainableAbstraction_ABC, MABS.Apply_ABC) :
 
     def apply(self, layer, stream) :
         """Apply to a layer and update networks's log"""
-        
         return self.run(layer)
 
     def run(self, layer, stream) :
@@ -116,47 +115,36 @@ class BatchNormalization(Decorator_ABC):
 
            \\gamma * \\frac{x - \\mu}{\\sqrt{\\sigma^2 + \\epsilon}} + \\beta
 
-        Where W and b are learned and std stands for the standard deviation. The mean and the std are computed accross the whole minibatch.
+        Where \\gamma and \\beta are learned and std stands for the standard deviation. The mean and the std are computed accross the whole minibatch.
 
         :param float epsilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
-        :param initialization GammaInit: How to initizalise the weights. This decorator is smart enough to use layer initializations.
-        :param initialization betaInit: Same for bias
     """
 
-    def __init__(self, testMu, testSigma, gInit=1, b=0, epsilon=1e-6, trainstreams=["train", "test"]) :
+    def __init__(self, testMu, testSigma, initializations=[MI.SingleValue('gamma', 1), MI.SingleValue('beta', 0)], epsilon=1e-6, streams=["train", "test"]) :
         super(Normalize, self).__init__(streams, **kwargs)
-        self.setHP("gInit", gInit)
-        self.setHP("bInit", bInit)
+        self.setHP("testMu", testMu)
+        self.setHP("testSigma", testSigma)
         self.setHP("espilon", espilon)
         
         self.addParameters({
-            "g": MTYPES.Parameter("batchnorm.g"),
-            "b": MTYPES.Parameter("batchnorm.b")
+            "gamma": MTYPES.Parameter("batchnorm.g"),
+            "beta": MTYPES.Parameter("batchnorm.b")
         })
 
-    def initialize(self, layer) :
-        w = numpy.ones(shape) * self.gInit
-        self.parameters[W].setValue(v)
-        b = numpy.ones(shape) * self.bInit
-        self.parameters[W].setValue(b)
-
-    def initParameter(self, parameter, value) :
-        setattr(self, parameter, value)
-
-    def getParameterShape_abs(self, **kwargs) :
-        return self.paramShape
+    def getParameterShape_abs(self, parent, **kwargs) :
+        return parent.getOutputShape_abs()
 
     def run(self, layer, stream) :
         if stream == "train" :
             mu = tt.mean(layer.outputs[stream])
-            sigma = tt.sqrt( tt.var(layer.outputs[stream]) + self.epsilon )
+            sigma = tt.sqrt( tt.var(layer.outputs[stream]) + self.getHP("epsilon") )
         elif stream == "test" :
-            mu = self.testMu
-            sigma = self.testSigma
+            mu = self.getHP("testMu")
+            sigma = self.getHP("testSigma")
         else :
             raise ValueError("Unkown stream: %s" % stream)
 
-        layer.outputs[stream] = self.g * ( (layer.outputs[stream] - mu) / sigma ) + self.b
+        layer.outputs[stream] = self.getP("gamma") * ( (layer.outputs[stream] - mu) / sigma ) + self.getP("beta")
 
 class Clip(Decorator_ABC):
     """Clips the neurone activations, preventing them to go beyond the specified range"""
@@ -174,7 +162,7 @@ class Clip(Decorator_ABC):
 class AddGaussianNoise(Decorator_ABC):
     """Add gaussian noise to the output of the layer"""
     
-    def __init__(self, std, avg=1, strems=["train"], **kwargs):
+    def __init__(self, std, avg=1, streams=["train"], **kwargs):
         assert std > 0
         super(AddGaussianNoise, self).__init__(streams, **kwargs) 
         self.setHP("std", std)
@@ -189,7 +177,7 @@ class AddGaussianNoise(Decorator_ABC):
 class MultGaussianNoise(Decorator_ABC):
     """Multiply gaussian noise to the output of the layer"""
     
-    def __init__(self, std, avg=1, strems=["train"], **kwargs):
+    def __init__(self, std, avg=1, streams=["train"], **kwargs):
         assert std > 0
         super(MultGaussianNoise, self).__init__(streams, **kwargs) 
         self.setHP("std", std)

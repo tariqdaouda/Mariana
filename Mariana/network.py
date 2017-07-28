@@ -246,9 +246,9 @@ class Network(MABS.Logger_ABC) :
                 dct[layer.name]["abstractions"][k] = OrderedDict()
                 if type(v) is list :
                     for vv in v :
-                        dct[layer.name]["abstractions"][k][vv.__class__.__name__] = vv.toDictionary()
+                        dct[layer.name]["abstractions"][k][vv.__class__.__name__] = vv.toDictionary(parent=layer)
                 else :
-                    dct[layer.name]["abstractions"][k][v.__class__.__name__] = v.toDictionary()
+                    dct[layer.name]["abstractions"][k][v.__class__.__name__] = v.toDictionary(parent=layer)
 
             for l2 in self.outConnections[layer] :
                 dct.update(do(dct, l2, level+1) )

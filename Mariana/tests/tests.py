@@ -228,7 +228,7 @@ class MLPTests(unittest.TestCase):
             self.assertTrue(v < -1)
 
     # @unittest.skip("skipping")
-    def test_conv(self) :
+    def test_conv_pooling(self) :
         import Mariana.convolution as MCONV
         import Mariana.sampling as MSAMP
         import theano
@@ -282,6 +282,7 @@ class MLPTests(unittest.TestCase):
             return model
 
         def makeDataset(nbExamples, size, patternSize) :
+            """dataset with pattern of 1 randomly inserted"""
             data = numpy.random.random((nbExamples, 1, 1, size)).astype(theano.config.floatX)
             data = data / numpy.sum(data)
             pattern = numpy.ones(patternSize)
