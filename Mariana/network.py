@@ -137,8 +137,6 @@ class Network(MABS.Logger_ABC) :
             if len(self.inputs) < 1 :
                 raise ValueError("Network has no inputs")
 
-            # self.initParameters(forceReset=False)
-
             for inp in self.inputs.itervalues() :
                 inp._initA()
 
@@ -146,13 +144,6 @@ class Network(MABS.Logger_ABC) :
                 l._initB()
                 self.parameters.extend(l.parameters.values())
     
-            # for o in self.layers.itervalues() :
-            #     for k, v in o.__dict__.iteritems() :
-            #         if ( v.__class__ is TheanoFunction ) or issubclass(v.__class__, TheanoFunction) :
-            #             if k not in self.outputMaps :
-            #                 self.outputMaps[k] = OutputMap(k, self)
-            #             self.outputMaps[k].addOutput(o, v)
-            
             self._mustInit = False
     
     def save(self, filename) :
@@ -169,9 +160,9 @@ class Network(MABS.Logger_ABC) :
 
         for l in self.layers.itervalues() :
             l._resetNetwork()
+            l._unclaimAbstractions()
             res["layers"][l.name] = l
-            # l.network = self
-
+        
         ext = '.mar'
         if filename.find(ext) < 0 :
             fn = filename + ext
@@ -185,6 +176,7 @@ class Network(MABS.Logger_ABC) :
         for l in self.layers.itervalues() :
             # print l, self
             l.network = self
+            l._claimAbstractions()
 
     @classmethod
     def load(cls, filename) :

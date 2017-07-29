@@ -377,8 +377,8 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         if ( self._mustReset) and ( len(self._inputRegistrations) == len(self.getInLayers()) ) :
             self.logEvent("%s: _whateverFirstInit" % (self.name))
             self._whateverFirstInit()
-            self.logEvent("%s: _takeAbstractions" % (self.name))
-            self._takeAbstractions()
+            self.logEvent("%s: _claimtakeAbstractions" % (self.name))
+            self._claimAbstractions()
             self.logEvent("%s: setInputs" % (self.name))
             self.setInputs()
             self.logEvent("%s: _initParameters" % (self.name))

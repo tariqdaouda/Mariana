@@ -165,11 +165,17 @@ class TrainableAbstraction_ABC(Abstraction_ABC):
             if not v.isSet() :
                 raise ValueError("Parameter '%s' of '%s' has not been initialized" % (k, self.name) )
     
-    def _takeAbstractions(self) :
+    def _claimAbstractions(self) :
         for ab in self.getAbstractions() :
             ab.setParent(self)
             if ab.isTrainable() :
-                ab._takeAbstractions()
+                ab._claimAbstractions()
+    
+    def _unclaimAbstractions(self) :
+        for ab in self.getAbstractions() :
+            ab.unsetParent()
+            if ab.isTrainable() :
+                ab._unclaimAbstractions()
 
     def _initParameters(self, forceReset=False) :
         """creates the parameters if necessary"""
@@ -204,6 +210,9 @@ class Apply_ABC(object):
     
     def setParent(self, layer) :
         self.parent = layer
+
+    def unsetParent(self) :
+        self.parent = None
 
     def logApply(self, layer, **kwargs) :
         message = "Applying : '%s' on layer '%s'" % (self.name, layer.name)

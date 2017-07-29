@@ -46,17 +46,17 @@ class MLPTests(unittest.TestCase):
         
         return mlp
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_missing_args(self) :
         mlp = self.trainMLP_xor()
         self.assertRaises(SyntaxError, mlp["out"].train, {} )
     
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_unexpected_args(self) :
         mlp = self.trainMLP_xor()
         self.assertRaises(SyntaxError, mlp["out"].train, {"inp.inputs": self.xor_ins, "out.targets" : self.xor_outs, "lala": 0} )
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_xor(self) :
         mlp = self.trainMLP_xor()
 
@@ -68,7 +68,7 @@ class MLPTests(unittest.TestCase):
         for i in xrange(len(self.xor_ins)) :
             self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[i]]} )["out.predict.test"], self.xor_outs[i] )
         
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_save_load_64h(self) :
         import os
         import Mariana.network as MN
@@ -97,7 +97,7 @@ class MLPTests(unittest.TestCase):
         self.assertTrue((v1==v2).all())
         os.remove('test_save.mar')
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_ae_reg(self) :
         powerOf2 = 3
         nbUnits = 2**powerOf2
@@ -128,7 +128,7 @@ class MLPTests(unittest.TestCase):
         for i in xrange(len(res)) :
             self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_ae(self) :
         powerOf2 = 3
         nbUnits = 2**powerOf2
@@ -159,7 +159,7 @@ class MLPTests(unittest.TestCase):
         for i in xrange(len(res)) :
             self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_concatenation(self) :
         ls = MS.GradientDescent(lr = 0.1)
         cost = MC.NegativeLogLikelihood()
@@ -185,7 +185,7 @@ class MLPTests(unittest.TestCase):
         for i in xrange(len(self.xor_ins)) :
             self.assertEqual(mlp["out"].predict["test"]( {"inp.inputs": [self.xor_ins[i]]} )["out.predict.test"], self.xor_outs[i] )
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_merge(self) :
         ls = MS.GradientDescent(lr = 0.1)
         cost = MC.NegativeLogLikelihood()
@@ -202,7 +202,7 @@ class MLPTests(unittest.TestCase):
         v = mdl["merge"].propagate["test"]({"inp1.inputs": [[1]],"inp2.inputs": [[8]]} )["merge.propagate.test"]
         self.assertEqual(v, 29)
     
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_embedding(self) :
         """the first 3 and the last 3 should be diametrically opposed"""
         data = [[0], [1], [2], [3], [4], [5]]
@@ -251,7 +251,7 @@ class MLPTests(unittest.TestCase):
         self.assertTrue(sum(hb) == sum(h.getP('b').getValue()) )
         self.assertTrue( sum(hw[0]) != sum( h.getP('W').getValue()[0]) )
 
-    @unittest.skip("skipping")
+    # @unittest.skip("skipping")
     def test_conv_pooling(self) :
         import Mariana.convolution as MCONV
         import Mariana.sampling as MSAMP
