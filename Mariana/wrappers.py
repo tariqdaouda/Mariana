@@ -60,14 +60,6 @@ class Updates(object):
     def compile(self) :
         """Derive the updates and gradients for every parameter in the network"""
         
-        # def _apply(sc, store, layer, entity, param_name, cute_name, loss) :
-        #     try :
-        #         previous = store[cute_name]
-        #     except KeyError :
-        #         previous = None
-
-        #     store[cute_name] = sc.apply(layer, entity, param_name, loss, previous)
-        
         #append outputs optimization rules at the top level
         self.loss = 0
         optimizers = {}
@@ -185,37 +177,6 @@ class TheanoFunctionHandle(object) :
     def hasUpdates(self) :
         """returns True if the function updates the parameters, False other wise."""
         return self.update
-
-    # def __add__(self, other) :
-    #     """Add two handles together using the '+' operator. Losses will be added up and updates re-calculated"""
-    #     if self.stream != other.stream :
-    #         raise TypeError("All functions must be in the same stream %s != %s" %(self.stream, other.stream))
-        
-    #     if other.__class__ is TheanoFunction :
-    #         if other.isCompiled() :
-    #             raise TypeError("Cannot add an already compiled function")
-    #         other._addHandle(self)
-    #         return other
-    #     elif other.__class__ is not TheanoFunctionHandle :
-    #         raise TypeError("Added value must be another valid function")
-
-    #     return TheanoFunction([self, other])
-
-    # def develop(self) :
-    #     """Compile the inner theano function"""
-    #     if not self.theano_fct :
-    #         self.theano_fct = TheanoFunction([self])
-
-    # def __call__(self, *args, **kwargs) :
-    #     """Call the inner theano functiom"""
-    #     self.develop()
-    #     return self.theano_fct.run(*args, **kwargs)
-
-    # def __getattribute__(self, k) :
-    #     """return the theano function attributes"""
-    #     self.develop()
-    #     if hasattr(self.theano_fct, k) :
-    #         return getattr(self.theano_fct, k)
     
 class TheanoFunction(object) :
     """
