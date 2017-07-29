@@ -45,7 +45,8 @@ class Ignore(ConflictResolve):
 class Die(ConflictResolve):
     """No conflic resolve, crashes everything"""
     def resolve(self, previous, current) :
-        raise IncompatibleLearningScenarios("Learning scenario is incompatible with previous ones")
+        if previous.gradient is not None or previous.update is not None:
+            raise IncompatibleLearningScenarios("Learning scenario is incompatible with previous ones")
 
 class ParameterGradUpdates(object):
     """docstring for ParameterGradUpdates"""
@@ -106,6 +107,14 @@ class LearningScenario_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC):
     def run(self, parameter, parameterName, loss, abstraction, previous) :
         """return the updates for the parameters of abstraction. Must be implemented in child"""
         raise NotImplemented("Must be implemented in child")
+
+class Independent(LearningScenario_ABC):
+    "Indicates that the abstraction does not inherit optimization rules form the outputs. Must be place at the first positon of the list."
+    def __init__(self):
+       super(Independent, self).__init__()
+
+    def run(*args, **kwargs) :
+        return None
 
 class Fixed(LearningScenario_ABC):
     "No learning, the abstraction parameteres stay fixed"

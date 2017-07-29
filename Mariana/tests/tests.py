@@ -158,7 +158,38 @@ class MLPTests(unittest.TestCase):
         res = ae["out"].propagate["test"]({"inp.inputs": data})["out.propagate.test"]
         for i in xrange(len(res)) :
             self.assertEqual( numpy.argmax(data[i]), numpy.argmax(res[i]))
+    
+    # @unittest.skip("skipping")
+    def test_multiout_fctmixin(self) :
+        
+        i = ML.Input(1, name = 'inp')
+        o1 = ML.Autoencode(targetLayer=i, activation = MA.Tanh(), learningScenari = [MS.GradientDescent(lr = 0.1)], cost = MC.MeanSquaredError(), name = "out1" )
+        o2 = ML.Regression(1, activation = MA.Tanh(), learningScenari = [MS.GradientDescent(lr = 0.2)], cost = MC.MeanSquaredError(), name = "out2" )
 
+        i  > o1
+        ae = i > o2
+        ae.init()
+ 
+        preOut1 = ae["out1"].test( {"inp.inputs": [[1]]} )["out1.drive.test"]
+        preOut2 = ae["out2"].test( {"inp.inputs": [[1]], "out2.targets": [[1]]} )["out2.drive.test"]
+        ae["out1"].train({"inp.inputs": [[1]]} )["out1.drive.train"]
+        self.assertTrue( preOut1 > ae["out1"].test( {"inp.inputs": [[1]]} )["out1.drive.test"] )
+        self.assertTrue( preOut2 == ae["out2"].test( {"inp.inputs": [[1]], "out2.targets": [[1]]} )["out2.drive.test"] )
+
+        preOut1 = ae["out1"].test( {"inp.inputs": [[1]]} )["out1.drive.test"]
+        preOut2 = ae["out2"].test( {"inp.inputs": [[1]], "out2.targets": [[1]]} )["out2.drive.test"]
+        ae["out2"].train({"inp.inputs": [[1]], "out2.targets": [[1]]} )["out2.drive.train"]
+        self.assertTrue( preOut1 == ae["out1"].test( {"inp.inputs": [[1]]} )["out1.drive.test"] )
+        self.assertTrue( preOut2 > ae["out2"].test( {"inp.inputs": [[1]], "out2.targets": [[1]]} )["out2.drive.test"] )
+
+        preOut1 = ae["out1"].test( {"inp.inputs": [[1]]} )["out1.drive.test"]
+        preOut2 = ae["out2"].test( {"inp.inputs": [[1]], "out2.targets": [[1]]} )["out2.drive.test"]
+        fct = ae["out1"].train + ae["out2"].train + ae["inp"].propagate["train"]
+        ret = fct( {"inp.inputs": [[1]], "out2.targets": [[1]]} )
+        self.assertEqual( len(ret), 3)
+        self.assertTrue( preOut1 > ae["out1"].test( {"inp.inputs": [[1]]} )["out1.drive.test"] )
+        self.assertTrue( preOut2 > ae["out2"].test( {"inp.inputs": [[1]], "out2.targets": [[1]]} )["out2.drive.test"] )
+        
     # @unittest.skip("skipping")
     def test_concatenation(self) :
         ls = MS.GradientDescent(lr = 0.1)

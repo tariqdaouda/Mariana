@@ -4,6 +4,7 @@ import theano.tensor as tt
 
 import Mariana.candies as MCAN
 import Mariana.settings as MSET
+import Mariana.scenari as MS
 import Mariana.custom_types as MTYPES
 
 __all__=["UpdateStore", "Updates", "TheanoFunctionHandle", "TheanoFunction"]
@@ -70,7 +71,8 @@ class Updates(object):
             names[o] = o.name
             inheritables = []
             for ls in o.abstractions["learningScenari"] :
-                if ls.isInheritable() : inheritables.append(ls)
+                if ls.isInheritable() :
+                    inheritables.append(ls)
 
             for abstraction in o.getTrainableAbstractions() :
                 optimizers[abstraction] = list(inheritables)
@@ -80,13 +82,22 @@ class Updates(object):
                 if l not in optimizers :
                     names[l] = l.name
                     optimizers[l] = []
-                optimizers[l].extend(inheritables)
-    
+                if len(l.abstractions["learningScenari"]) > 0 :
+                    if not isinstance(l.abstractions["learningScenari"][0], MS.Independent) :
+                        optimizers[l].extend(inheritables)
+                else :
+                    optimizers[l].extend(inheritables)
+
                 for abstraction in l.getTrainableAbstractions() :
                     if abstraction not in optimizers :
                         names[abstraction] = "%s.%s" % (l.name. abstraction.name)
                         optimizers[abstraction] = []
-                    optimizers[abstraction].extend(inheritables)
+                    
+                    if len(abstraction.abstractions["learningScenari"]) > 0 :
+                        if not isinstance(abstraction.abstractions["learningScenari"][0], MS.Independent) :
+                            optimizers[abstraction].extend(inheritables)
+                    else :
+                        optimizers[abstraction].extend(inheritables)
 
         #append specific optimization rules
         for abstraction in optimizers :
@@ -96,38 +107,40 @@ class Updates(object):
                     self.loss = reg.apply(abstraction, self.loss)
         
         preStore = {}
+        appliedOptim = {}
         for abstraction, scenari in optimizers.iteritems() :
-            for paramName in abstraction.getParameters() :
-                previousOptim=None
-                for sc in scenari :
-                    optim = sc.apply(abstraction=abstraction, parameterName=paramName, loss=self.loss, previous=previousOptim)
-                    name = "%s.%s" % (names[abstraction], paramName),
-                    if optim :
-                        preStore[name] = {
-                            "parameter": optim.parameter,
-                            "gradient": optim.gradient,
-                            "update" : optim.update,
-                            "name" : name,
-                            "coParameters": []
-                        }
-                        for coParam in optim.coParameters :
-                            preStore[name]["coParameters"].append(
-                                {
-                                    "parameter": coParam.parameter,
-                                    "gradient": coParam.gradient,
-                                    "update" : coParam.update,
-                                    "name" : "%s.%s.%s" % (name, coParam.name),
-                                }
-                            )
-                        previousOptim = optim
-
-        # print preStore.keys()
+            appliedOptim[abstraction] = set()
+            for sc in scenari :
+                if sc not in appliedOptim[abstraction] :
+                    appliedOptim[abstraction].add(sc)
+                    for paramName in abstraction.getParameters() :
+                        previousOptim=None
+                        optim = sc.apply(abstraction=abstraction, parameterName=paramName, loss=self.loss, previous=previousOptim)
+                        name = "%s.%s" % (names[abstraction], paramName),
+                        if optim :
+                            preStore[name] = {
+                                "parameter": optim.parameter,
+                                "gradient": optim.gradient,
+                                "update" : optim.update,
+                                "name" : name,
+                                "coParameters": []
+                            }
+                            for coParam in optim.coParameters :
+                                preStore[name]["coParameters"].append(
+                                    {
+                                        "parameter": coParam.parameter,
+                                        "gradient": coParam.gradient,
+                                        "update" : coParam.update,
+                                        "name" : "%s.%s.%s" % (name, coParam.name),
+                                    }
+                                )
+                            previousOptim = optim
+        
         for gup in preStore.itervalues() :
             self.store.add( gup["parameter"], gup["gradient"], gup["update"], gup["name"] )
             for coParam in gup["coParameters"] :
                 self.store.add( coParam["parameter"], coParam["gradient"], coParam["update"], coParam["name"] )
 
-        # print self.store.updates
         self.isCompiled = True
 
 class TheanoFunctionHandle(object) :
@@ -178,14 +191,14 @@ class TheanoFunctionHandle(object) :
         """returns True if the function updates the parameters, False other wise."""
         return self.update
     
-class TheanoFunction(object) :
+class KolokoTheanoFunction(object) :
     """
     This class encapsulates a just-in-time compiled Theano function.
     """
-    def __init__(self, name, layer, output, stream, update=False, **theano_kwargs) :
-        super(TheanoFunction, self).__init__()
+    def __init__(self) :
+        super(KolokoTheanoFunction, self).__init__()
 
-        self.theano_handles = [TheanoFunctionHandle(name, layer, output, stream, update=update, **theano_kwargs)]
+        self.theano_handles = []
         self.theano_fct = None
         self.gradients_fct = None
         self.updates_fct = None
@@ -195,15 +208,28 @@ class TheanoFunction(object) :
         self.updates = None
     
         self.perfomUpdates = None
+        self.stream = None
             
     def isCompiled(self) :
         """Has the compildation already happend?"""
         return self.theano_fct is not None
 
-    def __add__(self, theano_handle) :
-        self._addHandle(theano_handle)
+    def __add__(self, mar_theano_fct) :
+        if self.stream != mar_theano_fct.stream :
+            raise ValueError("All functions must be on the same stream. Got: '%s' and '%s' " % (self.stream, mar_theano_fct.stream))
+
+        fct = KolokoTheanoFunction()
+        fct.stream = self.stream
+
+        for hand in self.theano_handles :
+            fct.addHandle(hand)
     
-    def _addHandle(self, theano_handle) :
+        for hand in mar_theano_fct.theano_handles :
+            fct.addHandle(hand)
+
+        return fct
+
+    def addHandle(self, theano_handle) :
         """Add a handle to the current definition. Losses will be added up and updates will be merged"""
         if not isinstance(theano_handle, TheanoFunctionHandle) :
             raise ValueError("theano_handle must be an instance of TheanoFunctionHandle")
@@ -352,8 +378,14 @@ class TheanoFunction(object) :
         return self.run(*args, **kwargs)
 
     def __repr__(self) :
-        if not self.isCompiled :
-            return "<Uncompiled Mariana Theano Fct '%s'>" % id(self)
+        if not self.isCompiled() :
+            if len(self.theano_handles) == 1 :
+                return "< Uncompiled Mariana Theano Fct: %s.%s >" %(self.theano_handles[0].layer.name, self.theano_handles[0].name)
+            else :
+                s =[]
+                for hand in self.theano_handles :
+                    s.append("%s.%s" %(hand.layer.name, hand.name))
+                return "< Uncompiled Mariana Theano Fct Mix: %s >" % (' + '.join(s) )
         else :
             args = [] 
             for k, v in self.inputs_varToName.items() :
@@ -361,8 +393,15 @@ class TheanoFunction(object) :
 
             return "<Compiled Mariana Theano Fct '%s'. Arguments: '%s'>" % (id(self), ', '.join(args))
 
+class TheanoFunction(KolokoTheanoFunction):
+    """docstring for TheanoFunction"""
+    def __init__(self, name, layer, output, stream, update=False, **theano_kwargs):
+        super(TheanoFunction, self).__init__()
+        self.stream = stream
+        self.theano_handles = [TheanoFunctionHandle(name, layer, output, stream, update=update, **theano_kwargs)]
+
 class TheanoFunctionGroup(object):
-    """docstring for TheanoFunctionGroup"""
+    """High level that wraps a group of function (one for every stream)"""
     def __init__(self, name, layer, outputs, **theano_kwargs):
         super(TheanoFunctionGroup, self).__init__()
         
@@ -387,16 +426,19 @@ class TheanoFunctionGroup(object):
         self.mustInit = True
 
     def allowUpdates(self, stream) :
+        """Apply updates on a given stream"""
         if stream not in self :
             raise ValueError("Output has no stream: '%s'" % stream)
         self.updates.add(stream)
 
     def removeUpdates(self, stream) :
+        """Removes updates from a given stream"""
         if stream not in self :
             raise ValueError("Output has no stream: '%s'" % stream)
         self.updates.remove(stream)
     
     def init(self) :
+        """Initialize the group"""
         if self.mustInit :
             for stream in self.functions :
                 update = False

@@ -100,6 +100,12 @@ class UntrainableAbstraction_ABC(Abstraction_ABC):
     def getParameters(self) :
         return {}
 
+    def __hash__(self) :
+        return hash(self.__class__.__name__ + str(self.hyperParameters.items()))
+        
+    def __eq__(self, a) :
+        return self.__class__ is a.__class__ and self.hyperParameters == a.hyperParameters
+
 class TrainableAbstraction_ABC(Abstraction_ABC):
     """docstring for TrainableAbstraction_ABC"""
     def __init__(self, initializations=[], learningScenari=[], regularizations=[], **kwargs):
@@ -209,9 +215,13 @@ class Apply_ABC(object):
         self.parent = None
     
     def setParent(self, layer) :
+        message = "'%s' has been claimed by '%s'" % (self.name, layer.name)
+        self.logEvent(message)
         self.parent = layer
 
     def unsetParent(self) :
+        message = "'%s' is once again unclaimed" % (self.name)
+        self.logEvent(message)
         self.parent = None
 
     def logApply(self, layer, **kwargs) :

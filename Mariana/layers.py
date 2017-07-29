@@ -516,10 +516,10 @@ class Input(Layer_ABC) :
     def femaleConnect(self, *args) :
         raise ValueError("Nothing can be connected to an input layer")
 
-class MergeLayer(Layer_ABC):
+class Merge(Layer_ABC):
     """docstring for MergeLayer"""
     def __init__(self, operations, **kwargs):
-        super(MergeLayer, self).__init__(maxInConnections=None, **kwargs)
+        super(Merge, self).__init__(maxInConnections=None, **kwargs)
         self.operations = operations
         self.outputs = MTYPES.Variable(streams = self.operations.streams)
 
@@ -538,15 +538,15 @@ class MergeLayer(Layer_ABC):
     def setOutputs_abs(self) :
         self.outputs = self.operations.getOutputs()
 #Shortcut
-M = MergeLayer
+M = Merge
 # M(a + b * c - o, ...)
 
-class Concatenation(Layer_ABC):
+class Concatenate(Layer_ABC):
     """docstring for Concatenation"""
     def __init__(self, layers, croppings = [], axis=1, **kwargs):
         from lasagne.layers.merge import autocrop_array_shapes
         
-        super(Concatenation, self).__init__(maxInConnections=None, **kwargs)
+        super(Concatenate, self).__init__(maxInConnections=None, **kwargs)
         self.layers = layers
         self.croppings = croppings
         self.axis = axis
@@ -593,7 +593,7 @@ class Concatenation(Layer_ABC):
             self.outputs[s] = tt.concatenate(autocrop(outs, self.croppings), axis=self.axis)
 
 #Shortcut
-C = Concatenation
+C = Concatenate
 # C( [a, b, c], ...)
 
 class Embedding(Layer_ABC) :
