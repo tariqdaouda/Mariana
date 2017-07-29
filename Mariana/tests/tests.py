@@ -210,7 +210,7 @@ class MLPTests(unittest.TestCase):
 
         ls = MS.GradientDescent(lr = 0.5)
         cost = MC.NegativeLogLikelihood()
-        # 
+        
         inp = ML.Input(1, 'inp')
         emb = ML.Embedding(nbDimensions=2, dictSize=len(data), learningScenari = [ls], name="emb")
         o = ML.SoftmaxClassifier(2, learningScenari = [MS.Fixed()], cost = cost, name = "out")
@@ -228,6 +228,30 @@ class MLPTests(unittest.TestCase):
             self.assertTrue(v < -1)
 
     # @unittest.skip("skipping")
+    def test_optimizer_override(self) :
+        
+        ls = MS.GradientDescent(lr = 0.5)
+        cost = MC.NegativeLogLikelihood()
+        
+        inp = ML.Input(1, 'inp')
+        h = ML.Hidden(5, activation = MA.Tanh(), learningScenari = [MS.Fixed("b")], name = "h")
+        o = ML.SoftmaxClassifier(2, learningScenari = [MS.GradientDescent(lr = 0.5), MS.Fixed("W")], cost = cost, name = "out")
+        net = inp > h > o
+        net.init()
+
+        ow = o.getP('W').getValue()
+        ob = o.getP('b').getValue()
+        hw = h.getP('W').getValue()
+        hb = h.getP('b').getValue()
+        for x in xrange(1,10):
+            net["out"].train({"inp.inputs": [[1]], "out.targets":[1]} )["out.drive.train"]
+        
+        self.assertTrue(sum(ow[0]) == sum(o.getP('W').getValue()[0]) )
+        self.assertTrue(sum(ob) != sum(o.getP('b').getValue()) )
+        self.assertTrue(sum(hb) == sum(h.getP('b').getValue()) )
+        self.assertTrue( sum(hw[0]) != sum( h.getP('W').getValue()[0]) )
+
+    @unittest.skip("skipping")
     def test_conv_pooling(self) :
         import Mariana.convolution as MCONV
         import Mariana.sampling as MSAMP

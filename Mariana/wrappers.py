@@ -103,17 +103,39 @@ class Updates(object):
                 for reg in abstraction.abstractions["regularizations"] :
                     self.loss = reg.apply(abstraction, self.loss)
         
+        preStore = {}
         for abstraction, scenari in optimizers.iteritems() :
             for paramName in abstraction.getParameters() :
                 previousOptim=None
                 for sc in scenari :
-                    # print sc, abstraction, previousOptim
                     optim = sc.apply(abstraction=abstraction, parameterName=paramName, loss=self.loss, previous=previousOptim)
-                    self.store.add( optim.parameter, optim.gradient, optim.update, "%s.%s" % (names[abstraction], paramName) )
-                    for coParam in optim.coParameters :
-                        self.store.add( coParam.parameter, coParam.gradient, coParam.update, "%s.%s.%s" % (names[abstraction], paramName, coParam.name) )
-                    previousOptim = optim
-        
+                    name = "%s.%s" % (names[abstraction], paramName),
+                    if optim :
+                        preStore[name] = {
+                            "parameter": optim.parameter,
+                            "gradient": optim.gradient,
+                            "update" : optim.update,
+                            "name" : name,
+                            "coParameters": []
+                        }
+                        for coParam in optim.coParameters :
+                            preStore[name]["coParameters"].append(
+                                {
+                                    "parameter": coParam.parameter,
+                                    "gradient": coParam.gradient,
+                                    "update" : coParam.update,
+                                    "name" : "%s.%s.%s" % (name, coParam.name),
+                                }
+                            )
+                        previousOptim = optim
+
+        # print preStore.keys()
+        for gup in preStore.itervalues() :
+            self.store.add( gup["parameter"], gup["gradient"], gup["update"], gup["name"] )
+            for coParam in gup["coParameters"] :
+                self.store.add( coParam["parameter"], coParam["gradient"], coParam["update"], coParam["name"] )
+
+        # print self.store.updates
         self.isCompiled = True
 
 class TheanoFunctionHandle(object) :
