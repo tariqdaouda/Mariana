@@ -179,6 +179,7 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
                 for abstraction in abstractions :
                     if abstraction.isTrainable() :
                         abstraction._initParameters(forceReset=forceReset)
+                        
         self._mustInit = False
 
     def getLog(self) :
@@ -322,8 +323,9 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
 
     def _decorate(self) :
         """applies decorators"""
-        for d in self.abstractions["decorators"] :
-            d._apply(self)
+        for s in self.streams :
+            for d in self.abstractions["decorators"] :
+                d._apply(self, stream=s)
 
     def _activate(self) :
         """applies activation"""
@@ -375,6 +377,8 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         if ( self._mustReset) and ( len(self._inputRegistrations) == len(self.getInLayers()) ) :
             self.logEvent("%s: _whateverFirstInit" % (self.name))
             self._whateverFirstInit()
+            self.logEvent("%s: _takeAbstractions" % (self.name))
+            self._takeAbstractions()
             self.logEvent("%s: setInputs" % (self.name))
             self.setInputs()
             self.logEvent("%s: _initParameters" % (self.name))

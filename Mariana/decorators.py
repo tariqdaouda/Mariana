@@ -4,7 +4,8 @@ import theano.tensor as tt
 import Mariana.settings as MSET
 import Mariana.abstraction as MABS
 import Mariana.initializations as MI
-import Mariana.useful as MUSE
+# import Mariana.useful as MUSE
+import Mariana.custom_types as MTYPES
 
 __all__= ["Decorator_ABC", "BatchNormalization", "Center", "Normalize", "Mask", "RandomMask", "BinomialDropout", "Clip", "AdditiveGaussianNoise", "MultiplicativeGaussianNoise"]
 
@@ -13,13 +14,13 @@ class Decorator_ABC(MABS.TrainableAbstraction_ABC, MABS.Apply_ABC) :
 
     def __init__(self, streams, **kwargs):
         super(Decorator_ABC, self).__init__(**kwargs)
-        self.mask = tt.cast(mask, theano.config.floatX)
         self.streams = set(self.streams)
         self.setHP("streams", streams)
 
     def apply(self, layer, stream) :
         """Apply to a layer and update networks's log"""
-        return self.run(layer)
+        if stream in self.streams :
+	        return self.run(layer, stream=stream)
 
     def run(self, layer, stream) :
         """The function that all decorator_ABCs must implement"""
@@ -44,8 +45,7 @@ class Mask(Decorator_ABC):
         self.setHP("mask", mask)
         
     def run(self, layer, stream) :
-        if stream in self.streams :
-            layer.outputs[stream] = layer.outputs[stream] * self.mask
+        layer.outputs[stream] = layer.outputs[stream] * self.mask
 
 class RandomMask(Decorator_ABC):
     """
@@ -58,12 +58,11 @@ class RandomMask(Decorator_ABC):
         self.setHP("masks", masks)
 
     def run(self, layer, stream) :
-        if stream in self.streams :
-            rnd = tt.shared_randomstreams.RandomStreams()
-            maskId = rnd.random_integers(low=0, high=self.nbMasks-1, ndim=1)
-            mask = self.masks[maskId]
+        rnd = tt.shared_randomstreams.RandomStreams()
+        maskId = rnd.random_integers(low=0, high=self.nbMasks-1, ndim=1)
+        mask = self.masks[maskId]
 
-            layer.outputs[stream] = layer.outputs[stream] * mask
+        layer.outputs[stream] = layer.outputs[stream] * mask
 
 class BinomialDropout(Decorator_ABC):
     """Stochastically mask some parts of the output of the layer. Use it to make things such as denoising autoencoders and dropout layers"""
@@ -75,12 +74,11 @@ class BinomialDropout(Decorator_ABC):
         self.setHP("ratio", ratio)
         
     def run(self, layer, stream) :        
-        if stream in self.streams :
-            rnd = tt.shared_randomstreams.RandomStreams()
-            mask = rnd.binomial(n = 1, p = (1-self.ratio), size = outputs.shape)
-            # cast to stay in GPU float limit
-            mask = MUSE.iCast_theano(mask)
-            return (layer.outputs[stream] * mask)
+        rnd = tt.shared_randomstreams.RandomStreams()
+        mask = rnd.binomial(n = 1, p = (1-self.ratio), size = outputs.shape)
+        # cast to stay in GPU float limit
+        mask = MUSE.iCast_theano(mask)
+        return (layer.outputs[stream] * mask)
 
 class Center(Decorator_ABC) :
     """Centers the outputs by substracting the mean"""
@@ -88,24 +86,22 @@ class Center(Decorator_ABC) :
         super(Center, self).__init__(streams, **kwargs)
         
     def run(self, layer, stream) :
-        if stream in self.streams :
-            layer.outputs[stream] = layer.outputs[stream]-tt.mean(layer.outputs[stream])
+        layer.outputs[stream] = layer.outputs[stream]-tt.mean(layer.outputs[stream])
 
 class Normalize(Decorator_ABC) :
     """
     Normalizes the outputs by substracting the mean and dividing by the standard deviation
 
-    :param float espilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
+    :param float epsilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
     """
 
-    def __init__(self, espilon=1e-6, streams=["train"]) :
+    def __init__(self, epsilon=1e-6, streams=["train"]) :
         super(Normalize, self).__init__(streams, **kwargs) 
-        self.setHP("espilon", espilon)
+        self.setHP("epsilon", epsilon)
 
     def run(self, layer, stream) :
-        if stream in self.streams :
-            std = tt.sqrt( tt.var(layer.outputs[stream]) + self.espilon )
-            layer.outputs[stream] = ( layer.outputs[stream]-tt.mean(layer.output) / std )
+        std = tt.sqrt( tt.var(layer.outputs[stream]) + self.epsilon )
+        layer.outputs[stream] = ( layer.outputs[stream]-tt.mean(layer.output) / std )
 
 class BatchNormalization(Decorator_ABC):
     """Applies Batch Normalization to the outputs of the layer.
@@ -120,19 +116,19 @@ class BatchNormalization(Decorator_ABC):
         :param float epsilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
     """
 
-    def __init__(self, testMu, testSigma, initializations=[MI.SingleValue('gamma', 1), MI.SingleValue('beta', 0)], epsilon=1e-6, streams=["train", "test"]) :
-        super(Normalize, self).__init__(streams, **kwargs)
+    def __init__(self, testMu, testSigma, initializations=[MI.SingleValue('gamma', 1), MI.SingleValue('beta', 0)], epsilon=1e-6, streams=["train", "test"], **kwargs) :
+        super(BatchNormalization, self).__init__(initializations=initializations, streams=streams, **kwargs)
         self.setHP("testMu", testMu)
         self.setHP("testSigma", testSigma)
-        self.setHP("espilon", espilon)
+        self.setHP("epsilon", epsilon)
         
         self.addParameters({
-            "gamma": MTYPES.Parameter("batchnorm.g"),
-            "beta": MTYPES.Parameter("batchnorm.b")
+            "gamma": MTYPES.Parameter("gamma"),
+            "beta": MTYPES.Parameter("beta")
         })
 
-    def getParameterShape_abs(self, parent, **kwargs) :
-        return parent.getOutputShape_abs()
+    def getParameterShape_abs(self, param, **kwargs) :
+        return self.parent.getShape_abs()
 
     def run(self, layer, stream) :
         if stream == "train" :
@@ -141,10 +137,8 @@ class BatchNormalization(Decorator_ABC):
         elif stream == "test" :
             mu = self.getHP("testMu")
             sigma = self.getHP("testSigma")
-        else :
-            raise ValueError("Unkown stream: %s" % stream)
-
-        layer.outputs[stream] = self.getP("gamma") * ( (layer.outputs[stream] - mu) / sigma ) + self.getP("beta")
+        
+        layer.outputs[stream] = self.getP("gamma")() * ( (layer.outputs[stream] - mu) / sigma ) + self.getP("beta")()
 
 class Clip(Decorator_ABC):
     """Clips the neurone activations, preventing them to go beyond the specified range"""
@@ -156,8 +150,7 @@ class Clip(Decorator_ABC):
         self.setHP("upper", upper)
     
     def run(self, layer, stream) :
-        if stream in self.streams :
-            layer.outputs[stream] = layer.outputs[stream].clip(self.lower, self.upper)
+        layer.outputs[stream] = layer.outputs[stream].clip(self.lower, self.upper)
 
 class AddGaussianNoise(Decorator_ABC):
     """Add gaussian noise to the output of the layer"""
@@ -169,10 +162,9 @@ class AddGaussianNoise(Decorator_ABC):
         self.setHP("avg", avg)
         
     def run(self, layer, stream) :
-        if stream in self.streams :
-            rnd = tt.shared_randomstreams.RandomStreams()
-            randomVals = rnd.normal(size = layer.getOutputShape_abs(), avg=self.avg, std=self.std)
-            layer.outputs[stream] = layer.outputs[stream] + randomVals
+        rnd = tt.shared_randomstreams.RandomStreams()
+        randomVals = rnd.normal(size = layer.getOutputShape_abs(), avg=self.avg, std=self.std)
+        layer.outputs[stream] = layer.outputs[stream] + randomVals
 
 class MultGaussianNoise(Decorator_ABC):
     """Multiply gaussian noise to the output of the layer"""
@@ -184,7 +176,6 @@ class MultGaussianNoise(Decorator_ABC):
         self.setHP("avg", avg)
         
     def run(self, layer, stream) :
-        if stream in self.streams :
-            rnd = tt.shared_randomstreams.RandomStreams()
-            randomVals = rnd.normal(size = layer.getOutputShape_abs(), avg=self.avg, std=self.std)
-            layer.outputs[stream] = layer.outputs[stream] * randomVals
+        rnd = tt.shared_randomstreams.RandomStreams()
+        randomVals = rnd.normal(size = layer.getOutputShape_abs(), avg=self.avg, std=self.std)
+        layer.outputs[stream] = layer.outputs[stream] * randomVals

@@ -45,14 +45,16 @@ class Initialization_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC) :
         message = "Applying '%s' on parameter: '%s' of layer '%s'" % (self.name, self.getHP('parameter'), layer.name)
         self.logEvent(message)
 
-    def apply(self, parent) :
-        retShape = parent._getParameterShape_abs(self.getHP("parameter"), parent=parent)
+    def apply(self, abstraction, **kwargs) :
+    
+        retShape = abstraction._getParameterShape_abs(self.getHP("parameter"))
+
         v = MUSE.iCast_numpy(self.run(retShape))
         if (v.shape != retShape) :
             raise ValueError("Initialization has a wrong shape: %s, parameter shape is: %s " % (v.shape, retShape))
         
         v = MUSE.sparsify(v, self.getHP("sparsity"))        
-        parent.setP(self.getHP("parameter"), v)
+        abstraction.setP(self.getHP("parameter"), v)
         
     def run(self, shape) :
         """The function that all Initialization_ABCs must implement"""

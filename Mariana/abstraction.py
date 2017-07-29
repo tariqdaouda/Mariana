@@ -150,12 +150,12 @@ class TrainableAbstraction_ABC(Abstraction_ABC):
         """return all parameter"""
         return self.parameters
 
-    def _getParameterShape_abs(self, param, parent=None) :
+    def _getParameterShape_abs(self, param) :
         if param not in self.parameters :
             raise ValueError("Unknown parameter: %s for %s" % (param, self))
-        return self.getParameterShape_abs(param, parent=None)
+        return self.getParameterShape_abs(param)
 
-    def getParameterShape_abs(self, param, parent=None) :
+    def getParameterShape_abs(self, param) :
         """Should return the shape of the parameter. This has to be implemented in order for the initializations to work (and maybe some other stuff as well)"""
         raise NotImplemented("Should be implemented in child")
 
@@ -164,7 +164,13 @@ class TrainableAbstraction_ABC(Abstraction_ABC):
         for k, v in self.getParameters().iteritems() :
             if not v.isSet() :
                 raise ValueError("Parameter '%s' of '%s' has not been initialized" % (k, self.name) )
-        
+    
+    def _takeAbstractions(self) :
+        for ab in self.getAbstractions() :
+            ab.setParent(self)
+            if ab.isTrainable() :
+                ab._takeAbstractions()
+
     def _initParameters(self, forceReset=False) :
         """creates the parameters if necessary"""
         if self._mustInit or forceReset :
@@ -194,13 +200,17 @@ class Apply_ABC(object):
         super(Apply_ABC, self).__init__()
         self.name = self.__class__.__name__
         self._mustInit=True
+        self.parent = None
+    
+    def setParent(self, layer) :
+        self.parent = layer
 
     def logApply(self, layer, **kwargs) :
         message = "Applying : '%s' on layer '%s'" % (self.name, layer.name)
         self.logEvent(message)
         
     def _apply(self, layer, **kwargs) :
-        """does self.set() + self.apply()"""
+        """Logs and calls self.apply()"""
         self.logApply(layer)
         self.apply(layer, **kwargs)
 
