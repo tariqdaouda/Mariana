@@ -52,6 +52,19 @@ class DecoratorTests(unittest.TestCase):
         
         self.assertEqual(sum(out[0]), 0)
 
+    # @unittest.skip("skipping")
+    def test_dropout(self) :
+        import theano, numpy
+        
+        inp = ML.Input(100, 'inp', decorators=[MD.BinomialDropout(dropoutRatio = 0.8)])
+        model = inp.network
+        model.init()
+
+        data = numpy.random.randn(1, 100).astype(theano.config.floatX) +1
+        out = model["inp"].propagate["train"]({"inp.inputs": data})["inp.propagate.train"]
+        
+        self.assertTrue(sum(out[0] != 0) < sum(data[0] != 0))
+
 if __name__ == '__main__' :
     import Mariana.settings as MSET
     MSET.VERBOSE = False

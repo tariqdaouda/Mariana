@@ -4,7 +4,7 @@ import theano.tensor as tt
 import Mariana.settings as MSET
 import Mariana.abstraction as MABS
 import Mariana.initializations as MI
-# import Mariana.useful as MUSE
+import Mariana.useful as MUSE
 import Mariana.custom_types as MTYPES
 
 __all__= ["Decorator_ABC", "BatchNormalization", "Center", "Normalize", "Mask", "RandomMask", "BinomialDropout", "Clip", "AdditiveGaussianNoise", "MultiplicativeGaussianNoise"]
@@ -66,19 +66,19 @@ class RandomMask(Decorator_ABC):
 
 class BinomialDropout(Decorator_ABC):
     """Stochastically mask some parts of the output of the layer. Use it to make things such as denoising autoencoders and dropout layers"""
-    def __init__(self, ratio, streams=["train"], **kwargs):
+    def __init__(self, dropoutRatio, streams=["train"], **kwargs):
         super(BinomialDropout, self).__init__(streams, **kwargs)
-        assert (ratio >= 0 and ratio <= 1)
-        self.ratio = ratio
+        assert (dropoutRatio >= 0 and dropoutRatio <= 1)
+        self.dropoutRatio = dropoutRatio
         self.seed = MSET.RANDOM_SEED
-        self.setHP("ratio", ratio)
+        self.setHP("dropoutRatio", dropoutRatio)
         
     def run(self, layer, stream) :        
         rnd = tt.shared_randomstreams.RandomStreams()
-        mask = rnd.binomial(n = 1, p = (1-self.ratio), size = outputs.shape)
+        mask = rnd.binomial(n = 1, p = (1-self.dropoutRatio), size = layer.outputs[stream].shape)
         # cast to stay in GPU float limit
         mask = MUSE.iCast_theano(mask)
-        return (layer.outputs[stream] * mask)
+        layer.outputs[stream] = layer.outputs[stream] * mask
 
 class Center(Decorator_ABC) :
     """Centers the outputs by substracting the mean"""
