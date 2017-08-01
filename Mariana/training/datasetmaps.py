@@ -134,6 +134,7 @@ class ClassSets(Dataset_ABC) :
         
         * .input, for the raw inputs
         * .classNumber, each class is represent by an int
+        * .classNumberVec, each class is represent by a vector of one int
         * .onehot, onehot representation of classes
 
         """
@@ -180,6 +181,7 @@ class ClassSets(Dataset_ABC) :
         self.subsets = {
             "input" : None,
             "classNumber" : None,
+            "classNumberVec" : None,
             "onehot" : None
         }
 
@@ -237,15 +239,23 @@ class ClassSets(Dataset_ABC) :
 
     def get(self, subset, i, size) :
         """Returns n element from a subset, starting from position i"""
-        return self.subsets[subset][i:i+size]
+        if subset == "classNumberVec" :
+            ret = self.subsets["classNumber"][i:i+size].reshape(-1, 1)
+        else :
+            ret = self.subsets[subset][i:i+size]
+        return ret
 
     def getAll(self, subset) :
         """return all the elements from a subset. Oversampled of course if necessary"""
-        return self.subsets[subset]
+        if subset == "classNumberVec" :
+            ret = self.subsets["classNumber"].reshape(-1, 1)
+        else :
+            ret = self.subsets[subset]
+        return ret
 
     def getHandle(self, subset) :
         """returns a DatasetHandle(self, subset)"""
-        if subset in self.subsets :
+        if subset in self.subsets or subset == "classNumberVec" :
             return DatasetHandle(self, subset)
 
     def getFullLength(self) :
