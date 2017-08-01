@@ -7,10 +7,12 @@
 
 .. image:: https://img.shields.io/badge/python-2.7-blue.svg 
 
-.. image:: http://bioinfo.iric.ca/~daoudat/Mariana/_static/MarianaLogo_wbg_50.png 
+.. image:: https://avatars2.githubusercontent.com/u/7224902?v=3&s=460 
 
 MARIANA: The Cutest Deep Learning Framework
 =============================================
+
+**WIP: NEW VERSION WITH MUCH IMPROVEMENTS. COMING SOON! (WHEN IT IS READY).**
 
 Mariana's goal is to create a **powerful language** through which complex deep neural networks can be meaningfully expressed and easily manipulated. It's here to empower **researchers**, **teachers** and **students**, while greatly facilitating **AI technology transfer** into other domains.
 
