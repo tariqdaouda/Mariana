@@ -289,7 +289,7 @@ class KolokoTheanoFunction(object) :
             
             self.results = OrderedDict()
 
-    def _parseInputs(self, inputs = {}) :
+    def _parseInputs(self, inputs = {}, ignoreUnexpected=False) :
         """parse function inputs and raises SyntaxError exceptions with friendly, human readable errors"""
         # if len(inputs) != len(self.inputs_varToName) :
         givens = set(inputs.keys())
@@ -299,7 +299,7 @@ class KolokoTheanoFunction(object) :
         msg = []
         if len(missing) > 0 :
             msg.append("Missing arguments: %s" % str(missing)[1:-1])
-        if len(notInvited) > 0 :
+        if len(notInvited) > 0 and ignoreUnexpected :
             msg.append("Unexpected arguments: %s" % str(notInvited)[1:-1])
         if len(msg) > 0 :
             raise SyntaxError('\n'.join(msg))
@@ -311,10 +311,10 @@ class KolokoTheanoFunction(object) :
         
         return fct_inputs
 
-    def run(self, inputs = {}) :
+    def run(self, inputs = {}, ignoreUnexpected=False) :
         """run the function and return the results"""
         self.compile()
-        fct_inputs = self._parseInputs(inputs)
+        fct_inputs = self._parseInputs(inputs, ignoreUnexpected)
 
         fres = iter(self.theano_fct(*fct_inputs.values()))
         for k in self.outputs.iterkeys() :
@@ -322,13 +322,13 @@ class KolokoTheanoFunction(object) :
 
         return self.results
 
-    def getGradients(self, inputs={}) :
+    def getGradients(self, inputs={}, ignoreUnexpected=False) :
         """return the gradients that would be performed"""
         self.compile()
         if not self.updates :
             raise TypeError("Function has no updates, cannot have gradients")
 
-        fct_inputs = self._parseInputs(inputs)
+        fct_inputs = self._parseInputs(inputs, ignoreUnexpected)
         if not self.gradients_fct :
             self.gradients_fct = theano.function(inputs = self.inputs.values(), outputs = self.updates.store.gradients.values(), **self.theano_kwargs)
 
@@ -339,12 +339,12 @@ class KolokoTheanoFunction(object) :
 
         return results
         
-    def getUpdates(self, inputs={}) :
+    def getUpdates(self, inputs={}, ignoreUnexpected) :
         """return the updates that would be performed"""
         self.compile()
         if not self.updates :
             raise TypeError("Function has no updates")
-        fct_inputs = self._parseInputs(inputs)
+        fct_inputs = self._parseInputs(inputs, ignoreUnexpected)
 
         if not self.updates_fct :
             self.updates_fct = theano.function(inputs = self.inputs.values(), outputs = self.updates.store.updates.values(), **self.theano_kwargs)

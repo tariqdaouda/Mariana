@@ -142,16 +142,20 @@ class GradientDescent(LearningScenario_ABC):
     def run(self, parameter, parameterName, loss, **kwargs) :
         gparam = tt.grad(loss, parameter.getVar())
         if self.getHP("momentum") <= 0 :
-            param_update = parameter.getVar() - self.getHP("lr") * gparam
-            if self.getHP("reverse") :
-                param_update = -param_update
+            if not self.getHP("reverse") :
+                param_update = parameter.getVar() - self.getHP("lr") * gparam
+            else : 
+                param_update = parameter.getVar() + self.getHP("lr") * gparam
+            
             ret = OptimizerResult(parameter.getVar(), parameterName, gparam, param_update)
         else :
             momentum_param = theano.shared(parameter.getVar()*0., broadcastable=parameter.broadcastable, name="momentum.%s" % (parameterName))
             momentum_update = self.momentum * momentum_param + (1-self.getHP("momentum"))*gparam
-            param_update = parameter.getVar() + self.getHP("lr") * momentum_param
-            if self.getHP("reverse") :
-                param_update = -param_update
+            if not self.getHP("reverse") :
+                param_update = parameter.getVar() - self.getHP("lr") * momentum_param
+            else :
+                param_update = parameter.getVar() + self.getHP("lr") * momentum_param
+            
             ret = OptimizerResult(parameter.getVar(), parameterName, gparam, param_update)
             ret.addCoParameter(momentum_param, "momentum", None, momentum_update)
 

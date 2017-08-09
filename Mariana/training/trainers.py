@@ -3,12 +3,53 @@ import numpy
 from collections import OrderedDict
 import theano.tensor as tt
 
-import Mariana.training.recorders as MREC
-import Mariana.training.stopcriteria as MSTOP
+import Mariana.network as MNET
+import Mariana.training.future.recorders as MREC
+import Mariana.training.future.stopcriteria as MSTOP
 import Mariana.candies as MCAN
 import Mariana.settings as MSET
 
 __all__ = ["Trainer_ABC", "DefaultTrainer"]
+
+class OutputTrainingSchedule_ABC(object) :
+
+    def __init__(self, name) :
+        self.name = self.__class__.__name__
+
+    def getOutput(self, aMap) :
+        """return an ouput to be trained on"""
+        NotImplemented("Must be implemented in child")
+
+# class Synchronous(OutputTrainingSchedule_ABC) :
+
+#     def __init__(self, outputLayers=None) :
+#         self.outputLayers = outputLayers
+
+#     def getOutput(self, aMap) :
+#         layerList = aMap.inputLayers
+#         if self.outputLayers :
+#             outputs = self.outputLayers
+#         else :
+#             outputs = aMap.outputLayers
+
+        # scores = {}
+        # for batchData in aMap :
+        #     for output in outputs :
+        #         layerList.append(output)
+        #         res = aMap.runFunction(output, **batchData)
+        #         scores[output.name] = {}
+        #         for k, v in res.iteritems() :
+        #             try :
+        #                 scores[output.name][k].append(v)
+        #             except KeyError:
+        #                 scores[output.name][k] = [v]
+        #         layerList.pop(-1)
+                
+        # for output in aMap.outputLayers :
+        #     for k, v in scores[output.name].iteritems() :
+        #         scores[output.name][k] = numpy.mean(v)
+
+        # return scores
 
 class Trainer_ABC(object) :
     """This is the general interface of trainer"""
@@ -17,26 +58,27 @@ class Trainer_ABC(object) :
         """
         The store is initialised to::
 
-            self.store = {
-                "runInfos" : {
-                    "epoch" : 0,
-                },
-                "scores" : {},
-                "hyperParameters" : {},
-                "setSizes" : {},
-            }
-
-        """
         self.store = {
             "runInfos" : {
                 "epoch" : 0,
+                "runtime" : 0
             },
-            "scores" : {},
-            "hyperParameters" : {},
-            "setSizes" : {},
+            "scores" : {}
         }
 
-    def start(self, runName, model, recorder, *args, **kwargs) :
+        """
+
+        self.store = {
+            "runInfos" : {
+                "epoch" : 0,
+                "runtime" : 0
+            },
+            "scores" : {},
+            "currentSet": None,
+            "minibatchOutput": None
+        }
+
+    def start(self, runName, saveIfMurdered=True, **kwargs) :
         """Starts the training and encapsulates it into a safe environement.
         If the training stops because of an Exception or SIGTEM, the trainer
         will save logs, the store, and the last version of the model.
@@ -57,7 +99,7 @@ class Trainer_ABC(object) :
             death_time = time.ctime().replace(' ', '_')
             filename = "dx-xb_" + runName + "_death_by_" + exName + "_" + death_time
             sys.stderr.write("\n===\nDying gracefully from %s, and saving myself to:\n...%s\n===\n" % (exName, filename))
-            model.save(filename)
+            self.model.save(filename)
             f = open(filename +  ".traceback.log", 'w')
             f.write("Mariana training Interruption\n=============================\n")
             f.write("\nDetails\n-------\n")
@@ -66,19 +108,6 @@ class Trainer_ABC(object) :
             f.write("Killed by: %s\n" % str(exType))
             f.write("Time of death: %s\n" % death_time)
             f.write("Model saved to: %s\n" % filename)
-            sstore = str(self.store).replace("'", '"').replace("True", 'true').replace("False", 'false')
-            try :
-                f.write(
-                    "store:\n%s" % json.dumps(
-                        json.loads(sstore), sort_keys=True,
-                        indent=4,
-                        separators=(',', ': ')
-                    )
-                )
-            except Exception as e:
-                print "Warning: Couldn't format the store to json, saving it ugly."
-                print "Reason:", e
-                f.write(sstore)
 
             if tb is not None :
                 f.write("\nTraceback\n---------\n")
@@ -94,19 +123,8 @@ class Trainer_ABC(object) :
             print "\n" + "Training starts."     
         MCAN.friendly("Process id", "The pid of this run is: %d" % os.getpid())
 
-        if recorder == "default" :
-            params = {
-                "printRate" : 1,
-                "writeRate" : 1
-            }
-            recorder = MREC.GGPlot2(runName, **params)
-            MCAN.friendly(
-                "Default recorder",
-                "The trainer will recruit the default 'GGPlot2' recorder with the following arguments:\n\t %s.\nResults will be saved into '%s'." % (params, recorder.filename)
-            )
-    
         try :
-            return self.run(runName, model, recorder, *args, **kwargs)
+            return self.run(runName, **kwargs)
         except MSTOP.EndOfTraining as e :
             print e.message
             death_time = time.ctime().replace(' ', '_')
@@ -118,19 +136,6 @@ class Trainer_ABC(object) :
             f.write("Epoch of death: %s\n" % self.store["runInfos"]["epoch"])
             f.write("Stopped by: %s\n" % e.stopCriterion.name)
             f.write("Reason: %s\n" % e.message)
-            sstore = str(self.store).replace("'", '"').replace("True", 'true').replace("False", 'false')
-            try :
-                f.write(
-                    "store:\n%s" % json.dumps(
-                        json.loads(sstore), sort_keys=True,
-                        indent=4,
-                        separators=(',', ': ')
-                    )
-                )
-            except Exception as e:
-                print "Warning: Couldn't format the store to json, saving it ugly."
-                print "Reason:", e
-                f.write(sstore)
 
             f.flush()
             f.close()
@@ -138,49 +143,45 @@ class Trainer_ABC(object) :
             f = open(filename + ".store.pkl", "wb")
             cPickle.dump(self.store, f)
             f.close()
-            
+
         except KeyboardInterrupt :
-            if not self.saveIfMurdered :
+            if not saveIfMurdered :
                 raise
             exType, ex, tb = sys.exc_info()
             _dieGracefully(exType, tb)
             raise
         except :
-            if not self.saveIfMurdered :
+            if not saveIfMurdered :
                 raise
             exType, ex, tb = sys.exc_info()
             _dieGracefully(exType, tb)
             raise
 
-    def run(self, *args, **kwargs) :
+    def run(self, **kwargs) :
         """Abtract function must be implemented in child. This function should implement the whole training process"""
         raise NotImplemented("Must be implemented in child")
 
 class DefaultTrainer(Trainer_ABC) :
     """The default trainer should serve for most purposes"""
 
-    SEQUENTIAL_TRAINING = 0
-    SIMULTANEOUS_TRAINING = 1
-    RANDOM_PICK_TRAINING = 2
-
-    ALL_SET = -1
-
     def __init__(self,
-        trainMaps,
-        testMaps,
-        validationMaps,
-        trainMiniBatchSize,
-        stopCriteria = [],
-        testMiniBatchSize = -1,
-        validationMiniBatchSize = -1,
-        saveIfMurdered = True,
-        trainFunctionName = "train",
-        testFunctionName="test",
-        validationFunctionName = "test") :
+        setMaps,
+        model,
+        ouputSchedule=Synchronous(),
+        # stopCriteria=[],
+        onStart=[],
+        onEpochStart=[],
+        onSetStart=[],
+        onMiniBatchStart=[],
+        onMiniBatchEnd=[],
+        onSetEnd=[],
+        onEpochEnd=[],
+        onEnd=[],
+    ) :
         """
-            :param DatasetMaps trainMaps: Layer mappings for the training set
-            :param DatasetMaps testtrainMaps: Layer mappings for the testing set
-            :param DatasetMaps validationMaps: Layer mappings for the validation set, if you do not wich to set one, pass None as argument
+            :param DatasetsetMaps trainsetMaps: Layer mappings for the training set
+            :param DatasetsetMaps testtrainsetMaps: Layer mappings for the testing set
+            :param DatasetsetMaps validationsetMaps: Layer mappings for the validation set, if you do not wich to set one, pass None as argument
             :param int trainMiniBatchSize: The size of a training minibatch, use DefaultTrainer.ALL_SET for the whole set
             :param list stopCriteria: List of StopCriterion objects 
             :param int testMiniBatchSize: The size of a testing minibatch, use DefaultTrainer.ALL_SET for the whole set
@@ -193,40 +194,37 @@ class DefaultTrainer(Trainer_ABC) :
         
         Trainer_ABC.__init__(self)
 
-        self.maps = {
-            "train": trainMaps
-        }
+        assert isinstance(setMaps, dict)
+        self.setMaps = setMaps
 
-        if testMaps is not None :
-            self.maps["test"] = testMaps
-
-        if validationMaps is not None :
-            self.maps["validation"] = validationMaps
-
-        self.miniBatchSizes = {
-            "train" : trainMiniBatchSize,
-            "test" : testMiniBatchSize,
-            "validation" : validationMiniBatchSize
-        }
-
-        self.stopCriteria = stopCriteria        
-        self.saveIfMurdered = saveIfMurdered
+        # self.stopCriteria = stopCriteria        
+        self.onStart = onStart
+        self.onEnd = onEnd        
+        self.onSetStart = onSetStart
+        self.onSetEnd = onSetEnd        
+        self.onMiniBatchStart = onMiniBatchStart
+        self.onMiniBatchEnd = onMiniBatchEnd
+        self.onEpochStart = onEpochStart
+        self.onEpochEnd = onEpochEnd
         
-        self.trainingOrdersHR = {
-            self.SIMULTANEOUS_TRAINING : "SIMULTANEOUS",
-            self.SEQUENTIAL_TRAINING : "SEQUENTIAL",
-            self.RANDOM_PICK_TRAINING : "RANDOM_PICK"
-        }
+        self.model = model
+        self.ouputSchedule = ouputSchedule
+        self.startTime = None
 
-        self.trainFunctionName = trainFunctionName
-        self.testFunctionName = testFunctionName
-        self.validationFunctionName = validationFunctionName
-
-    def start(self, runName, model, recorder = "default", trainingOrder = 0, moreHyperParameters={}, outputLayers='all') :
+    def start(self, runName) :
         """starts the training, cf. run() for the a description of the arguments"""
-        Trainer_ABC.start( self, runName, model, recorder, trainingOrder, moreHyperParameters, outputLayers)
+        self.startTime = time.time()
+        self._runHooks(self.onStart)
+ 
+        Trainer_ABC.start( self, runName)
+        
+        self._runHooks(self.onEnd)
+ 
+    def _runHooks(self, hooks) :
+        for hook in hooks :
+            hook.commit(self)
 
-    def run(self, name, model, recorder, trainingOrder, moreHyperParameters, outputLayers='all') :
+    def run(self, name) :
         """
             :param str runName: The name of this run
             :param Recorder recorder: A recorder object
@@ -239,223 +237,42 @@ class DefaultTrainer(Trainer_ABC) :
             :param bool reset: Should the trainer be reset before starting the run
             :param dict moreHyperParameters: If provided, the fields in this dictionary will be included into the log .csv file
         """
-        def setHPs(layer, thing, dct) :
-            try :
-                thingObj = getattr(l, thing)
-            except AttributeError :
-                return
+        while True :
+            self._runHooks(self.onEpochStart)
 
-            if thingObj is not None :
-                if type(thingObj) is types.ListType :
-                    for obj in thingObj :
-                        if len(obj.hyperParameters) == 0 :
-                            dct["%s_%s_%s" % (l.name, thing, obj.name)] = 1
-                        else :
-                            for hp in obj.hyperParameters :
-                                dct["%s_%s_%s_%s" % (l.name, thing, obj.name, hp)] = getattr(obj, hp)
-                else :
-                    try :
-                        if len(thingObj.hyperParameters) == 0 :
-                            dct["%s_%s" % (l.name, thingObj.name)] = 1
-                        else :
-                            for hp in thingObj.hyperParameters :
-                                dct["%s_%s" % (l.name, hp)] = getattr(thingObj, hp)
-                    except AttributeError :
-                        pass
-
-        def _trainTest(aMap, modelFct, trainingOrder, miniBatchSize, inputLayers, outputLayers) :
-            scores = {}
-            layerList = inputLayers
-            if miniBatchSize == DefaultTrainer.ALL_SET :
-                for output in outputLayers :
-                    layerList.append(output)
-                    kwargs = dict( aMap.getAll(layerList = layerList) )
-                    res = modelFct(output, **kwargs)
-                    scores[output.name] = dict(res)
-                    layerList.pop(-1)
-            else :
-                if trainingOrder == DefaultTrainer.SEQUENTIAL_TRAINING :
-                    for output in outputLayers :
-                        for i in xrange(0, len(aMap), miniBatchSize) :
-                            layerList.append(output)
-                            batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
-                            res = modelFct(output, **batchData)
-                            if output.name not in scores :
-                                scores[output.name] = {}
-                            
-                            for k, v in res.iteritems() :
-                                try :
-                                    scores[output.name][k].append(v)
-                                except KeyError:
-                                    scores[output.name][k] = [v]
-                            
-                            layerList.pop(-1)
-                elif trainingOrder == DefaultTrainer.SIMULTANEOUS_TRAINING :
-                    for i in xrange(0, len(aMap), miniBatchSize) :
-                        batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
-                        for output in outputLayers :
-                            layerList.append(output)
-                            res = modelFct(output, **batchData)
-                            
-                            if output.name not in scores :
-                                scores[output.name] = {}
-                            
-                            for k, v in res.iteritems() :
-                                try :
-                                    scores[output.name][k].append(v)
-                                except KeyError:
-                                    scores[output.name][k] = [v]
-                            
-                            layerList.pop(-1)
+            for mapName, aMap in self.setMaps.iteritems() :
+                self.store["currentMap"] = mapName
+                self._runHooks(self.onSetStart)
                 
-                elif trainingOrder == DefaultTrainer.RANDOM_PICK_TRAINING :
-                    outputOrder = list(numpy.random.randint(0, len(outputLayers), len(aMap)/miniBatchSize +1))
-                    for i in xrange(0, len(aMap), miniBatchSize):
-                        output = outputLayers[outputOrder.pop()]
-                        layerList.append(output)
-                        batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
-                        res = modelFct(output, **batchData)
-                    
-                        if output.name not in scores :
-                            scores[output.name] = {}
-                        
+                tmpStore = {}
+                for batchData in aMap :
+                    self._runHooks(self.onMiniBatchStart)
+                    for output in self.ouputSchedule.getOutputs(self) :
+                        res = aMap.runFunction(output, **batchData)
+                        scores[output.name] = {}
                         for k, v in res.iteritems() :
                             try :
-                                scores[output.name][k].append(v)
-                            except KeyError:
-                                scores[output.name][k] = [v]
+                                tmpStore[k].append(v)
+                            except KeyError :
+                                tmpStore[k] = [v]
+                        self.store["minibatchOutput"] = res
+                    self._runHooks(self.onMiniBatchEnd)
                         
-                        layerList.pop(-1)
-                else :
-                    raise ValueError("Unknown training order: %s" % trainingOrder)
+                for output in aMap.outputLayers :
+                    for k, v in scores[output.name].iteritems() :
+                        scores[output.name][k] = numpy.mean(v)
 
-            if len(outputLayers) > 1 :
-                keys = {}
-    
-            for outputName in scores :
-                for fname, v in scores[outputName].iteritems() :
-                    avg = numpy.mean(v)
-                    scores[outputName][fname] = avg
-                    if len(outputLayers) > 1 :
-                        try :
-                            keys[fname].append(avg)
-                        except KeyError :
-                            keys[fname] = [avg]
+                self._runHooks(self.onSetEnd)
+  
+                # self.store["scores"][mapName] = self.ouputSchedule.run(aMap)                
 
-            if len(outputLayers) > 1 :
-                for k, v in keys.itervalues() :
-                    scores["average"] = numpy.mean(v)
-            
-            return scores
-
-        if trainingOrder not in self.trainingOrdersHR:
-            raise ValueError("Unknown training order: %s" % trainingOrder)
-
-        legend = ["name", "epoch", "runtime(min)", "training_order"]
-        legend.extend(moreHyperParameters.keys())
-        hyperParameters = OrderedDict()
-        for l in model.layers.itervalues() :
-            hyperParameters["%s_shape" % l.name] = list(l.getOutputShape()) #cast to list for json save
-            try :
-                hyperParameters["activation"] = l.activation.__name__
-            except AttributeError :
-                pass
-            setHPs(l, "learningScenario", hyperParameters)
-            setHPs(l, "decorators", hyperParameters)
-            setHPs(l, "activation", hyperParameters)
-            if MSET.TYPE_OUTPUT_LAYER in l.types :
-                setHPs(l, "costObject", hyperParameters)
-
-        legend.extend(hyperParameters.keys())
-        self.store["hyperParameters"].update(hyperParameters)
-        self.store["hyperParameters"].update(moreHyperParameters)
-        
-        self.store["runInfos"]["name"] = name
-        self.store["runInfos"]["training_order"] = self.trainingOrdersHR[trainingOrder]
-        self.store["runInfos"]["pid"] = os.getpid()
-    
-        self.recorder = recorder
-        
-        startTime = time.time()
-        self.store["runInfos"]["epoch"] = 0
-        inputLayers = model.inputs.values()
-        if outputLayers == 'all' :
-            outputLayers = model.outputs.values()
-
-        for mapName in self.maps :
-            self.store["setSizes"][mapName] = self.maps[mapName].getMinFullLength()
-            self.store["scores"][mapName] = {}
-            for o in outputLayers :
-                self.store["scores"][mapName][o.name] = {}
-
-        while True :
-            for mapName in self.maps.iterkeys() :
-                # try :
-                aMap = self.maps[mapName]
-                if len(aMap) > 0 :
-                    scores = {}
-                    aMap.commit()
-                    if mapName == "train" :
-                        modelFct = getattr(model, self.trainFunctionName)
-                    elif mapName == "test" :
-                        modelFct = getattr(model, self.testFunctionName)
-                    elif mapName == "validation" :
-                        modelFct = getattr(model, self.validationFunctionName)
-                    else :
-                        raise ValueError("Unknown map name: '%s'" % mapName)
-                    
-                    # import numpy
-                    # inputs = [numpy.arange(model["Sequence"].nbInputs)+1]
-                    # print model.propagate("Sequence", Sequence=inputs)
-
-                    scores = _trainTest(
-                        aMap,
-                        modelFct,
-                        trainingOrder,
-                        self.miniBatchSizes[mapName],
-                        inputLayers,
-                        outputLayers
-                    )
-                    self.store["scores"][mapName] = scores
-                # except KeyError as e :
-                    # raise e
-                    # pass
-            
-            runtime = (time.time() - startTime)/60.
-            self.store["runInfos"].update( (
-                ("runtime_min", runtime),
-            ) )
-            
-            self.recorder.commit(self.store, model)
-            for crit in self.stopCriteria :
-                if crit.stop(self) :
-                    raise MSTOP.EndOfTraining(crit)
-
-            for l in model.layers.itervalues() :
-                try :
-                    l.learningScenario.update(self.store)
-                except AttributeError :
-                    pass
 
             self.store["runInfos"]["epoch"] += 1
-    
-    def runCustom(self, model, outputName, functionName, dataMapName, miniBatchSize = -1) :
-        """Runs a given function, of a given model, applied to a given output using one of dataset maps of the trainer.
-        In order for this function to work, 'model' must either be the model on wich the dataset maps have been defined, or have layers
-        that have the same names as those of the model on wich the dataset maps have been defined."""       
-        
-        modelFct = getattr(model, functionName)
-        aMap = self.maps[dataMapName]
+            self.store["runInfos"]["runtime"] = (time.time() - self.startTime)
 
-        layerList = [outputName]
-        for l in model.inputs.itervalues() :
-            layerList.append(l.name)
+            self._runHooks(self.onEpochEnd)
+            
+            # for crit in self.stopCriteria :
+            #     if crit.stop(self) :
+            #         raise MSTOP.EndOfTraining(crit)
 
-        if miniBatchSize == DefaultTrainer.ALL_SET :
-            kwargs = dict( aMap.getAll(layerList = layerList) )
-            res = modelFct(outputName, **kwargs)
-        else :
-            for i in xrange(0, len(aMap), miniBatchSize) :
-                batchData = aMap.getBatch(i, miniBatchSize, layerList = layerList)
-                res = modelFct(outputName, **batchData)
-        return res[0]
