@@ -14,7 +14,7 @@ MARIANA: The Cutest Deep Learning Framework
 
 **WIP: NEW VERSION WITH MUCH IMPROVEMENTS. COMING SOON! (WHEN IT IS READY).**
 
-Mariana's goal is to create a **powerful language** through which complex deep neural networks can be meaningfully expressed and easily manipulated. It's here to empower **researchers**, **teachers** and **students**, while greatly facilitating **AI technology transfer** into other domains.
+Mariana's goal is to create a **powerful language** through which complex deep neural networks can be meaningfully expressed and easily manipulated. It's here to empower **researchers**, **teachers** and **students**, while greatly facilitating **AI knowledge transfer** into other domains.
 
 **It looks like this:**
 
