@@ -14,7 +14,9 @@ MARIANA: The Cutest Deep Learning Framework
 
 **TEMPORARY README FOR MARIANA V2, WIP (BUT ALMOST DONE).**
 
-Mariana is an **efficient language** through which complex deep neural networks can be easily expressed and easily manipulated. It's simple enough for beginners and doesn't get much complicated for seniors. Intuitive, user-friendly and yet flexible enough for research. It's here to empower **researchers**, **teachers** and **students** alike, while greatly facilitating **AI knowledge transfer** into other domains.
+Mariana is an **efficient language** through which complex deep neural networks can be easily expressed and easily manipulated. It's simple enough for beginners and doesn't get much complicated for seniors.
+
+Intuitive, user-friendly and yet flexible enough for research. It's here to empower **researchers**, **teachers** and **students** alike, while greatly facilitating **AI knowledge transfer** into other domains.
 
 V2's most exciting stuff
 =========================
