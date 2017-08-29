@@ -24,14 +24,18 @@ V2 is almost a complete rewite of V1. It is much better.
 What's done
 -----------
 
-* Convolutions, Deconvolutions (Transpose convolution)
-* Just in time function compilation: At the heart of Mariana are Theano function: The previous version compiled every function a model initialization. This caused compilation times to be longer that needed. With this version functions are compiled only if needed.
-* Function mixins (My favorite): Mariana functions can now be added together! The result is a function that performs the action all its components. Let's say we have two output layers on want a function that optimises on losses for both outputs. Creating it is as simple as: f = out1.train + out2.train, and then calling f. Mariana will derive f from both functions adding the costs, calculating gradients and updates seemlessly in the background  
-* New MergeLayer: Need a layer that is a linear combination of other layer layer. The new MergeLayer is perfect for that newLayer = M(layer1 + (layers3 * layer3) + 4 )
-* New concatenation layer: newLayer = C([Layer1, layer2])
-* Lasagne compatible: Every lasagne layer can be seemlessly imported and used in Mariana
-* Unlimited number of inputs per layer. Each layer can have as many inputs as you want
-* Abstractions are now divided into trainable (layers, decorators, activations) and untrainable (scenari, costs, initializations). All trainable abstractions can hold parameters and have untrainable abstractions applied to them. PReLU will finally join ReLU as an activation!
+* **Convolutions, Deconvolutions (Transpose convolution)**
+
+* **Lasagne compatible**: Every lasagne layer can be seemlessly imported and used in Mariana
+* **Just in time function compilation**: At the heart of Mariana are Theano function. The previous version compiled every function a model initialization. This caused compilation times to be longer that needed. With this version functions are compiled only if needed.
+* **Function mixins (My favorite)**: Mariana functions can now be added together! The result is a function that performs the action all its components. Let's say we have two output layers on want a function that optimises on losses for both outputs. Creating it is as simple as: f = out1.train + out2.train, and then calling f. Mariana will derive f from both functions adding the costs, calculating gradients and updates seemlessly in the background  
+* **Streams!**: You probably heard of batchnorm... and how it has a different behaviour in training in testing. Well that simple fact can be the cause for some very messy DL code. With streams it is over. Streams are parrelle universes of execution for functions. You can define your own and have as many as you want. For batchnorm it mean that depending on the stream you call your function in (test or train), the behaviour will be different, but you only changed one word.
+* **Much easier to extend**: The (almost) complete rewrite made for much more cleaner that is much more easy to extend. It is now much simpler to create your own layers, decorators, etc... Function that you need to implement end with *_abs* and Mariana has whole new bunch of custom type that support streams.
+* **New merge layer**: Need a layer that is a linear combination of other layer layer. The new MergeLayer is perfect for that newLayer = M(layer1 + (layers3 * layer3) + 4 )
+* **New concatenation layer**: newLayer = C([Layer1, layer2])
+* **Unlimited number of inputs per layer**: Each layer used to be limited to one. Now it is infinit
+* **Abstractions are now divided into trainable (layers, decorators, activations) and untrainable (scenari, costs, initializations)**: All trainable abstractions can hold parameters and have untrainable abstractions applied to them. PReLU will finally join ReLU as an activation!
+
 
 What's almost done
 -------------------
