@@ -299,7 +299,7 @@ class KolokoTheanoFunction(object) :
         msg = []
         if len(missing) > 0 :
             msg.append("Missing arguments: %s" % str(missing)[1:-1])
-        if len(notInvited) > 0 and ignoreUnexpected :
+        if len(notInvited) > 0 and not ignoreUnexpected :
             msg.append("Unexpected arguments: %s" % str(notInvited)[1:-1])
         if len(msg) > 0 :
             raise SyntaxError('\n'.join(msg))
@@ -339,7 +339,7 @@ class KolokoTheanoFunction(object) :
 
         return results
         
-    def getUpdates(self, inputs={}, ignoreUnexpected) :
+    def getUpdates(self, inputs={}, ignoreUnexpected=False) :
         """return the updates that would be performed"""
         self.compile()
         if not self.updates :

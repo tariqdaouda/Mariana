@@ -11,6 +11,18 @@ import Mariana.activations as MA
 import theano.tensor as tt
 import numpy
 
+def getMLP(self, nbInputs=2, nbClasses=2) :
+    ls = MS.GradientDescent(lr = 0.1)
+    cost = MC.NegativeLogLikelihood()
+
+    i = ML.Input(nbInputs, 'inp')
+    h = ML.Hidden(size = 6, activation = MA.ReLU(), name = "Hidden_0.500705866892")
+    o = ML.SoftmaxClassifier(nbClasses=nbClasses, cost=cost, learningScenari=[ls], name = "out")
+
+    mlp = i > h > o
+    mlp.init()
+    return mlp
+    
 class MLPTests(unittest.TestCase):
 
     def setUp(self) :
@@ -29,15 +41,7 @@ class MLPTests(unittest.TestCase):
         pass
 
     def trainMLP_xor(self) :
-        ls = MS.GradientDescent(lr = 0.1)
-        cost = MC.NegativeLogLikelihood()
-
-        i = ML.Input(2, 'inp')
-        h = ML.Hidden(size = 6, activation = MA.ReLU(), name = "Hidden_0.500705866892")
-        o = ML.SoftmaxClassifier(nbClasses=2, cost=cost, learningScenari=[ls], name = "out")
-
-        mlp = i > h > o
-        mlp.init()
+        mlp = getMLP(2, 2)
 
         self.xor_ins = numpy.array(self.xor_ins)
         self.xor_outs = numpy.array(self.xor_outs)
@@ -48,13 +52,13 @@ class MLPTests(unittest.TestCase):
 
     # @unittest.skip("skipping")
     def test_missing_args(self) :
-        mlp = self.trainMLP_xor()
+        mlp = getMLP(2, 2)
         self.assertRaises(SyntaxError, mlp["out"].train, {} )
     
     # @unittest.skip("skipping")
     def test_unexpected_args(self) :
-        mlp = self.trainMLP_xor()
-        self.assertRaises(SyntaxError, mlp["out"].train, {"inp.inputs": self.xor_ins, "out.targets" : self.xor_outs, "lala": 0} )
+        mlp = getMLP(2, 2)
+        self.assertRaises( SyntaxError, mlp["out"].train, {"inp.inputs": self.xor_ins, "out.targets" : self.xor_outs, "lala": 0} )
 
     # @unittest.skip("skipping")
     def test_xor(self) :
