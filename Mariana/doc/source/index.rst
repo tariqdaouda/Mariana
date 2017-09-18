@@ -3,8 +3,6 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. image:: https://travis-ci.org/tariqdaouda/Mariana.svg
-    :target: https://travis-ci.org/tariqdaouda/Mariana
 .. image:: https://codecov.io/gh/tariqdaouda/Mariana/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/tariqdaouda/Mariana/branch/master/graph/
 .. image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
