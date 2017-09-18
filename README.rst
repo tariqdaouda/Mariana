@@ -1,12 +1,7 @@
-.. image:: https://travis-ci.org/tariqdaouda/Mariana.svg
-    :target: https://travis-ci.org/tariqdaouda/Mariana.svg?branch=dev
-.. image:: https://codecov.io/gh/tariqdaouda/Mariana/branch/master/graph/badge.svg
-    :target: https://codecov.io/gh/tariqdaouda/Mariana/branch/master/graph/
-.. image:: https://img.shields.io/badge/python-2.7-blue.svg 
-.. image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
-    :target: https://opensource.org/licenses/Apache-2.0
+
 MARIANA: The Cutest Deep Learning Framework
 =============================================
+.. image:: https://img.shields.io/badge/python-2.7-blue.svg 
 
 As neural nets increase in complexity they also become harder to write and harder to teach. Our hypothesis is that these difficulties stem from the absence of a language that elegantly describe neural networks. Mariana (named after the deepest place on earth, the Mariana trench) is an attempt to create such a language within python. That being said, you can also call it an *Extendable Python Machine Learning Framework build on top of Theano that focuses on ease of use*.
 
