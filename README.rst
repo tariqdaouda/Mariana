@@ -1,17 +1,7 @@
-.. image:: https://travis-ci.org/tariqdaouda/Mariana.svg
-    :target: https://travis-ci.org/tariqdaouda/Mariana.svg?branch=V2-dev
-.. image:: https://codecov.io/gh/tariqdaouda/Mariana/branch/V2-dev/graph/badge.svg
-    :target: https://codecov.io/gh/tariqdaouda/Mariana/branch/V2-dev/graph/
-.. image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
-    :target: https://opensource.org/licenses/Apache-2.0
-
-.. image:: https://img.shields.io/badge/python-2.7-blue.svg 
-
-.. image:: https://avatars2.githubusercontent.com/u/7224902?v=3&s=460 
-
 MARIANA: The Cutest Deep Learning Framework
 =============================================
-
+.. image:: https://img.shields.io/badge/python-2.7-blue.svg 
+    
 **TEMPORARY README FOR MARIANA V2, WIP (BUT ALMOST DONE).**
 
 Mariana is an **efficient language** through which complex deep neural networks can be easily expressed and easily manipulated. It's simple enough for beginners and doesn't get much complicated for seniors.
