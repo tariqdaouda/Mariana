@@ -3,14 +3,9 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. image:: https://codecov.io/gh/tariqdaouda/Mariana/branch/master/graph/badge.svg
-    :target: https://codecov.io/gh/tariqdaouda/Mariana/branch/master/graph/
-.. image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
-    :target: https://opensource.org/licenses/Apache-2.0
+Mariana: The Cutest Deep Learning Framework
+===========================================
 .. image:: https://img.shields.io/badge/python-2.7-blue.svg 
-
-Mariana: Deep Neural Networks should be Easy to Write
-=====================================================
 
 Named after the deepest place on earth (Mariana trench), Mariana is a Python Machine Learning Framework built on top of Theano_, that focuses on ease of use.  Mariana lives on github_.
 
