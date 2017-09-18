@@ -38,8 +38,9 @@ class Initialization_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC) :
             "sparsity": sparsity
         })
     
-    # def attach(self, abstraction) :
-    #     pass
+    def setup(self, abstraction) :
+        """setups the initialization for a given abstraction. By default does nothing, but allows some degree of fine tuning if necesssary"""
+        pass
 
     def logApply(self, layer, **kwargs) :
         message = "Applying '%s' on parameter: '%s' of layer '%s'" % (self.name, self.getHP('parameter'), layer.name)
@@ -158,8 +159,8 @@ class FanInFanOut_ABC(Initialization_ABC) :
                 return numpy.sqrt(2/(1+activation.leakiness**2))
         return 1.0
 
-    # def attach(self, abstraction) :
-    #     self.gain = self._getGain(abstraction.abstractions["activation"])
+    def setup(self, abstraction) :
+        self.gain = self._getGain(abstraction.abstractions["activation"])
 
     def apply(self, abstraction) :
         import Mariana.activations as MA

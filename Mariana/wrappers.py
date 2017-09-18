@@ -116,7 +116,7 @@ class Updates(object):
                     for paramName in abstraction.getParameters() :
                         previousOptim=None
                         optim = sc.apply(abstraction=abstraction, parameterName=paramName, loss=self.loss, previous=previousOptim)
-                        name = "%s.%s" % (names[abstraction], paramName),
+                        name = "%s.%s" % (names[abstraction], paramName)
                         if optim :
                             preStore[name] = {
                                 "parameter": optim.parameter,

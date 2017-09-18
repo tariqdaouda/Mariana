@@ -55,19 +55,21 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
 
                     dct[cat]["layer"].append({"name": pKey, "value": pVal})
                     dct[cat]["size"] += 1
-                    
+                
                 for absCat, abstractions in networkJson["layers"][l]["abstractions"].iteritems() :
                     dct[cat][absCat] = []
                     for absName, absVal in abstractions.iteritems() :
-                        for pName, pVal in absVal[cat].iteritems() :
-                            if cat == "notes" :
-                                pKey = pName
-                            else :
-                                pKey = "{absName}.{pName}".format(absName = absName, pName = pName)
-                            
-                            dct[cat][absCat].append({"name": pKey, "value": pVal})
+                        try :
+                            for pName, pVal in absVal[cat].iteritems() :
+                                if cat == "notes" :
+                                    pKey = pName
+                                else :
+                                    pKey = "{absName}.{pName}".format(absName = absName, pName = pName)
+                                
+                                dct[cat][absCat].append({"name": pKey, "value": pVal})
                             dct[cat]["size"] += 1
-    
+                        except KeyError :
+                            pass    
             layers.append([l, dct])
 
         html = self.html.format(

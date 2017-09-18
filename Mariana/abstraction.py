@@ -190,13 +190,13 @@ class TrainableAbstraction_ABC(Abstraction_ABC):
                 init._apply(self)
         self._mustInit=False
 
-    def toDictionary(self, parent=None) :
+    def toDictionary(self) :
         """A dct representation of the object"""
         
         res = super(TrainableAbstraction_ABC, self).toDictionary()
         ps = OrderedDict()
         for k, v in self.parameters.iteritems() :
-            ps[k] = {"shape": self.getParameterShape_abs(k, parent=parent)}
+            ps[k] = {"shape": self.getParameterShape_abs(k)}
 
         res["parameters"] = ps    
         
