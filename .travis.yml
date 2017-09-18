@@ -23,6 +23,7 @@ before_install:
 install:
     - conda install --yes python=$TRAVIS_PYTHON_VERSION pip numpy scipy
     - pip install -r https://raw.githubusercontent.com/Lasagne/Lasagne/v0.1/requirements.txt
+    - pip install git+https://www.github.com/Lasagne/Lasagne
     - pip install coverage
     - python setup.py install
 

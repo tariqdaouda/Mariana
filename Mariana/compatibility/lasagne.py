@@ -96,7 +96,7 @@ class LasagneLayer(ML.Layer_ABC) :
         self.lasagneParameters = {}
         for init in self.abstractions["initializations"] :
             self.setP(init.getHP("parameter"), MTYPES.Parameter("%s.%s" % (self.name, init.getHP("parameter"))))
-            init.attach(self)
+            # init.attach(self)
             self.lasagneParameters[init.getHP("parameter")] = init.run
 
     def femaleConnect(self, layer) :
