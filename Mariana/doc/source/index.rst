@@ -7,6 +7,8 @@ Mariana: The Cutest Deep Learning Framework
 ===========================================
 .. image:: https://img.shields.io/badge/python-2.7-blue.svg 
 
+Mariana's goal is to create a powerful language through which complex deep neural networks can be meaningfully expressed and easily manipulated. It's here to empower researchers, teachers and students, while greatly facilitating AI knowledge transfer into other domains
+
 Named after the deepest place on earth (Mariana trench), Mariana is a Python Machine Learning Framework built on top of Theano_, that focuses on ease of use.  Mariana lives on github_.
 
 .. _Theano: http://www.deeplearning.net/software/theano/
