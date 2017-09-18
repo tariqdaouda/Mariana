@@ -1,9 +1,10 @@
-.. image:: https://img.shields.io/badge/python-2.7-blue.svg 
 
 .. image:: https://avatars2.githubusercontent.com/u/7224902?v=3&s=460 
 
 MARIANA: The Cutest Deep Learning Framework
 =============================================
+.. image:: https://img.shields.io/badge/python-2.7-blue.svg 
+
 
 **WIP: NEW VERSION WITH MUCH IMPROVEMENTS. COMING SOON! (WHEN IT IS READY).**
 
