@@ -1,17 +1,7 @@
-.. image:: https://travis-ci.org/tariqdaouda/Mariana.svg
-    :target: https://travis-ci.org/tariqdaouda/Mariana.svg?branch=V2-dev
-.. image:: https://codecov.io/gh/tariqdaouda/Mariana/branch/V2-dev/graph/badge.svg
-    :target: https://codecov.io/gh/tariqdaouda/Mariana/branch/V2-dev/graph/
-.. image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
-    :target: https://opensource.org/licenses/Apache-2.0
-
-.. image:: https://img.shields.io/badge/python-2.7-blue.svg 
-
-.. image:: https://avatars2.githubusercontent.com/u/7224902?v=3&s=460 
-
 MARIANA: The Cutest Deep Learning Framework
 =============================================
-
+.. image:: https://img.shields.io/badge/python-2.7-blue.svg 
+    
 **TEMPORARY README FOR MARIANA V2, WIP (BUT ALMOST DONE).**
 
 Mariana is an **efficient language** through which complex deep neural networks can be easily expressed and easily manipulated. It's simple enough for beginners and doesn't get much complicated for seniors.
@@ -26,12 +16,13 @@ V2 is almost a complete rewite of V1. It is much better.
 What's done
 -----------
 
-* **Convolutions, Deconvolutions (Transpose convolution)**
+* **Convolutions, Deconvolutions (Transpose convolution), all sorts of convolutions...**
 
 * **Lasagne compatible**: Every lasagne layer can be seemlessly imported and used into Mariana
 * **Just in time function compilation**: At the heart of Mariana are Theano function. The previous version compiled every function at model initialization. This caused compilation times to be longer than needed. With this version functions are compiled only if needed.
-* **Function mixins (My favorite)**: Mariana functions can now be added together! The result is a function that performs the actions of all its components at once. Let's say we have two output layers and want a function that optimises on losses for both outputs. Creating it is as simple as: f = out1.train + out2.train, and then calling f. Mariana will derive f from both functions adding the costs, calculating gradients and updates seemlessly in the background
-* **Easy access to gradients and updates**: Just call .getGradients(), .getUpdates() on ant function to get a view of either gradients of updates for any paramater.
+* **Function mixins (my favorite)**: Mariana functions can now be added together! The result is a function that performs the actions of all its components at once. Let's say we have two output layers and want a function that optimises on losses for both outputs. Creating it is as simple as: f = out1.train + out2.train, and then calling f. Mariana will derive f from both functions adding the costs, calculating gradients and updates seemlessly in the background
+* **Easy access to gradients and updates**: Just call .getGradients(), .getUpdates() on any function to get a view of either gradients of updates for all parameters.
+* **User friendly error messages**: Functions will tell you what arguments they expect.
 * **Streams!**: You probably heard of batchnorm... and how it has a different behaviour in training and in testing. Well that simple fact can be the cause of some very messy DL code. With streams all this is over. Streams are parallel universes of execution for functions. You can define your own streams and have as many as you want. For batchnorm it mean that depending on the stream you call your function in (test or train), the behaviour will be different, even though you only changed one word.
 * **Chainable optimization rules**: As in the previous version, layers inherit their learning scenari from outputs, but have the possibility to redifine them. This is still true, but rules can now be chained. Here's how to define a layer with fixed bias: l = Dense( learningScenari=[GradientDescent(lr = 0.1), Fixed('b')]) 
 * **Much easier to extend**: The (almost) complete rewrite made for a much more cleaner code that is much more easy to extend. It is now much simpler to create your own layers, decorators, etc... Function that you need to implement end with *_abs* and Mariana has whole new bunch of custom type that support streams.
