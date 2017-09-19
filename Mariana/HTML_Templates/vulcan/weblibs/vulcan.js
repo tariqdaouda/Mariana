@@ -179,6 +179,7 @@ Vue.component('graph-view', {
         };
 
         namesToI[layers[i][0]] = i
+        console.log(node)
         nodes.push(node)
       }
       return {nodes: nodes, maxLvl: maxLvl, namesToI}

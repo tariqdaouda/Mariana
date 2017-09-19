@@ -11,7 +11,7 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
         self.html = f.read()
         f.close()
         
-        self.filesDir = os.path.join(self.dirname, "files")
+        self.weblibsDir = os.path.join(self.dirname, "weblibs")
     
     def formatNotes(self, notes) :
         tmp = """
@@ -38,6 +38,8 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
         import json
 
         title = os.path.basename(filename)
+        noSpaceTitle = title.replace(" ", "-")
+        libsFolder = "%s_weblibs" % noSpaceTitle
         currFolder = os.path.dirname(filename)
 
         layers = []
@@ -67,13 +69,14 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
                                     pKey = "{absName}.{pName}".format(absName = absName, pName = pName)
                                 
                                 dct[cat][absCat].append({"name": pKey, "value": pVal})
-                            dct[cat]["size"] += 1
+                                dct[cat]["size"] += 1
                         except KeyError :
                             pass    
             layers.append([l, dct])
 
         html = self.html.format(
             TITLE=title,
+            LIBS_FOLDER=libsFolder,
             DOCUMENTATION_URL="http://bioinfo.iric.ca/~daoudat/Mariana/",
             GITHUB_URL="https://github.com/tariqdaouda/Mariana",
             MODEL_NOTES=self.formatNotes(networkJson["notes"]),
@@ -83,11 +86,13 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
             EDGES_JSON=json.dumps(networkJson["edges"])
         )
         
-        webFolder = "%s_webfiles" % title
         
-        if not os.path.isdir(self.filesDir) :
-            shutil.copytree(self.filesDir, os.path.join(currFolder, webFolder))
+        if os.path.isdir(self.weblibsDir) :
+            dstFolder = os.path.join(currFolder, libsFolder)
+            if os.path.isdir(dstFolder) :
+                shutil.rmtree(dstFolder)    
+            shutil.copytree(self.weblibsDir, dstFolder)
         
-        f = open(os.path.join(currFolder, "%s.html" % title), "w") 
+        f = open(os.path.join(currFolder, "%s.html" % noSpaceTitle), "w") 
         f.write(html)
         f.close()

@@ -2,48 +2,53 @@
 <html>
 <head>
     <title>{TITLE}</title>
-
+    <!--
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.0.0-beta.21/css/uikit.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.0.0-beta.21/js/uikit.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.0.0-beta.21/js/uikit-icons.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.19.1/vis.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.19.1/vis.min.css" rel="stylesheet" type="text/css"/>
-    
     <script type="text/javascript" src="https://unpkg.com/vue"></script>
-    <link href="{TITLE}_web/vulcan.css" rel="stylesheet" type="text/css"/>
+    -->
+    
+    <script type="text/javascript" src="{LIBS_FOLDER}/jquery-3.2.1.min.js"></script>
+    <link rel="stylesheet" href="{LIBS_FOLDER}/uikit/3.0.0-beta.21/css/uikit.min.css" />
+    <script src="{LIBS_FOLDER}/uikit/3.0.0-beta.21/js/uikit.min.js"></script>
+    <script type="text/javascript" src="{LIBS_FOLDER}/vue.min.js"></script>    
+    <script type="text/javascript" src="{LIBS_FOLDER}/vis/4.19.1/vis.min.js"></script>
+    <link href="{LIBS_FOLDER}/vis/4.19.1/vis.min.css" rel="stylesheet" type="text/css"/>
+    <link href="{LIBS_FOLDER}/vulcan.css" rel="stylesheet" type="text/css"/>
+
 </head>
 
 <body>
     <div id="all" class="uk-container uk-container-center">
         <div class="uk-grid uk-flex-center uk-text-center" uk-grid>
             <div class="uk-card uk-card-default uk-width-expand">
-                <h3 class="uk-card-title uk-margin-remove-bottom">{TITLE}</h3>
                 <p>
                     <a target="_blank" href='{DOCUMENTATION_URL}'>
-                        <img src="lala_web/mariana_logo.png" alt="Documentation" height="150" width="150" title="Documentation">
+                        <img src="{LIBS_FOLDER}/mariana_logo.png" alt="Documentation" height="150" width="150" title="Documentation"/>
                     </a>
                 </p> 
+                <h3 class="uk-card-title uk-margin-remove-bottom">{TITLE}</h3>
                 <p class="uk-text-meta uk-margin-remove-top"><time datetime="{MACHINE_TIME}">{USER_TIME}</time></p>
                 <div class="uk-card-body">
                     {MODEL_NOTES}
                 </div>
-                <div class="uk-card-footer">
-                    From Mariana, with <span uk-icon="icon: heart; ratio: 0.75"></span>
-                    <a target="_blank" href='{DOCUMENTATION_URL}'>
-                        <img src="lala_web/mariana_logo.png" alt="Documentation" height="42" width="42" title="Documentation">
-                    </a>
-                    <a target="_blank" href="{GITHUB_URL}" class="uk-icon-button" uk-icon="icon: github"></a>
-                </div>
+                <a target="_blank" href="{GITHUB_URL}" class="uk-icon-button">
+                    <i uk-icon="icon: github"></i>
+                </a>
             </div>
             <div class="uk-width-1-1"></div>
             <div class="uk-width-1-1">
                 <graph-view nodesp='{LAYERS_JSON}' edgesp='{EDGES_JSON}' physicsp="true" ></graph-view>
             </div>
-            
         </div>
     </div>
 </body>
 
-<script type="text/javascript" src="{TITLE}_web/vulcan.js"></script>
+<script src="{LIBS_FOLDER}/uikit/3.0.0-beta.21/js/uikit-icons.min.js"></script>
+<script type="text/javascript" src="{LIBS_FOLDER}/vulcan.js"></script>
+
 </html>
