@@ -16,7 +16,7 @@ V2 is almost a complete rewite of V1. It is much better.
 What's done
 -----------
 
-* **Convolutions, Deconvolutions (Transpose convolution)**
+* **Convolutions, Deconvolutions (Transpose convolution), all sorts of convolutions...**
 
 * **Lasagne compatible**: Every lasagne layer can be seemlessly imported and used into Mariana
 * **Just in time function compilation**: At the heart of Mariana are Theano function. The previous version compiled every function at model initialization. This caused compilation times to be longer than needed. With this version functions are compiled only if needed.
