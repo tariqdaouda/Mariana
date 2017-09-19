@@ -30,13 +30,12 @@ What's done
 * **New concatenation layer**: newLayer = C([Layer1, layer2])
 * **Unlimited number of inputs per layer**: Each layer used to be limited to one. Now it is infinit
 * **Abstractions are now divided into trainable (layers, decorators, activations) and untrainable (scenari, costs, initializations)**: All trainable abstractions can hold parameters and have untrainable abstractions applied to them. PReLU will finally join ReLU as an activation!
-
+* **New built-in visualization**: The previous visualization only showed the architecture and layer shapes. The new one is interactive. It contains information on all parameters, hyper-parameters as well as user defined notes on the network, layers, or any other abstraction in the network. A great tool for collaboration.
 
 What's almost done
 -------------------
 
 * Inclusion of popular recurrences (LSTM, recurent layers)
-* New built-in visualisaton: The previous visualization only showed the architecture and layer shapes. The new one will be interactive. It will contain information on all parameters, hyper-parameters as well as user defined notes on the network, layers, or any other abstraction in the network. A great tool for collaboration.
 
 What's next
 -----------
