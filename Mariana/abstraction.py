@@ -137,9 +137,9 @@ class TrainableAbstraction_ABC(Abstraction_ABC):
         for k, v in dct.iteritems() :
             self.setP(k, v)
 
-    def getParameter(k, v) :
+    def getParameter(self, k) :
         """get a single parameter"""
-        self.getP(k, v)
+        self.getP(k)
 
     def setP(self, param, value) :
         """setParameter() alias"""

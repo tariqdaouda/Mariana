@@ -10,9 +10,9 @@ class Convolution1D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         numFilters,
         filterSize,
+        name,
         stride=1,
         pad=0,
         untieBiases=False,
@@ -30,6 +30,7 @@ class Convolution1D(MLASAGNE.LasagneLayer):
                     "untie_biases": untieBiases,
                     "flip_filters": flipFilters
                 },
+                initializations=initializations,
                 lasagneKwargs={},
                 **kwargs
             )
@@ -39,10 +40,10 @@ class Convolution2D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         numFilters,
         filterHeight,
         filterWidth,
+        name,
         stride=(1, 1),
         pad=0,
         untieBiases=False,
@@ -60,6 +61,7 @@ class Convolution2D(MLASAGNE.LasagneLayer):
                     "untie_biases": untieBiases,
                     "flip_filters": flipFilters
                 },
+                initializations=initializations,
                 lasagneKwargs={},
                 name=name,
                 **kwargs
@@ -70,11 +72,11 @@ class Convolution3D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         numFilters,
         filterHeight,
         filterWidth,
         filterDepth,
+        name,
         stride=(1, 1, 1),
         pad=0 ,
         untieBiases=False,
@@ -92,6 +94,7 @@ class Convolution3D(MLASAGNE.LasagneLayer):
                     "untie_biases": untieBiases,
                     "flip_filters": flipFilters
                 },
+                initializations=initializations,
                 lasagneKwargs={},
                 name=name,
                 **kwargs
@@ -102,10 +105,10 @@ class TransposeConvolution2D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         numFilters,
         filterHeight,
         filterWidth,
+        name,
         stride=(1, 1),
         crop=0,
         untieBiases=False,
@@ -123,6 +126,7 @@ class TransposeConvolution2D(MLASAGNE.LasagneLayer):
                     "untie_biases": untieBiases,
                     "flip_filters": flipFilters
                 },
+                initializations=initializations,
                 lasagneKwargs={},
                 name=name,
                 **kwargs
@@ -134,11 +138,11 @@ class TransposeConvolution3D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         numFilters,
         filterHeight,
         filterWidth,
         filterDepth,
+        name,
         stride=(1, 1, 1),
         crop=0 ,
         untieBiases=False,
@@ -156,6 +160,7 @@ class TransposeConvolution3D(MLASAGNE.LasagneLayer):
                     "untie_biases": untieBiases,
                     "flip_filters": flipFilters
                 },
+                initializations=initializations,
                 lasagneKwargs={},
                 name=name,
                 **kwargs
@@ -167,10 +172,10 @@ class DilatedConvolution2D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         numFilters,
         filterHeight,
         filterWidth,
+        name,
         dilation=(1, 1),
         stride=(1, 1),
         pad=0,
@@ -190,6 +195,7 @@ class DilatedConvolution2D(MLASAGNE.LasagneLayer):
                     "untie_biases": untieBiases,
                     "flip_filters": flipFilters
                 },
+                initializations=initializations,
                 lasagneKwargs={},
                 name=name,
                 **kwargs

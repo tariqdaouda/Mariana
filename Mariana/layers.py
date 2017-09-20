@@ -255,7 +255,8 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
             inShape = layer.getShape_abs()
             flatSize = 1
             for i in xrange(selfNdim-1, inpNdim):
-                flatSize *= inShape[i]
+                if inShape[i] is not None :
+                    flatSize *= inShape[i]
             newShape = list(self.getShape_abs())
             newShape[0] = -1
             newShape[-1] = flatSize
@@ -461,8 +462,8 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
     def __repr__(self) :
         return "(Mariana %s '%s': %s )" % (self.__class__.__name__, self.name, self.getShape_abs())
 
-    def __len__(self) :
-        return self.nbOutputs
+    # def __len__(self) :
+    #     return self.nbOutputs
 
     def __setattr__(self, k, v) :
         if k == 'name' and hasattr(self, k) and self.name != v and name is not None :
@@ -480,9 +481,9 @@ class Input(Layer_ABC) :
         super(Input, self).__init__(name=name, **kwargs)
         
         if isinstance(shape, int) :
-            sh = (1, shape)
+            sh = (None, shape)
         else :
-            sh = [1]
+            sh = [None]
             sh.extend(list(shape))
             sh = tuple(sh)
         
@@ -691,7 +692,8 @@ class Dense(Layer_ABC) :
         if len(self.originalInputShape) > 2 :
             s = 1
             for v in self.originalInputShape[1:] :
-                s *= v
+                if v is not None :
+                    s *= v
             self.inputShape = (-1, s)
         else :
            self.inputShape = self.originalInputShape
