@@ -35,7 +35,8 @@ What's done
 What's almost done
 -------------------
 
-* Inclusion of popular recurrences (LSTM, recurent layers)
+* Inclusion of popular recurrences (LSTM, recurent layers, ...)
+* Fancy ways to go downhill: ADAM, Adagrad, ...
 
 What's next
 -----------
