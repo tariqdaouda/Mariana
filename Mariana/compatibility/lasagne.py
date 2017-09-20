@@ -53,7 +53,7 @@ class LasagneStreamedLayer(object):
 class LasagneLayer(ML.Layer_ABC) :
     """This very special class allows you to incorporate a Lasagne layer seemlessly inside a Mariana network.
     An incorporated lasagne is just like a regular layer, with streams and all the other Mariana niceties.
-    Initializations must be specified with Mariana initializers, and please don't pass it an 'incoming', 'nonlinearity' argument.
+    initializations must be specified with Mariana initializers, and please don't pass it an 'incoming', 'nonlinearity' argument.
     It is Mariana's job to do the shape inference and activate the layers, and she can get pretty upset if you try to tell her how to do her job.
     If you need to specifiy a specific value for some paramters, use the HardSet() initializer.
 
@@ -63,8 +63,8 @@ class LasagneLayer(ML.Layer_ABC) :
 
         hidden = LasagneLayer(
             DenseLayer,
-            lasagneHyperParameters={"num_units": 10},
             initializations=[MI.GlorotNormal('W'), MI.SingleValue('b', 0)],
+            lasagneHyperParameters={"num_units": 10},
             activation = MA.Tanh(),
             learningScenari = [MS.GradientDescent(lr = 0.1, momentum=0)],
             name = "HiddenLayer2"
@@ -72,10 +72,10 @@ class LasagneLayer(ML.Layer_ABC) :
     
     """
 
-    def __init__(self, lasagneLayerCls, lasagneHyperParameters={}, lasagneKwargs={}, **kwargs) :
+    def __init__(self, lasagneLayerCls, initializations, lasagneHyperParameters={}, lasagneKwargs={}, **kwargs) :
         import inspect
 
-        super(LasagneLayer, self).__init__(**kwargs)
+        super(LasagneLayer, self).__init__(initializations=initializations, **kwargs)
 
         self.lasagneLayerCls = lasagneLayerCls
 

@@ -19,6 +19,7 @@ class MaxPooling1D(MLASAGNE.LasagneLayer):
       
         super(MaxPooling1D, self).__init__(
                 LasagnePOOL.MaxPool1DLayer,
+                initializations=[],
                 lasagneHyperParameters={
                     "pool_size": poolSize,
                     "stride": stride,
@@ -41,6 +42,7 @@ class MaxPooling2D(MLASAGNE.LasagneLayer):
     ):
         super(MaxPooling2D, self).__init__(
                 LasagnePOOL.MaxPool2DLayer,
+                initializations=[],
                 lasagneHyperParameters={
                     "pool_size": (poolHeight, poolWidth),
                     "stride": stride,
@@ -64,6 +66,7 @@ class MaxPooling3D(MLASAGNE.LasagneLayer):
     ):
         super(MaxPooling3D, self).__init__(
                 LasagnePOOL.MaxPool3DLayer,
+                initializations=[],
                 lasagneHyperParameters={
                     "pool_size": (poolHeight, poolWidth, poolDepth),
                     "stride": stride,
@@ -91,6 +94,7 @@ class AveragePooling1D(MLASAGNE.LasagneLayer):
 
         super(AveragePooling1D, self).__init__(
                 LasagnePOOL.Pool1DLayer,
+                initializations=[],
                 lasagneHyperParameters={
                     "pool_size": poolSize,
                     "stride": stride,
@@ -120,6 +124,7 @@ class AveragePooling2D(MLASAGNE.LasagneLayer):
 
         super(AveragePooling2D, self).__init__(
                 LasagnePOOL.Pool2DLayer,
+                initializations=[],
                 lasagneHyperParameters={
                     "pool_size": (poolHeight, poolWidth),
                     "stride": stride,
@@ -150,6 +155,7 @@ class AveragePooling3D(MLASAGNE.LasagneLayer):
 
         super(AveragePooling3D, self).__init__(
                 LasagnePOOL.Pool3DLayer,
+                initializations=[],
                 lasagneHyperParameters={
                     "pool_size": (poolHeight, poolWidth, poolDepth),
                     "stride": stride,
@@ -171,6 +177,7 @@ class RepeatedUpscaling1D(MLASAGNE.LasagneLayer):
 
         super(Upscale1D, self).__init__(
                 LasagnePOOL.Upscale1DLayer,
+                initializations=[],
                 lasagneHyperParameters={
                     "scale_factor": scaleFactor,
                     "mode": "repeat"
@@ -189,6 +196,7 @@ class DilatedUpscaling1D(MLASAGNE.LasagneLayer):
 
         super(Upscale1D, self).__init__(
                 LasagnePOOL.Upscale1DLayer,
+                initializations=[],
                 lasagneHyperParameters={
                     "scale_factor": scaleFactor,
                     "mode": "dilate"
@@ -208,6 +216,7 @@ class RepeatedUpscaling2D(MLASAGNE.LasagneLayer):
 
         super(Upscale2D, self).__init__(
                 LasagnePOOL.Upscale2DLayer,
+                initializations=[],
                 lasagneHyperParameters={
                     "scale_factor": (heightScaleFactor, widthScaleFactor),
                     "mode": "repeat"
@@ -227,6 +236,7 @@ class DilatedUpscaling2D(MLASAGNE.LasagneLayer):
 
         super(Upscale2D, self).__init__(
                 LasagnePOOL.Upscale2DLayer,
+                initializations=[],
                 lasagneHyperParameters={
                     "scale_factor": (heightScaleFactor, widthScaleFactor),
                     "mode": "dilate"
@@ -247,6 +257,7 @@ class RepeatedUpscaling3D(MLASAGNE.LasagneLayer):
 
         super(Upscale3D, self).__init__(
                 LasagnePOOL.Upscale3DLayer,
+                initializations=[],
                 lasagneHyperParameters={
                     "scale_factor": (heightScaleFactor, widthScaleFactor, depthScaleFactor),
                     "mode": "repeat"
@@ -266,6 +277,7 @@ class DilatedUpscaling3D(MLASAGNE.LasagneLayer):
     ):
         super(Upscale3D, self).__init__(
                 LasagnePOOL.Upscale3DLayer,
+                initializations=[],
                 lasagneHyperParameters={
                     "scale_factor": (heightScaleFactor, widthScaleFactor, depthScaleFactor),
                     "mode": "dilate"
@@ -286,6 +298,7 @@ class WinnerTakesAll(MLASAGNE.LasagneLayer):
 
         super(Upscale3D, self).__init__(
                 LasagnePOOL.FeatureWTALayer,
+                initializations=[],
                 lasagneHyperParameters={
                     "pool_size": poolSize,
                     "axis": axis
@@ -306,6 +319,7 @@ class MaxSpatialPyramidPooling(MLASAGNE.LasagneLayer):
 
         super(Upscale3D, self).__init__(
                 LasagnePOOL.SpatialPyramidPooling,
+                initializations=[],
                 lasagneHyperParameters={
                     "pool_size": poolSize,
                     "implementation": implementation,
@@ -333,6 +347,7 @@ class AverageSpatialPyramidPooling(MLASAGNE.LasagneLayer):
 
         super(Upscale3D, self).__init__(
                 LasagnePOOL.SpatialPyramidPooling,
+                initializations=[],
                 lasagneHyperParameters={
                     "pool_size": poolSize,
                     "implementation": implementation,

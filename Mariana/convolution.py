@@ -22,6 +22,7 @@ class Convolution1D(MLASAGNE.LasagneLayer):
     ):
         super(Convolution1D, self).__init__(
                 LasagneCONV.Conv1DLayer,
+                initializations=initializations,
                 lasagneHyperParameters={
                     "num_filters": numFilters,
                     "filter_size": filterSize,
@@ -30,7 +31,6 @@ class Convolution1D(MLASAGNE.LasagneLayer):
                     "untie_biases": untieBiases,
                     "flip_filters": flipFilters
                 },
-                initializations=initializations,
                 lasagneKwargs={},
                 **kwargs
             )
@@ -53,6 +53,7 @@ class Convolution2D(MLASAGNE.LasagneLayer):
     ):
         super(Convolution2D, self).__init__(
                 LasagneCONV.Conv2DLayer,
+                initializations=initializations,
                 lasagneHyperParameters={
                     "num_filters": numFilters,
                     "filter_size": (filterHeight, filterWidth),
@@ -61,7 +62,6 @@ class Convolution2D(MLASAGNE.LasagneLayer):
                     "untie_biases": untieBiases,
                     "flip_filters": flipFilters
                 },
-                initializations=initializations,
                 lasagneKwargs={},
                 name=name,
                 **kwargs
