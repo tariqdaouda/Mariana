@@ -286,7 +286,7 @@ class MLPTests(unittest.TestCase):
         self.assertTrue(sum(hb) == sum(h.getP('b').getValue()) )
         self.assertTrue( sum(hw[0]) != sum( h.getP('W').getValue()[0]) )
 
-    # @unittest.skip("skipping")
+    @unittest.skip("skipping")
     def test_conv_pooling(self) :
         import Mariana.convolution as MCONV
         import Mariana.sampling as MSAMP
@@ -375,34 +375,31 @@ class MLPTests(unittest.TestCase):
 
         self.assertTrue(res < 0.1)
 
-    @unittest.skip("skipping")
-    def testRecurrentDense(self) :
+    # @unittest.skip("skipping")
+    def testRecurrences(self) :
         import Mariana.recurrence as MREC
+        import Mariana.reshaping as MRES
         
         ls = MS.GradientDescent(lr = 0.1)
         cost = MC.NegativeLogLikelihood()
         
-        inp = ML.Input((None, 1), 'inp')
-        # h = ML.Hidden(5, activation = MA.Tanh(), learningScenari = [MS.Fixed("b")], name = "h")
-        r = MREC.RecurrentDense(2, name = "rec")
-        o = ML.SoftmaxClassifier(2, cost=cost, learningScenari = [MS.GradientDescent(lr = 0.5)], name = "out")
-        # net = inp > h > r > o
-        net = inp > r > o
-        net.init()
-
-        print net["rec"].propagate["test"]({"inp.inputs":  [[[1]]]} )
-        # print r.getP("W_in_to_hid").getValue()
-        print r.getP("W_hid_to_hid").getValue()
-        for x in xrange(1,100):
-            net["out"].train({"inp.inputs": [[[1]]], "out.targets":[1]} )["out.drive.train"]
-            # net["out"].train({"inp.inputs": [[[1]], [[0]]], "out.targets":[0]} )["out.drive.train"]
-            # net["out"].train({"inp.inputs": [[[0]], [[1]]], "out.targets":[0]} )["out.drive.train"]
-            # net["out"].train({"inp.inputs": [[[1]], [[1]]], "out.targets":[0]} )["out.drive.train"]
-        # print r.getP("W_hid_to_hid")
-        # print r.getP("W_in_to_hid").getValue()
-        print r.getP("W_hid_to_hid").getValue()
-        print net["rec"].propagate["test"]({"inp.inputs": [[[1]]]} )
-
+        # for clas in [MREC.RecurrentDense, MREC.LSTM, MREC.GRU] : 
+        for clas in [MREC.RecurrentDense] : 
+            inp = ML.Input((None, 3), 'inp')
+            r = clas(2, onlyReturnFinal=True, name = "rec")
+            reshape = MRES.Reshape((-1, 2), name="reshape")
+            o = ML.SoftmaxClassifier(2, cost=cost, learningScenari = [MS.GradientDescent(lr = 0.5)], name = "out")
+            net = inp > r > reshape > o
+            net.init()
+            inputs = [ [ [1, 1], [1, 2], [1, 1] ], [ [1, 1], [10, 1], [1, 10] ] ]
+            
+            oldWih = r.getP("W_in_to_hid").getValue()
+            oldWhh = r.getP("W_hid_to_hid").getValue()
+            for x in xrange(1,100):
+                net["out"].train({"inp.inputs": inputs, "out.targets":[1, 1, 1]} )["out.drive.train"]
+            self.assertTrue(oldWih.mean() != r.getP("W_in_to_hid").getValue().mean() )
+            self.assertTrue(oldWhh.mean() != r.getP("W_hid_to_hid").getValue().mean() )
+    
 if __name__ == '__main__' :
     import Mariana.settings as MSET
     MSET.VERBOSE = False

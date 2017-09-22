@@ -86,6 +86,7 @@ class Convolution3D(MLASAGNE.LasagneLayer):
     ):
         super(Convolution3D, self).__init__(
                 LasagneCONV.Conv3DLayer,
+                initializations=initializations,
                 lasagneHyperParameters={
                     "numFilters": numFilters,
                     "filter_size": (filterHeight, filterWidth, filterDepth),
@@ -94,7 +95,6 @@ class Convolution3D(MLASAGNE.LasagneLayer):
                     "untie_biases": untieBiases,
                     "flip_filters": flipFilters
                 },
-                initializations=initializations,
                 lasagneKwargs={},
                 name=name,
                 **kwargs
@@ -118,6 +118,7 @@ class TransposeConvolution2D(MLASAGNE.LasagneLayer):
     ):
         super(TransposeConvolution2D, self).__init__(
                 LasagneCONV.TransposedConv2DLayer,
+                initializations=initializations,
                 lasagneHyperParameters={
                     "num_filters": numFilters,
                     "filter_size": (filterHeight, filterWidth),
@@ -126,7 +127,6 @@ class TransposeConvolution2D(MLASAGNE.LasagneLayer):
                     "untie_biases": untieBiases,
                     "flip_filters": flipFilters
                 },
-                initializations=initializations,
                 lasagneKwargs={},
                 name=name,
                 **kwargs
@@ -152,6 +152,7 @@ class TransposeConvolution3D(MLASAGNE.LasagneLayer):
     ):
         super(Convolution3D, self).__init__(
                 LasagneCONV.TransposedConv3DLayer,
+                initializations=initializations,
                 lasagneHyperParameters={
                     "num_filters": numFilters,
                     "filter_size": (filterHeight, filterWidth, filterDepth),
@@ -160,7 +161,6 @@ class TransposeConvolution3D(MLASAGNE.LasagneLayer):
                     "untie_biases": untieBiases,
                     "flip_filters": flipFilters
                 },
-                initializations=initializations,
                 lasagneKwargs={},
                 name=name,
                 **kwargs
@@ -186,6 +186,7 @@ class DilatedConvolution2D(MLASAGNE.LasagneLayer):
     ):
         super(TransposeConvolution2D, self).__init__(
                 LasagneCONV.DilatedConv2DLayer,
+                initializations=initializations,
                 lasagneHyperParameters={
                     "num_filters": numFilters,
                     "filter_size": (filterHeight, filterWidth),
@@ -195,7 +196,6 @@ class DilatedConvolution2D(MLASAGNE.LasagneLayer):
                     "untie_biases": untieBiases,
                     "flip_filters": flipFilters
                 },
-                initializations=initializations,
                 lasagneKwargs={},
                 name=name,
                 **kwargs

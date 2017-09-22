@@ -306,7 +306,10 @@ class Network(MABS.Logger_ABC) :
 
     def __getitem__(self, l) :
         """get a layer by name"""
-        return self.layers[l]
+        try :
+            return self.layers[l]
+        except KeyError :
+            raise KeyError("There's no layer named: '%s'" % l)
 
     def __repr__(self) :
         if self._mustInit :

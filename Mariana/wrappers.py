@@ -356,6 +356,15 @@ class KolokoTheanoFunction(object) :
 
         return results
 
+    def help(self, forceCompile = True):
+        """return a description of the function and its expected arguments"""
+        if not self.isCompiled() :
+            if not forceCompile :
+                return "<stream: {stream}, not compiled>".format(stream=self.stream)
+            else :
+                self.compile()
+        return "<stream: {stream}, arguments: {arguments}>".format(stream=self.stream, arguments=self.inputs_varToName.values())
+
     def getToposort(self) :
         """returns the toposort ( name of all ops  of the function in order of application ) of the function"""
         return self.theano_fct.maker.fgraph.toposort()
@@ -424,7 +433,7 @@ class TheanoFunctionGroup(object):
 
         self.updates = set()
         self.mustInit = True
-
+    
     def allowUpdates(self, stream) :
         """Apply updates on a given stream"""
         if stream not in self :
@@ -447,6 +456,23 @@ class TheanoFunctionGroup(object):
                 if self.functions[stream] is None :
                     self.functions[stream] = TheanoFunction("%s.%s" %(self.name, stream), self.layer, self.outputs, stream=stream, update = update, **self.theano_kwargs)
             self.mustInit = False
+
+    def help(self, forceInit=True):
+        """return the help information for functions in the group"""
+        if self.mustInit :
+            if not forceInit :
+                return "==HELP==\nMariana function group {lname}.{name}, (not initialized)".format(name=self.name, lname=self.layer.name)
+            else :
+                self.init()
+
+        sf = []
+        for f in self.functions.values() :
+            sf.append('  '+f.help())
+
+        sf = "\n".join(sf)
+
+        s = "==HELP==\nMariana function group {lname}.{name}:\n{fcts}\n".format(name=self.name, lname=self.layer.name, fcts=sf)
+        return s
 
     def __getitem__(self, stream) :
         self.init()

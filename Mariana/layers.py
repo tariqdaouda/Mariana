@@ -477,13 +477,13 @@ class Input(Layer_ABC) :
     :param int/tuple shape: the shape of the layer, can be a int if its just to specify a number of units. Do not add the minibatch to the shape. Mariana is smart enough to add it for you.
     :param dtype: the numpy data type 
     """
-    def __init__(self, shape, name=None, dtype=theano.config.floatX,  **kwargs) :
+    def __init__(self, shape, name=None, batchSize=None, dtype=theano.config.floatX,  **kwargs) :
         super(Input, self).__init__(name=name, **kwargs)
         
         if isinstance(shape, int) :
-            sh = (None, shape)
+            sh = (batchSize, shape)
         else :
-            sh = [None]
+            sh = [batchSize]
             sh.extend(list(shape))
             sh = tuple(sh)
         
@@ -601,7 +601,7 @@ class Embedding(Layer_ABC) :
     """Embeddings are learned representations of the inputs that are much loved in NLP.
     This layer will take care of creating the embeddings and optimizing them. It can either be used as an input layer or as hidden layer"""
 
-    def __init__(self, nbDimensions, dictSize, zeroForNull=False, initializations=[MI.Uniform('embeddings', small=True)], **kwargs) :
+    def __init__(self, nbDimensions, dictSize, name=None, batchSize=None, zeroForNull=False, initializations=[MI.Uniform('embeddings', small=True)], **kwargs) :
         """
         :param int nbDimensions: the number of dimensions in wich to encode each word.
         :param int dictSize: the total number of words.
@@ -610,7 +610,7 @@ class Embedding(Layer_ABC) :
         
         """
 
-        super(Embedding, self).__init__(initializations=initializations, **kwargs)
+        super(Embedding, self).__init__(initializations=initializations, name=name, **kwargs)
 
         self.zeroForNull=zeroForNull
 
@@ -627,7 +627,7 @@ class Embedding(Layer_ABC) :
         self.nbInputs = layer.getShape_abs()[1]
 
     def getShape_abs(self) :
-        return (1, self.nbInputs * self.getHP("nbDimensions"))
+        return (batchSize, self.nbInputs * self.getHP("nbDimensions"))
 
     def getParameterShape_abs(self, param, **kwargs) :
         if param == "embeddings" :

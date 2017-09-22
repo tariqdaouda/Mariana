@@ -3,7 +3,7 @@ import Mariana.initializations as MI
 import Mariana.compatibility.lasagne as MLASAGNE
 import lasagne.layers as LasagneLayers
 
-__all__ = ["RecurrentDense", "RecurrentLayer", "LSTM", "CustomRecurrentLayer", "GatedRecurrentUnit", "GRU"]
+__all__ = ["RecurrentDense", "RecurrentLayer", "LSTM", "GatedRecurrentUnit", "GRU"]
 
 class RecurrentDense(MLASAGNE.LasagneLayer):
     """The classical recurrent layer with dense input to hidden and hidden to hidden connections.
@@ -19,7 +19,7 @@ class RecurrentDense(MLASAGNE.LasagneLayer):
         gradientSteps=-1,
         gradClipping=0,
         unrollScan=False,
-        precomputeInput=True,
+        # precomputeInput=False,
         onlyReturnFinal=False,
         **kwargs
     ):
@@ -32,7 +32,7 @@ class RecurrentDense(MLASAGNE.LasagneLayer):
                     "gradient_steps": gradientSteps,
                     "grad_clipping": gradClipping,
                     "unroll_scan": unrollScan,
-                    "precompute_input": precomputeInput,
+                    "precompute_input": False,
                     "mask_input": None,
                     "only_return_final": onlyReturnFinal,
                 },
@@ -50,7 +50,7 @@ class RecurrentDense(MLASAGNE.LasagneLayer):
                 "gradientSteps": gradientSteps,
                 "gradClipping": gradClipping,
                 "unrollScan": unrollScan,
-                "precomputeInput": precomputeInput,
+                # "precomputeInput": precomputeInput,
                 "onlyReturnFinal": onlyReturnFinal
             }
         )
