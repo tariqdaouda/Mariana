@@ -51,7 +51,6 @@ class ReLU(Activation_ABC):
 
     def run(self, x):
         return tt.nnet.relu(x, alpha=self.getHP("leakiness"))
-        # return tt.maximum(0., x)
 
 class Softmax(Activation_ABC):
     """Softmax to get a probabilistic output

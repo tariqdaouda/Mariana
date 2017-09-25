@@ -185,9 +185,16 @@ class TrainableAbstraction_ABC(Abstraction_ABC):
 
     def _initParameters(self, forceReset=False) :
         """creates the parameters if necessary"""
+        selfParams = set(self.parameters.keys())
+        initParams = set()
         if self._mustInit or forceReset :
             for init in self.abstractions["initializations"] :
                 init._apply(self)
+                initParams.add(init.getHP("parameter"))
+        
+        if selfParams != initParams :
+            raise ValueError("Parameters: %s, where not supplied initializations" % (selfParams - initParams))
+        
         self._mustInit=False
 
     def toDictionary(self) :

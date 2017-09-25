@@ -391,7 +391,7 @@ class MLPTests(unittest.TestCase):
             o = ML.SoftmaxClassifier(2, cost=cost, learningScenari = [MS.GradientDescent(lr = 0.5)], name = "out")
             net = inp > r > reshape > o
             net.init()
-            inputs = [ [ [1, 1], [1, 2], [1, 1] ], [ [1, 1], [10, 1], [1, 10] ] ]
+            inputs = [ [ [1, 1], [1, 0], [1, 1] ], [ [1, 0], [0, 1], [1, 0] ] ]
             
             oldWih = r.getP("W_in_to_hid").getValue()
             oldWhh = r.getP("W_hid_to_hid").getValue()

@@ -103,8 +103,6 @@ class LasagneLayer(ML.Layer_ABC) :
 
     def femaleConnect(self, layer) :
         self.inLayer = layer
-        # print "---=-", self.inLayer.getShape_abs()
-        # print self.lasagneParameters
         if not self.lasagneLayer :
             self.lasagneLayer = LasagneStreamedLayer(incomingShape=self.inLayer.getShape_abs(), streams=self.streams, lasagneLayerCls=self.lasagneLayerCls, hyperParameters=self.lasagneHyperParameters, initParameters=self.lasagneParameters)
         
