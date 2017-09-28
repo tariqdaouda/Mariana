@@ -1,12 +1,14 @@
 
 .. image:: https://avatars2.githubusercontent.com/u/7224902?v=3&s=460 
 
+**WIP: NEW VERSION WITH MUCH IMPROVEMENTS. COMING SOON! (WHEN IT IS READY).**
+Checkout branch for a list of upcoming feature: V2-dev_.
+
+.. _V2-dev: https://github.com/tariqdaouda/Mariana/tree/V2-dev
+
 MARIANA: The Cutest Deep Learning Framework
 =============================================
 .. image:: https://img.shields.io/badge/python-2.7-blue.svg 
-
-
-**WIP: NEW VERSION WITH MUCH IMPROVEMENTS. COMING SOON! (WHEN IT IS READY).**
 
 Mariana's goal is to create a **powerful language** through which complex deep neural networks can be meaningfully expressed and easily manipulated. It's here to empower **researchers**, **teachers** and **students**, while greatly facilitating **AI knowledge transfer** into other domains.
 
