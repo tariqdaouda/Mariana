@@ -2,7 +2,7 @@
 .. image:: https://avatars2.githubusercontent.com/u/7224902?v=3&s=460 
 
 **WIP: NEW VERSION WITH MUCH IMPROVEMENTS. COMING SOON! (WHEN IT IS READY).**
-Checkout branch for a list of upcoming feature: V2-dev_.
+Checkout branch V2-dev_ for a list of upcoming feature.
 
 .. _V2-dev: https://github.com/tariqdaouda/Mariana/tree/V2-dev
 
