@@ -18,9 +18,7 @@ Intuitive, user-friendly and yet flexible enough for research. It's here to empo
 
 	import Mariana.settings as MSET
 
-	MSET.VERBOSE = False
-
-	ls = MS.GradientDescent(lr = 0.01)
+	ls = MS.GradientDescent(lr = 0.01, momentum=0.9)
 	cost = MC.NegativeLogLikelihood()
 
 	inp = ML.Input(28*28, name = "InputLayer")
