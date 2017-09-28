@@ -8,6 +8,35 @@ Mariana is an **efficient language** through which complex deep neural networks 
 
 Intuitive, user-friendly and yet flexible enough for research. It's here to empower **researchers**, **teachers** and **students** alike, while greatly facilitating **AI knowledge transfer** into other domains.
 
+.. code:: python
+
+	import Mariana.layers as ML
+	import Mariana.scenari as MS
+	import Mariana.costs as MC
+	import Mariana.activations as MA
+	import Mariana.regularizations as MR
+
+	import Mariana.settings as MSET
+
+	MSET.VERBOSE = False
+
+	ls = MS.GradientDescent(lr = 0.01)
+	cost = MC.NegativeLogLikelihood()
+
+	inp = ML.Input(28*28, name = "InputLayer")
+	h1 = ML.Hidden(300, activation = MA.ReLU(), name = "Hidden1", regularizations = [ MR.L1(0.0001) ])
+	h2 = ML.Hidden(300, activation = MA.ReLU(), name = "Hidden2", regularizations = [ MR.L1(0.0001) ])
+	o = ML.SoftmaxClassifier(10, learningScenario = ls, costObject = cost, name = "Probabilities")
+
+	#Connection layers
+	inp > h1 > h2
+	concat = C([inp, h2])
+
+	MLP_skip = concat > o
+
+	#Visualizing
+	MLP_skip.saveHTML("mySkipMLP")
+    
 V2's most exciting stuff
 =========================
 
