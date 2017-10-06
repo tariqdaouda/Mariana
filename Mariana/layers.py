@@ -22,10 +22,10 @@ class Layer_ABC(object) :
 
     def __new__(cls, *args, **kwargs) :
         import inspect
-        
+       
         obj=super(Layer_ABC, cls).__new__(cls, *args, **kwargs)
         # argNames=inspect.getargspec(obj.__init__)[0][1:] #remove self
-        
+       
         finalKwargs={}
         for k, v in kwargs.iteritems() :
             finalKwargs[k]=v
@@ -117,7 +117,7 @@ class Layer_ABC(object) :
         creationArguments=dict(self.creationArguments["kwargs"])
         creationArguments.update(kwargs)
         newLayer=self.__class__(*self.creationArguments["args"], **creationArguments)
-        
+       
         for k, v in self.getParameterDict().iteritems() :
             setattr(newLayer, k, v)
             newLayer._mustReset=False
@@ -136,7 +136,7 @@ class Layer_ABC(object) :
         """The last function called during initialization. Does nothing by default, you can put in it
         whatever post-action you want performed on the layer post normal initialization"""
         pass
-    
+   
     def _setShape(self) :
         """last chance to define the layer's shape before parameter initialization"""
         pass
@@ -144,7 +144,7 @@ class Layer_ABC(object) :
     def _initParameters(self, forceReset=False) :
         """creates the parameters if necessary (self._mustRest == True)"""
         self._setShape()
-        if self._mustReset or forceReset :        
+        if self._mustReset or forceReset :       
             for init in self.initializations :
                 init.apply(self)
         self._mustReset=False
@@ -153,7 +153,7 @@ class Layer_ABC(object) :
         """Initialize a parameter, raise value error if already initialized"""
         if parameter not in self.parameters :
             raise ValueError("Layer '%s' has no parameter '%s'. Add it to self.parameters dict and give it a None value." % (self.name, parameter) )
-            
+           
         if self.parameters[parameter] is None:
             self.parameters[parameter] = value
         else :
@@ -195,7 +195,7 @@ class Layer_ABC(object) :
         This is called after decorating"""
         self.propagate=MWRAP.TheanoFunction("propagate", self, [("outputs", self.outputs)], allow_input_downcast=True)
         self.propagateTest=MWRAP.TheanoFunction("propagateTest", self, [("outputs", self.testOutputs)], allow_input_downcast=True)
-        
+       
         # self.propagate_preAct=MWRAP.TheanoFunction("propagate_preAct", self, [("outputs", self.preactivation_outputs)], allow_input_downcast=True)
         # self.propagateTest_preAct=MWRAP.TheanoFunction("propagateTest_preAct", self, [("outputs", self.preactivation_testOutputs)], allow_input_downcast=True)
 
@@ -235,7 +235,7 @@ class Layer_ABC(object) :
             self._decorate()
             self._outputsSanityCheck()
             self._activate()
-            
+           
             for l in self.network.outConnections[self] :
                 l._registerInput(self)
                 l._initA()
@@ -246,7 +246,7 @@ class Layer_ABC(object) :
         self._listRegularizations()
         self._setTheanoFunctions()
         self._whateverLastInit()
-        
+       
     def _maleConnect(self, layer) :
         """What happens to A when A > B"""
         pass
@@ -286,7 +286,7 @@ class Layer_ABC(object) :
                 object.__setattr__(self, k, v)
                 self.network=MNET.Network()
                 self.network._addLayer(self)
-        
+       
         try :
             deco=self._decorating
         except AttributeError:
@@ -302,7 +302,7 @@ class Layer_ABC(object) :
                 pass
 
         object.__setattr__(self, k, v)
-    
+   
     # def __getattr__(self, k) :
     #     net=object.__getattr__(self, "network")
     #     net.init()
@@ -333,7 +333,6 @@ class Embedding(Layer_ABC) :
         :param int dictSize: the total number of words.
         :param bool zeroForNull: if True the dictionnary will be augmented by one elements at te begining (index=0) whose parameters will always be vector of zeros. This can be used to selectively mask some words in the input, but keep in mind that the index for the first word is moved to one.
         :param int size: the size of the input vector (if your input is a sentence this should be the number of words in it). You don't have to provide a value in the embedding layer is a hidden layer
-        
         """
 
         super(Embedding, self).__init__(size, layerTypes=[MSET.TYPE_INPUT_LAYER], initializations=initializations, **kwargs)
@@ -350,11 +349,11 @@ class Embedding(Layer_ABC) :
 
         self.inputs=None
         self.testInputs=None
-        
+       
         if size is not None :
             self.nbInputs=size
-            self.nbOutputs=self.nbDimentions*self.nbInputs    
-        
+            self.nbOutputs=self.nbDimentions*self.nbInputs   
+       
     def _femaleConnect(self, layer) :
         self.types=[MSET.TYPE_HIDDEN_LAYER]
         if not hasattr(self, "nbInputs") or self.nbInputs is None :
@@ -362,7 +361,7 @@ class Embedding(Layer_ABC) :
             self.nbOutputs=self.nbDimentions*self.nbInputs
         elif self.nbInputs != layer.nbOutputs :
             raise ValueError("All layers connected to '%s' must have the same number of outputs. Got: %s, previously had: %s" % (self.name, layer.nbOutputs, self.nbInputs) )
-    
+   
     def getParameterShape(self, param) :
         if param == "embeddings" :
             return (self.dictSize, self.nbDimentions)
@@ -400,7 +399,7 @@ class Embedding(Layer_ABC) :
                     outs=layer.outputs
                     testOuts=layer.testOutputs
 
-                if self.inputs is None :   
+                if self.inputs is None :  
                     self.inputs=outs
                     self.testInputs=testOuts
                 else :
@@ -442,7 +441,7 @@ class Composite(Layer_ABC):
         outs=[]
         for l in self.network.inConnections[self] :
             outs.append(l.outputs)
-        
+       
         self.outputs=tt.concatenate( outs, axis=1 )
         self.testOutputs=tt.concatenate( outs, axis=1 )
 
@@ -505,11 +504,11 @@ class WeightBias_ABC(Layer_ABC) :
 
         self.outputs=self.inputs
         self.testOutputs=self.testInputs
-        
+       
         if self.parameters["W"] is not None:
             self.outputs=tt.dot(self.inputs, self.parameters["W"])
             self.testOutputs=tt.dot(self.testInputs, self.parameters["W"])
-            
+           
         if self.parameters["b"] is not None:
             self.outputs=self.outputs + self.parameters["b"]
             self.testOutputs=self.testOutputs + self.parameters["b"]
@@ -611,14 +610,14 @@ class Output_ABC(Layer_ABC) :
         self.dctUpdates={}
         self.updates=self.learningScenario.apply(self, self.cost)
         self.dctUpdates[self.name]=self.updates
-        
-        # print self.name, self.updates 
+       
+        # print self.name, self.updates
         for l in self.dependencies.itervalues() :
             if l.learningScenario is not None :
                 updates=l.learningScenario.apply(l, self.cost)
             else :
                 updates=self.learningScenario.apply(l, self.cost)
-            # print l.name, updates 
+            # print l.name, updates
             self.updates.extend(updates)
             self.dctUpdates[l.name]=updates
 
@@ -633,14 +632,14 @@ class Output_ABC(Layer_ABC) :
             self._setCosts()
 
         self._applyRegularizations()
-        
+       
         if self.updates is None :
             self._setUpdates()
 
         super(Output_ABC, self)._setTheanoFunctions()
         self._setCustomTheanoFunctions()
         self._setGetGradientsUpdatesFunctions()
-    
+   
     def _setCustomTheanoFunctions(self) :
         """Adds train, test, model functions::
 
@@ -658,7 +657,7 @@ class Output_ABC(Layer_ABC) :
         """Defines functions for retreving gradients/updates"""
         layers=[self]
         layers.extend(self.dependencies.values())
-        
+      
         for l in layers :
             try :
                 gradOuts=[]
@@ -708,7 +707,7 @@ class WeightBiasOutput_ABC(Output_ABC, WeightBias_ABC):
 
     def _setOutputs(self) :
         WeightBias_ABC._setOutputs(self)
- 
+
 class SoftmaxClassifier(WeightBiasOutput_ABC) :
     """A softmax (probabilistic) Classifier"""
     def __init__(self, size, costObject, learningScenario, temperature=1, **kwargs) :
@@ -755,14 +754,14 @@ class Autoencode(WeightBiasOutput_ABC) :
 
     def _setNbOutputs(self) :
         self.nbOutputs=self.network[self.targetLayerName].nbOutputs
-        
+       
     def _initParameters(self, forceReset=False) :
         self._setNbOutputs()
         super(Autoencode, self)._initParameters(forceReset)
 
     def _whateverFirstInit(self) :
         self.targets=self.network[self.targetLayerName].outputs
-    
+   
     def _setCustomTheanoFunctions(self) :
         super(Autoencode, self)._setCustomTheanoFunctions()
         self.train=MWRAP.TheanoFunction("train", self, [("score", self.cost)], {}, updates=self.updates, allow_input_downcast=True)
