@@ -64,8 +64,8 @@ class Network(object) :
     
         self.edges = OrderedDict()
         
-        self.outConnections = {}
-        self.inConnections = {}
+        self.outConnections = OrderedDict()
+        self.inConnections = OrderedDict()
 
         self.parameters = []
 
@@ -143,6 +143,22 @@ class Network(object) :
 
         self.logNetworkEvent("New edge %s > %s" % (layer1.name, layer2.name))
 
+    def getSortedInConnections(self, layer) :
+        """Returns a layer's inner connections sorted in alphetical order"""
+        names = []
+        for l in self.inConnections[layer] :
+            names.append(l.name)
+        names.sort()
+        return [self.layers[name] for name in names]
+        
+    def getSortedOutConnections(self, layer) :
+        """Returns a layer's outer connections sorted in alphetical order"""
+        names = []
+        for l in self.outConnections[layer] :
+            names.append(l.name)
+        names.sort()
+        return [self.layers[name] for name in names]
+    
     def _addLayer(self, h) :
         """adds a layer to the network"""
         
@@ -349,7 +365,6 @@ class Network(object) :
 
         for l in expandedLayers.itervalues() :
             for k, v in model["layers"][l.name]["parameters"].iteritems() :
-                # print l, k, v.get_value()
                 try:
                     l.updateParameter(k, v)
                 except :

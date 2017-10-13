@@ -439,11 +439,13 @@ class Composite(Layer_ABC):
 
     def _setOutputs(self) :
         outs=[]
-        for l in self.network.inConnections[self] :
+        testOuts=[]
+        for l in self.network.getSortedInConnections(self) :
             outs.append(l.outputs)
+            testOuts.append(l.testOutputs)
        
-        self.outputs=tt.concatenate( outs, axis=1 )
-        self.testOutputs=tt.concatenate( outs, axis=1 )
+        self.outputs=tt.concatenate( outs, axis=1 ) 
+        self.testOutputs=tt.concatenate( testOuts, axis=1 )
 
 class Pass(Layer_ABC) :
     def __init__(self, name=None, **kwargs):
