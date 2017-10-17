@@ -517,9 +517,9 @@ class WeightBias_ABC(Layer_ABC) :
 
     def getParameterShape(self, param) :
         if param == "W" :
-            return (self.nbInputs, self.nbOutputs)
+            return (int(self.nbInputs), int(self.nbOutputs))
         elif param == "b" :
-            return (self.nbOutputs,)
+            return (int(self.nbOutputs),)
         else :
             raise ValueError("Unknown parameter: %s" % param)
 
