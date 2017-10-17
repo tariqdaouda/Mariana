@@ -1,5 +1,5 @@
 
-.. image:: https://avatars2.githubusercontent.com/u/7224902?v=3&s=460 
+.. image:: https://github.com/tariqdaouda/Mariana/blob/master/MarianaLogo.png
 
 **WIP: NEW VERSION WITH MUCH IMPROVEMENTS. COMING SOON! (WHEN IT IS READY).**
 Checkout branch V2-dev_ for a list of upcoming feature.
