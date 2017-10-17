@@ -8,6 +8,33 @@ Mariana is an **efficient language** through which complex deep neural networks 
 
 Intuitive, user-friendly and yet flexible enough for research. It's here to empower **researchers**, **teachers** and **students** alike, while greatly facilitating **AI knowledge transfer** into other domains.
 
+.. code:: python
+
+	import Mariana.layers as ML
+	import Mariana.scenari as MS
+	import Mariana.costs as MC
+	import Mariana.activations as MA
+	import Mariana.regularizations as MR
+
+	import Mariana.settings as MSET
+
+	ls = MS.GradientDescent(lr = 0.01, momentum=0.9)
+	cost = MC.NegativeLogLikelihood()
+
+	inp = ML.Input(28*28, name = "InputLayer")
+	h1 = ML.Hidden(300, activation = MA.ReLU(), name = "Hidden1", regularizations = [ MR.L1(0.0001) ])
+	h2 = ML.Hidden(300, activation = MA.ReLU(), name = "Hidden2", regularizations = [ MR.L1(0.0001) ])
+	o = ML.SoftmaxClassifier(10, learningScenario = ls, costObject = cost, name = "Probabilities")
+
+	#Connection layers
+	inp > h1 > h2
+	concat = C([inp, h2])
+
+	MLP_skip = concat > o
+
+	#Visualizing
+	MLP_skip.saveHTML("mySkipMLP")
+    
 V2's most exciting stuff
 =========================
 
@@ -30,13 +57,13 @@ What's done
 * **New concatenation layer**: newLayer = C([Layer1, layer2])
 * **Unlimited number of inputs per layer**: Each layer used to be limited to one. Now it is infinit
 * **Abstractions are now divided into trainable (layers, decorators, activations) and untrainable (scenari, costs, initializations)**: All trainable abstractions can hold parameters and have untrainable abstractions applied to them. PReLU will finally join ReLU as an activation!
-
+* **New built-in visualization**: The previous visualization only showed the architecture and layer shapes. The new one is interactive. It contains information on all parameters, hyper-parameters as well as user defined notes on the network, layers, or any other abstraction in the network. A great tool for collaboration.
 
 What's almost done
 -------------------
 
-* Inclusion of popular recurrences (LSTM, recurent layers)
-* New built-in visualisaton: The previous visualization only showed the architecture and layer shapes. The new one will be interactive. It will contain information on all parameters, hyper-parameters as well as user defined notes on the network, layers, or any other abstraction in the network. A great tool for collaboration.
+* Inclusion of popular recurrences (LSTM, recurent layers, ...)
+* Fancy ways to go downhill: ADAM, Adagrad, ...
 
 What's next
 -----------
