@@ -45,7 +45,7 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
         layers = []
         for l in networkJson["layers"] :
             dct = {"name": l, "shape": networkJson["layers"][l]['shape'], "level": networkJson["layers"][l]['level']}
-
+            # dct = {"name": l, "shape": networkJson["layers"][l]['shape'], "level": networkJson["layers"][l]['level'], "abstractions": {}}
             for cat in ["parameters", "hyperParameters", "notes"] :
                 dct[cat] = {"size": 0}
                 dct[cat]["layer"] = []
@@ -60,7 +60,11 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
                 
                 for absCat, abstractions in networkJson["layers"][l]["abstractions"].iteritems() :
                     dct[cat][absCat] = []
+                    # if absCat not in dct["abstractions"] :
+                        # dct["abstractions"][absCat] = []
+    
                     for absName, absVal in abstractions.iteritems() :
+                        # dct["abstractions"][absCat].append(absName)
                         try :
                             for pName, pVal in absVal[cat].iteritems() :
                                 if cat == "notes" :

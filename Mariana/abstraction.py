@@ -49,10 +49,10 @@ class Abstraction_ABC(Logger_ABC):
         self._mustInit=True
 
     def isTrainable(self) :
-        raise NotImplemented("Must be implemented in child")
+        raise NotImplementedError("Must be implemented in child")
 
     def getParameters(self) :
-        raise NotImplemented("Must be implemented in child")
+        raise NotImplementedError("Must be implemented in child")
 
     def addHyperParameters(self, dct) :
         """adds to the list of hyper params, dct must be a dict"""
@@ -163,7 +163,7 @@ class TrainableAbstraction_ABC(Abstraction_ABC):
 
     def getParameterShape_abs(self, param) :
         """Should return the shape of the parameter. This has to be implemented in order for the initializations to work (and maybe some other stuff as well)"""
-        raise NotImplemented("Should be implemented in child")
+        raise NotImplementedError("Should be implemented in child")
 
     def _parametersSanityCheck(self) :
         "perform basic parameter checks on layers, automatically called on initialization"
@@ -242,8 +242,8 @@ class Apply_ABC(object):
 
     def apply(self, layer, **kwargs) :
         """Apply to a layer, basically logs stuff and then calls run"""
-        raise NotImplemented("Must be implemented in child")
+        raise NotImplementedError("Must be implemented in child")
     
     def run(self, **kwargs) :
         """the actual worker function that does whaters the abstraction is supposed to do"""
-        raise NotImplemented("Must be implemented in child")
+        raise NotImplementedError("Must be implemented in child")

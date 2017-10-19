@@ -232,7 +232,10 @@ class Network(MABS.Logger_ABC) :
         def do(dct, layer, level) :
             dct[layer.name] = layer.toDictionary()
             dct[layer.name]["level"] = level
-            
+            for  lin in self.inConnections[layer] :
+                if lin.name in dct :
+                    dct[layer.name]["level"] = max(dct[lin.name]["level"]+1, dct[layer.name]["level"])
+             
             dct[layer.name]["abstractions"] = OrderedDict()
             for k, v in layer.abstractions.iteritems() :
                 dct[layer.name]["abstractions"][k] = OrderedDict()

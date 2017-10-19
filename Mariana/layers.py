@@ -36,7 +36,7 @@ class ArithmeticMerge(object):
             for cl in allowedCls :
                 if isinstance(var, cl) :
                     preStreams[var] = set(var.streams)
-                    preShapes[var] = var.getShape_abs()
+                    preShapes[var] = tuple(var.getShape_abs())
             
         if len(preStreams) == 2 :
             streams  = preStreams[a] & preStreams[b]
@@ -47,7 +47,7 @@ class ArithmeticMerge(object):
             self.streams = list(streams)
 
             if preShapes[a] != preShapes[b] :
-                raise ValueError("All parameters nust have the same shape")        
+                raise ValueError("All parameters nust have the same shape %s != %s" % (preShapes[a], preShapes[b]))        
         elif len(preStreams) == 1 :
             self.streams = list(preStreams.values()[0])
         else :
@@ -270,7 +270,7 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         return newShape
     
     def setInputs(self) :
-        """Sets the inputs to the layer and performs of reshaping of the inputs. The outputs of all input layers are added together"""
+        """Sets the inputs to the layer and performs of reshaping of the inputs. If there's more that one connection, this function has to redefined"""
         def getInput(layer, stream) :
             shape = self.getInputShape(layer)
             if shape != self.getShape_abs() :
@@ -279,10 +279,14 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
                 return layer.outputs[stream]
 
         selfNdim = len(self.getShape_abs())
-        for s in self.streams :
-            self.inputs[s] = 0
-            for layer in list(self.getInLayers()) :        
-                self.inputs[s] += getInput(layer, s)
+        layers = list(self.getInLayers())
+        if len(layers) > 1 :
+            raise AttributeError("There's more than one input layer to %s. You should redefine the setInputs() function" % self)
+        
+        if len(layers) == 1 :
+            layer = list(self.getInLayers())[0]
+            for s in self.streams :
+                self.inputs[s] = getInput(layer, s)
 
     def setOutputs_abs(self) :
         """Defines the outputs and outputs["test"] of the layer before the application of the activation function. This function is called by _init() ans should be written in child."""
@@ -482,6 +486,8 @@ class Input(Layer_ABC) :
         
         if isinstance(shape, int) :
             sh = (batchSize, shape)
+        elif isinstance(shape, float) :
+            sh = (batchSize, int(shape))
         else :
             sh = [batchSize]
             sh.extend(list(shape))
@@ -518,7 +524,7 @@ class Input(Layer_ABC) :
         raise ValueError("Nothing can be connected to an input layer")
 
 class Merge(Layer_ABC):
-    """docstring for MergeLayer"""
+    """Merge layers using basic arithmetic"""
     def __init__(self, operations, **kwargs):
         super(Merge, self).__init__(maxInConnections=None, **kwargs)
         self.operations = operations
@@ -526,6 +532,9 @@ class Merge(Layer_ABC):
 
         for l in self.operations.getDependencies() :
             l.connect(self)
+
+    def setInputs(self) :
+        pass
 
     def femaleConnect(self, layer) :
         raise ValueError("You can't connect something to a MergeLayer")
@@ -542,13 +551,41 @@ class Merge(Layer_ABC):
 M = Merge
 # M(a + b * c - o, ...)
 
+class SingleOptMerge(Merge):
+    """docstring for SingleOptMerge"""
+    def __init__(self, layers, operation, **kwargs):
+        operations = ArithmeticMerge(layers[0], layers[1], operation)
+        for l in layers[2:] :
+            operations = ArithmeticMerge(self.operations, layers[1], operation)
+        super(SingleOptMerge, self).__init__(operations, **kwargs)
+
+class Add(SingleOptMerge):
+    """docstring for Addition"""
+    def __init__(self, layers, **kwargs):
+        super(Add, self).__init__(layers, "+", **kwargs)
+ 
+class Multiply(SingleOptMerge):
+    """docstring for Multiply"""
+    def __init__(self, layers, **kwargs):
+        super(Multiply, self).__init__(layers, "*", **kwargs)
+
+class Substract(SingleOptMerge):
+    """docstring for Substract"""
+    def __init__(self, layers, **kwargs):
+        super(Substract, self).__init__(layers, "-", **kwargs)
+
+class Divide(SingleOptMerge):
+    """docstring for Divide"""
+    def __init__(self, layers, **kwargs):
+        super(Divide, self).__init__(layers, "/", **kwargs)
+
 class Concatenate(Layer_ABC):
-    """docstring for Concatenation"""
+    """Concatenate layers"""
     def __init__(self, layers, croppings = [], axis=1, **kwargs):
         from lasagne.layers.merge import autocrop_array_shapes
         
         super(Concatenate, self).__init__(maxInConnections=None, **kwargs)
-        self.layers = layers
+        self.layers = list(layers)
         self.croppings = croppings
         self.axis = axis
 
@@ -581,6 +618,9 @@ class Concatenate(Layer_ABC):
                     self.streams = self.streams & sl
 
         self.outputs = MTYPES.Variable(streams = self.streams)
+
+    def setInputs(self) :
+        pass
 
     def getShape_abs(self) :
         return self.shape

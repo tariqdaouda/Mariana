@@ -61,7 +61,7 @@ class Initialization_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC) :
         """The function that all Initialization_ABCs must implement"""
         raise NotImplemented("This one should be implemented in child")
 
-class None(Initialization_ABC) :
+class Null(Initialization_ABC) :
     """Return None, mainly for some cases of lasagne compatibility"""
     def run(self, shape) :
         return None

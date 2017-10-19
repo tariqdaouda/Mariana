@@ -63,6 +63,8 @@ class Variable(object):
             self.ties.remove(stream)
 
     def __getitem__(self, stream) :
+        # print self.variables[stream]
+        
         try :
             return self.variables[stream]
         except KeyError :
