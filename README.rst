@@ -1,5 +1,8 @@
 
 .. image:: https://github.com/tariqdaouda/Mariana/blob/master/MarianaLogo.png
+logo by  `Sawssan Kaddoura`_.
+
+.. _Sawssan Kaddoura: http://sawssankaddoura.com
 
 **WIP: NEW VERSION WITH MUCH IMPROVEMENTS. COMING SOON! (WHEN IT IS READY).**
 Checkout branch V2-dev_ for a list of upcoming feature.
