@@ -26,15 +26,23 @@ Intuitive, user-friendly and yet flexible enough for research. It's here to empo
 	h2 = ML.Hidden(300, activation = MA.ReLU(), name = "Hidden2", regularizations = [ MR.L1(0.0001) ])
 	o = ML.SoftmaxClassifier(10, learningScenario = ls, costObject = cost, name = "Probabilities")
 
-	#Connection layers
+	#Connecting layers
 	inp > h1 > h2
-	concat = C([inp, h2])
+	concat = ML.C([inp, h2])
 
 	MLP_skip = concat > o
-
+	MLP_skip.init()
+	
 	#Visualizing
 	MLP_skip.saveHTML("mySkipMLP")
     
+    	#training:
+	for i in xrange(1000) :
+		MLP_skip["Probabilities"].train({"InputLayer.inputs": train_set[0], "Probabilities.targets": train_set[1]})
+	
+	#testing
+		print MLP_skip["Probabilities"].test({"InputLayer.inputs": test_set[0], "Probabilities.targets": test_set[1]})
+	
 V2's most exciting stuff
 =========================
 
@@ -57,7 +65,7 @@ What's done
 * **New concatenation layer**: newLayer = C([Layer1, layer2])
 * **Unlimited number of inputs per layer**: Each layer used to be limited to one. Now it is infinit
 * **Abstractions are now divided into trainable (layers, decorators, activations) and untrainable (scenari, costs, initializations)**: All trainable abstractions can hold parameters and have untrainable abstractions applied to them. PReLU will finally join ReLU as an activation!
-* **New built-in visualization**: The previous visualization only showed the architecture and layer shapes. The new one is interactive. It contains information on all parameters, hyper-parameters as well as user defined notes on the network, layers, or any other abstraction in the network. A great tool for collaboration.
+* **New built-in visualization**: The previous visualization only showed the architecture and layer shapes. The new one is interactive. It contains information on all parameters, hyper-parameters as well as user defined notes. A great tool for collaboration.
 
 What's almost done
 -------------------
