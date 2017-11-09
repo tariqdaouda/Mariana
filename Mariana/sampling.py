@@ -10,8 +10,8 @@ class MaxPooling1D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         poolSize,
+        name,
         stride=None,
         pad=0,
         **kwargs
@@ -26,6 +26,8 @@ class MaxPooling1D(MLASAGNE.LasagneLayer):
                     "pad": pad,
                     "ignore_border": True,
                 },
+                name=name,
+
         )     
 
 class MaxPooling2D(MLASAGNE.LasagneLayer):
@@ -33,9 +35,9 @@ class MaxPooling2D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         poolHeight,
         poolWidth,
+        name,
         stride=None,
         pad=(0, 0),
         **kwargs
@@ -49,6 +51,8 @@ class MaxPooling2D(MLASAGNE.LasagneLayer):
                     "pad": pad,
                     "ignore_border": True,
                 },
+                name=name,
+
         )       
 
 class MaxPooling3D(MLASAGNE.LasagneLayer):
@@ -56,10 +60,10 @@ class MaxPooling3D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         poolHeight,
         poolWidth,
         poolDepth,
+        name,
         stride=None,
         pad=(0, 0, 0),
         **kwargs
@@ -73,6 +77,8 @@ class MaxPooling3D(MLASAGNE.LasagneLayer):
                     "pad": pad,
                     "ignore_border": True,
                 },
+                name=name,
+
         )
 
 class AveragePooling1D(MLASAGNE.LasagneLayer):
@@ -80,8 +86,8 @@ class AveragePooling1D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         poolSize,
+        name,
         stride=None,
         pad=0,
         includePadding=False,
@@ -102,6 +108,8 @@ class AveragePooling1D(MLASAGNE.LasagneLayer):
                     "ignore_border": True,
                     "mode": mode
                 },
+                name=name,
+
         )     
 
 class AveragePooling2D(MLASAGNE.LasagneLayer):
@@ -109,9 +117,9 @@ class AveragePooling2D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         poolHeight,
         poolWidth,
+        name,
         stride=None,
         pad=(0, 0),
         includePadding=False,
@@ -121,7 +129,7 @@ class AveragePooling2D(MLASAGNE.LasagneLayer):
             mode = "average_inc_pad"
         else:
             mode = "average_exc_pad"
-
+        
         super(AveragePooling2D, self).__init__(
                 LasagnePOOL.Pool2DLayer,
                 initializations=[],
@@ -132,6 +140,7 @@ class AveragePooling2D(MLASAGNE.LasagneLayer):
                     "ignore_border": True,
                     "mode": mode
                 },
+                name=name,
         )       
 
 class AveragePooling3D(MLASAGNE.LasagneLayer):
@@ -139,10 +148,10 @@ class AveragePooling3D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         poolHeight,
         poolWidth,
         poolDepth,
+        name,
         stride=None,
         pad=(0, 0, 0),
         includePadding=False,
@@ -163,6 +172,7 @@ class AveragePooling3D(MLASAGNE.LasagneLayer):
                     "ignore_border": True,
                     "mode": mode
                 },
+                name=name,
         )
 
 class RepeatedUpscaling1D(MLASAGNE.LasagneLayer):
@@ -170,8 +180,8 @@ class RepeatedUpscaling1D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         scaleFactor,
+        name,
         **kwargs
     ):
 
@@ -182,6 +192,8 @@ class RepeatedUpscaling1D(MLASAGNE.LasagneLayer):
                     "scale_factor": scaleFactor,
                     "mode": "repeat"
                 },
+                name=name,
+                
         )
 
 class DilatedUpscaling1D(MLASAGNE.LasagneLayer):
@@ -189,8 +201,8 @@ class DilatedUpscaling1D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         scaleFactor,
+        name,
         **kwargs
     ):
 
@@ -201,6 +213,8 @@ class DilatedUpscaling1D(MLASAGNE.LasagneLayer):
                     "scale_factor": scaleFactor,
                     "mode": "dilate"
                 },
+                name=name,
+                
         )
 
 class RepeatedUpscaling2D(MLASAGNE.LasagneLayer):
@@ -208,9 +222,9 @@ class RepeatedUpscaling2D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         heightScaleFactor,
         widthScaleFactor,
+        name,
         **kwargs
     ):
 
@@ -221,6 +235,8 @@ class RepeatedUpscaling2D(MLASAGNE.LasagneLayer):
                     "scale_factor": (heightScaleFactor, widthScaleFactor),
                     "mode": "repeat"
                 },
+                name=name,
+                
         )
 
 class DilatedUpscaling2D(MLASAGNE.LasagneLayer):
@@ -228,9 +244,9 @@ class DilatedUpscaling2D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         heightScaleFactor,
         widthScaleFactor,
+        name,
         **kwargs
     ):
 
@@ -241,6 +257,8 @@ class DilatedUpscaling2D(MLASAGNE.LasagneLayer):
                     "scale_factor": (heightScaleFactor, widthScaleFactor),
                     "mode": "dilate"
                 },
+                name=name,
+                
         )
 
 class RepeatedUpscaling3D(MLASAGNE.LasagneLayer):
@@ -248,10 +266,10 @@ class RepeatedUpscaling3D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         heightScaleFactor,
         widthScaleFactor,
         depthScaleFactor,
+        name,
         **kwargs
     ):
 
@@ -262,6 +280,8 @@ class RepeatedUpscaling3D(MLASAGNE.LasagneLayer):
                     "scale_factor": (heightScaleFactor, widthScaleFactor, depthScaleFactor),
                     "mode": "repeat"
                 },
+                name=name,
+                
         )
 
 class DilatedUpscaling3D(MLASAGNE.LasagneLayer):
@@ -269,10 +289,10 @@ class DilatedUpscaling3D(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         heightScaleFactor,
         widthScaleFactor,
         depthScaleFactor,
+        name,
         **kwargs
     ):
         super(Upscale3D, self).__init__(
@@ -282,6 +302,8 @@ class DilatedUpscaling3D(MLASAGNE.LasagneLayer):
                     "scale_factor": (heightScaleFactor, widthScaleFactor, depthScaleFactor),
                     "mode": "dilate"
                 },
+                name=name,
+                
         )
 
 class WinnerTakesAll(MLASAGNE.LasagneLayer):
@@ -289,9 +311,9 @@ class WinnerTakesAll(MLASAGNE.LasagneLayer):
     For a full explanation of the arguments please checkout lasagne's doc"""
     def __init__(
         self,
-        name,
         poolSize,
         depthScaleFactor,
+        name,
         axis=1,
         **kwargs
     ):
@@ -303,6 +325,8 @@ class WinnerTakesAll(MLASAGNE.LasagneLayer):
                     "pool_size": poolSize,
                     "axis": axis
                 },
+                name=name,
+                
         )
 
 class MaxSpatialPyramidPooling(MLASAGNE.LasagneLayer):
@@ -325,6 +349,8 @@ class MaxSpatialPyramidPooling(MLASAGNE.LasagneLayer):
                     "implementation": implementation,
                     "mode": 'max'
                 },
+                name=name,
+                
         )
 
 
@@ -353,5 +379,7 @@ class AverageSpatialPyramidPooling(MLASAGNE.LasagneLayer):
                     "implementation": implementation,
                     "mode": mode
                 },
+                name=name,
+                
         )
 

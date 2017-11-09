@@ -3,6 +3,8 @@ from wrappers import TheanoFunction
 import Mariana.settings as MSET
 import Mariana.abstraction as MABS
 
+import cPickle, pickle
+
 __all__= ["loadModel", "Network"]
 
 def loadModel(filename) :
@@ -26,11 +28,21 @@ class Network(MABS.Logger_ABC) :
         self.notes = OrderedDict()
 
         self.parameters = []
+        self.parameterStash = {}
 
         self._mustInit = True
         # self.outputMaps = {}
 
+    def getOuputs(self) :
+        """return network outputs"""
+        return self.outputs
+
+    def getInputs(self) :
+        """return network inputs"""
+        return self.inputs
+
     def getLog(self) :
+        """get the log"""
         log = {
             "network": self.log,
             "layers": {}
@@ -42,7 +54,16 @@ class Network(MABS.Logger_ABC) :
         return log
 
     def addNote(self, title, text) :
+        """add a note"""
         self.notes[title] = text
+
+    def getInConnections(self, layer) :
+        """return a layer's incoming connections"""
+        return list(self.inConnections[layer])
+    
+    def getOutConnections(self, layer) :
+        """return a layer's out connections"""
+        return list(self.outConnections[layer])
 
     def _addEdge(self, layer1Name, layer2Name) :
         """Add a connection between two layers"""
@@ -108,7 +129,7 @@ class Network(MABS.Logger_ABC) :
         for name, layer in self.layers.iteritems() :
             self.logEvent("Registering layer %s" % (layer.name))
 
-    def initParameters(self, forceReset = False) :
+    def initParameters(self) :
         """Initializes the parameters of all layers but does nothing else.
         Call this before tying parameters together::
         
@@ -119,9 +140,9 @@ class Network(MABS.Logger_ABC) :
             model.train(...)
         """
         for l in self.layers.itervalues() :
-            l._initParameters(forceReset)
+            l.initParameters()
 
-    def init(self, forceInit=False) :
+    def init(self, force=False) :
         "Initialiases the network by initialising every layer."
         for layer in self.layers.itervalues() :
             layerTypes = layer.getTypes()
@@ -129,8 +150,8 @@ class Network(MABS.Logger_ABC) :
                 self.inputs[layer.name] = layer
             if MSET.TYPE_OUTPUT_LAYER in layerTypes:
                 self.outputs[layer.name] = layer
-
-        if self._mustInit or forceInit :
+        
+        if self._mustInit or force :
             self.logEvent("Initialization begins!")
             print("\n" + MSET.OMICRON_SIGNATURE)
 
@@ -138,17 +159,17 @@ class Network(MABS.Logger_ABC) :
                 raise ValueError("Network has no inputs")
 
             for inp in self.inputs.itervalues() :
-                inp._initA()
+                inp._initA(force=True)
 
             for l in self.layers.itervalues() :
-                l._initB()
-                self.parameters.extend(l.parameters.values())
+                # print l._initStatus
+                l._initB(force=True)
+                self.parameters = self.getFullParameters()
     
             self._mustInit = False
     
     def save(self, filename) :
         """Save a model on disk"""
-        import cPickle, pickle
         res = {
             'network': {
                 "edges": self.edges.keys(),
@@ -159,10 +180,9 @@ class Network(MABS.Logger_ABC) :
         }
 
         for l in self.layers.itervalues() :
-            l._resetNetwork()
-            l._unclaimAbstractions()
+            l._resetNetwork(fullReset = False)
             res["layers"][l.name] = l
-        
+                
         ext = '.mar'
         if filename.find(ext) < 0 :
             fn = filename + ext
@@ -174,15 +194,12 @@ class Network(MABS.Logger_ABC) :
         f.close()
 
         for l in self.layers.itervalues() :
-            # print l, self
-            l.network = self
-            l._claimAbstractions()
+            l._resetNetwork(fullReset = False, newNetwork = self)
 
     @classmethod
     def load(cls, filename) :
         """Load a model from disk"""
-        import cPickle
-
+        
         f = open(filename)
         pkl = cPickle.load(f)
         f.close()
@@ -267,11 +284,58 @@ class Network(MABS.Logger_ABC) :
         return res
 
     def getFullParameters(self) :
-        params = {}
-        for layer in self.layers.itervalues() :
-            for k, v in layer.getFullParameters().iteritems() :
-                params["%s.%s" % (layer.name, k)] = v
-        return params
+        """get all model parameters"""
+        if self._mustInit :
+            params = {}
+            for layer in self.layers.itervalues() :
+                for k, v in layer.getFullParameters().iteritems() :
+                    params["%s.%s" % (layer.name, k)] = v
+            return params
+        else :
+            return self.parameters
+
+    def stashParameters(self, stashName, forceReset=False) :
+        import numpy
+        """Saves parameters in memory"""
+        if stashName not in self.parameterStash or forceReset :
+            self.parameterStash[stashName] = {}
+            for k, v in self.getFullParameters().iteritems() :
+                if v.isShared() :
+                    self.parameterStash[stashName][k] = v.getValue()
+        else :
+            params = self.getFullParameters()
+            for k in self.parameterStash[stashName].iterkeys() :
+                self.parameterStash[stashName][k] = params[k].getValue()
+
+    def applyStash(self, stashName) :
+        """set parameters to stash values"""
+        params = self.getFullParameters()
+        for k, v in self.parameterStash[stashName].iteritems() :
+            params[k].setValue(v)
+        self._mustInit = True
+
+    def saveStash(self, modelName, stashName) :
+        """Saves stashed parameters to disk"""
+        fn = "%s-%s.stash.mar.pkl" %(modelName, stashName)
+        f = open(fn, 'wb', pickle.HIGHEST_PROTOCOL)
+        cPickle.dump(self.parameterStash[stashName], f)
+        f.close()
+
+    def loadStash(self, filename) :
+        """Load a stash from disk"""
+        f = open(filename)
+        stash = cPickle.load(f)
+        f.close()
+
+        return stash
+
+    def dropStash(self, stashName) :
+        """drops a stash"""
+        del self.parameterStash[stashName]
+
+    def earseAllStashes(self) :
+        """erases all stashes"""
+        self.parameterStash = {}
 
     def toJson(self, name, pretty=True) :
         import json

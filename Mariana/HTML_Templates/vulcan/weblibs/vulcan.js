@@ -110,6 +110,7 @@ Vue.component('graph-view', {
                           <focus-switcher active v-on:focusChanged="changeFocus" focus-name="hyperParameters" icon-name="lock" v-bind:nb-elements="node.Mariana.data['hyperParameters'].size" v-bind:node="node"></focus-switcher>
                           <focus-switcher v-on:focusChanged="changeFocus" focus-name="parameters" icon-name="unlock" v-bind:nb-elements="node.Mariana.data['parameters'].size" v-bind:node="node"></focus-switcher>
                           <focus-switcher v-on:focusChanged="changeFocus" focus-name="notes" icon-name="comments" v-bind:nb-elements="node.Mariana.data['notes'].size" v-bind:node="node"></focus-switcher>
+                          <focus-switcher v-on:focusChanged="changeFocus" focus-name="abstractions" icon-name="table" v-bind:nb-elements="node.Mariana.data['abstractions'].size" v-bind:node="node"></focus-switcher>
                         </div>
                       </div>
                       <ul v-show="node.Mariana.open" class="uk-list uk-list-striped">
@@ -136,15 +137,20 @@ Vue.component('graph-view', {
   data : function(){
   createNodes = function(layers, color, highlightColor, hoverColor){
       categories = ["layer", "initializations", "activation", "regularizations", "decorators", "learningScenari"]
-      superCats = ["parameters", "hyperParameters", "notes"]
+      superCats = ["parameters", "hyperParameters", "notes", "abstractions"]
       nodes = []
       namesToI = {}
       maxLvl = 0
+      console.log(layers)
       for (var i = 0; i < layers.length; i++) {
         availableCats = {}
         for (var k = 0; k < superCats.length; k++) { 
           availableCats[superCats[k]] = []
           for (var j = 0; j < categories.length; j++) {
+            // console.log(layers[i][1])
+            // console.log(layers[i][1][superCats[k]])
+            console.log(layers[i][1][superCats[k]])
+
             if (layers[i][1][superCats[k]][categories[j]].length > 0) {
               availableCats[superCats[k]].push(categories[j])
             };

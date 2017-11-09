@@ -37,26 +37,29 @@ class Initialization_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC) :
             "parameter": parameter,
             "sparsity": sparsity
         })
-    
-    def setup(self, abstraction) :
-        """setups the initialization for a given abstraction. By default does nothing, but allows some degree of fine tuning if necesssary"""
-        pass
 
+    # def _apply(self, abstraction, **kwargs) :
+    #     if not abstraction.hasP(self.getHP("parameter")) :
+    #         raise ValueError ("'%s' does not have a parameter '%s'" % (abstraction, self.getHP("parameter") ) )
+        
+    #     if not abstraction.getP(self.getHP("parameter")).isTied() :
+    #         super(Initialization_ABC, self)._apply(abstraction, **kwargs)
+            
     def logApply(self, layer, **kwargs) :
         message = "Applying '%s' on parameter: '%s' of layer '%s'" % (self.name, self.getHP('parameter'), layer.name)
         self.logEvent(message)
 
     def apply(self, abstraction, **kwargs) :
-    
+        
         retShape = abstraction._getParameterShape_abs(self.getHP("parameter"))
 
         v = MUSE.iCast_numpy(self.run(retShape))
         if (v.shape != retShape) :
             raise ValueError("Initialization has a wrong shape: %s, parameter shape is: %s " % (v.shape, retShape))
         
-        v = MUSE.sparsify(v, self.getHP("sparsity"))        
+        v = MUSE.sparsify(v, self.getHP("sparsity"))
         abstraction.setP(self.getHP("parameter"), v)
-        
+    
     def run(self, shape) :
         """The function that all Initialization_ABCs must implement"""
         raise NotImplemented("This one should be implemented in child")
@@ -178,7 +181,7 @@ class FanInFanOut_ABC(Initialization_ABC) :
         
         return super(FanInFanOut_ABC, self).apply(abstraction)
 
-class GlorotNormal(FanInFanOut_ABC) :
+class XNormal(FanInFanOut_ABC) :
     """
     Initialization strategy introduced by Glorot et al. 2010 on a Normal distribution.
     Uses lasagne as backend.
@@ -186,10 +189,10 @@ class GlorotNormal(FanInFanOut_ABC) :
     def run(self, shape) :
         return LI.GlorotNormal(gain = self.gain).sample(shape)
 
-XNormal = GlorotNormal
-XavierNormal = GlorotNormal
+XavierNormal = XNormal
+GlorotNormal = XNormal
 
-class GlorotUniform(FanInFanOut_ABC) :
+class XUniform(FanInFanOut_ABC) :
     """
     Initialization strategy introduced by Glorot et al. 2010 on a Uniform distribution.
     If you use tanh() as activation try this one first.
@@ -198,8 +201,8 @@ class GlorotUniform(FanInFanOut_ABC) :
     def run(self, shape) :
         return LI.GlorotUniform(gain = self.gain).sample(shape)
 
-XUniform = GlorotUniform
-XavierUniform = GlorotUniform
+XavierUniform = XUniform
+GlorotUniform = XUniform
 
 class HeNormal(FanInFanOut_ABC) :
     """

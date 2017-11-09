@@ -30,3 +30,4 @@ class Reshape(MLASAGNE.LasagneLayer):
                 lasagneKwargs={},
                 **kwargs
             )
+        # self.shape = newShape

@@ -84,6 +84,7 @@ class Abstraction_ABC(Logger_ABC):
             "name": str(self.name),
             "hyperParameters": OrderedDict(self.hyperParameters),
             "notes": OrderedDict(self.notes),
+            "class": self.__class__.__name__
         }
         
         return res
@@ -118,6 +119,7 @@ class TrainableAbstraction_ABC(Abstraction_ABC):
         }
 
         self.parameters = OrderedDict()
+        # self._mustInit = True
 
     def getAbstractions(self) :
         res = []
@@ -133,7 +135,8 @@ class TrainableAbstraction_ABC(Abstraction_ABC):
         """Brutally set the value of a parameter. No checks applied"""
         self.setP(k, v)
     
-    def addParameters(self, dct) :
+    def setParameters(self, dct) :
+        """to set a bunch of them with a dict"""
         for k, v in dct.iteritems() :
             self.setP(k, v)
 
@@ -156,6 +159,14 @@ class TrainableAbstraction_ABC(Abstraction_ABC):
         """return all parameter"""
         return self.parameters
 
+    def hasParameter(self, p) :
+        """returns wether I have parameter called p"""
+        return p in self.parameters
+
+    def hasP(self, p) :
+        """hasParameter() alias"""
+        return self.hasParameter(p)
+
     def _getParameterShape_abs(self, param) :
         if param not in self.parameters :
             raise ValueError("Unknown parameter: %s for %s" % (param, self))
@@ -170,30 +181,24 @@ class TrainableAbstraction_ABC(Abstraction_ABC):
         for k, v in self.getParameters().iteritems() :
             if not v.isSet() :
                 raise ValueError("Parameter '%s' of '%s' has not been initialized" % (k, self.name) )
-    
-    def _claimAbstractions(self) :
-        for ab in self.getAbstractions() :
-            ab.setParent(self)
-            if ab.isTrainable() :
-                ab._claimAbstractions()
-    
-    def _unclaimAbstractions(self) :
-        for ab in self.getAbstractions() :
-            ab.unsetParent()
-            if ab.isTrainable() :
-                ab._unclaimAbstractions()
 
     def _initParameters(self, forceReset=False) :
         """creates the parameters if necessary"""
-        selfParams = set(self.parameters.keys())
+        selfParams = set()
+        for k, v in self.parameters.iteritems() :
+            if not v.isSet() :
+                selfParams.add(k)
+
         initParams = set()
         if self._mustInit or forceReset :
             for init in self.abstractions["initializations"] :
-                init._apply(self)
-                initParams.add(init.getHP("parameter"))
-        
-        if selfParams != initParams :
-            raise ValueError("Parameters: %s, where not supplied initializations" % (selfParams - initParams))
+                if not self.getP(init.getHP("parameter")).isSet() :
+                    init._apply(self)
+                    initParams.add(init.getHP("parameter"))
+        # print len(selfParams), len(initParams)
+        # print self, selfParams, initParams
+        if len(selfParams) != len(initParams) :
+            raise ValueError("Parameters: %s of %s, where not supplied initializations" % ((selfParams - initParams), self) )
         
         self._mustInit=False
 
@@ -219,25 +224,30 @@ class Apply_ABC(object):
         super(Apply_ABC, self).__init__()
         self.name = self.__class__.__name__
         self._mustInit=True
-        self.parent = None
+        # self.parent = None
     
-    def setParent(self, layer) :
-        message = "'%s' has been claimed by '%s'" % (self.name, layer.name)
-        self.logEvent(message)
-        self.parent = layer
+    # def setParent(self, layer) :
+    #     message = "'%s' has been claimed by '%s'" % (self.name, layer.name)
+    #     self.logEvent(message)
+    #     self.parent = layer
 
-    def unsetParent(self) :
-        message = "'%s' is once again unclaimed" % (self.name)
-        self.logEvent(message)
-        self.parent = None
+    # def unsetParent(self) :
+    #     message = "'%s' is once again unclaimed" % (self.name)
+    #     self.logEvent(message)
+    #     self.parent = None
 
     def logApply(self, layer, **kwargs) :
         message = "Applying : '%s' on layer '%s'" % (self.name, layer.name)
         self.logEvent(message)
-        
+    
+    def setup(self, abstraction) :
+        """setups the untrainable abstraction for a given trainable abstraction. Called just before apply(). By default does nothing, but allows some degree of fine tuning if necesssary"""
+        pass
+
     def _apply(self, layer, **kwargs) :
         """Logs and calls self.apply()"""
-        self.logApply(layer)
+        self.setup(layer)
+        self.logApply(layer, **kwargs)
         self.apply(layer, **kwargs)
 
     def apply(self, layer, **kwargs) :

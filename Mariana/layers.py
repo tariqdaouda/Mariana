@@ -74,7 +74,6 @@ class ArithmeticMerge(object):
         return deps
 
     def getOutputs(self) :
-        
         aOuts = {}
         bOuts = {}
         try:
@@ -116,7 +115,7 @@ class ArithmeticMerge(object):
         return ArithmeticMerge(self, thing, "/")
 
     def __repr__(self):
-        return "(" + repr(self.a) + self.op + repr(self.b) + ")"
+        return "AM(" + repr(self.a) + self.op + repr(self.b) + ")"
 
 class Layer_ABC(MABS.TrainableAbstraction_ABC) :
     "The interface that every layer should expose"
@@ -167,20 +166,15 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         self._inputRegistrations=set()
         self._resetNetwork()
 
-    def _resetNetwork(self) :
-        self._mustReset=True
-        self.network=MNET.Network()
-        self.network._addLayer(self)
+    def _resetNetwork(self, fullReset=True, newNetwork = None) :
+        if fullReset :
+            self._initStatus=0
 
-    def _initParameters(self, forceReset=False) :
-        if self._mustInit :
-            super(Layer_ABC, self)._initParameters(forceReset=forceReset)
-            for absType, abstractions in self.abstractions.iteritems() :
-                for abstraction in abstractions :
-                    if abstraction.isTrainable() :
-                        abstraction._initParameters(forceReset=forceReset)
-                        
-        self._mustInit = False
+        if newNetwork is None :
+            self.network=MNET.Network()
+            self.network._addLayer(self)
+        else :
+            self.network = newNetwork
 
     def getLog(self) :
         log = {
@@ -195,15 +189,23 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
 
         return log
 
+    # def copy(self) :
+    #     "return a copy of the layer"
+    #     import copy
+    #     copy.copy(self)
+
     def clone(self, **kwargs) :
         """Returns a free layer with the same parameters."""
+        import copy
+
         creationArguments=dict(self.creationArguments["kwargs"])
         creationArguments.update(kwargs)
         newLayer=self.__class__(*self.creationArguments["args"], **creationArguments)
         
         for k, v in self.getParameters().iteritems() :
-            setattr(newLayer, k, v)
-            newLayer._mustInit=False
+            newLayer.setP(k, copy.copy(v))
+        
+        self._initStatus = 1
         return newLayer
 
     def _registerInput(self, inputLayer) :
@@ -240,12 +242,12 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         """returns the layer intrinsic dimensionality (without the minibatch dimension), by default len(shape)-1"""
         return len(self.getShape_abs()) -1
 
-    def setParameter(self, param, value) :
-        """Brutally set the value of a parameter. No checks applied"""
-        if isinstance(value, MTYPES.Parameter) :
-            self.parameters[param] = value
-        else :
-            self.parameters[param].setValue(value)
+    # def setParameter(self, param, value) :
+    #     """Brutally set the value of a parameter. No checks applied"""
+    #     if isinstance(value, MTYPES.Parameter) :
+    #         self.parameters[param] = value
+    #     else :
+    #         self.parameters[param].setValue(value)
 
     def getInputShape(self, layer) :
         selfNdim = len(self.getShape_abs())
@@ -269,9 +271,16 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         
         return newShape
     
+    def setShape_abs(self) :
+        """sets the layer shape"""
+        pass
+
     def setInputs(self) :
         """Sets the inputs to the layer and performs of reshaping of the inputs. If there's more that one connection, this function has to redefined"""
         def getInput(layer, stream) :
+            if not layer.outputs[stream] :
+                raise ValueError("Can't set Inputs for layer '%s', input layer '%s' has '%s' output for stream '%s'." % (self.name, layer.name, layer.outputs[stream], stream))
+            
             shape = self.getInputShape(layer)
             if shape != self.getShape_abs() :
                 return layer.outputs[stream].reshape(shape)
@@ -320,8 +329,8 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         "perform basic output checks on layers, automatically called on initialization"
         for s in self.outputs.streams :
             v = self.outputs[s]
-            if not v :
-                raise AttributeError("Layers %s has invalid ouput: %s for stream: %s" % (self.name, v, s))
+            if not v and v != 0:
+                raise AttributeError("Layers %s has invalid output: %s for stream: %s" % (self.name, v, s))
  
     def getOutputs(self) :
         """return layer outputs"""
@@ -342,20 +351,43 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         
         return types
 
-    def _initA(self) :
+    def _initParameters(self, forceReset=False) :
+        # if self._initStatus == 0 or self._mustInit or forceReset :
+        super(Layer_ABC, self)._initParameters(forceReset=forceReset)
+        for absType, abstractions in self.abstractions.iteritems() :
+            for abstraction in abstractions :
+                if abstraction.isTrainable() :
+                    abstraction._initParameters(forceReset=forceReset)
+        # self._initStatus = 1
+
+    def initParameters(self, force=False) :
         """Initialize the essential attributes of the layer such as: outputs and activations. This function is automatically called before train/test etc..."""
-        self.logEvent("%s: initA" % (self.name))
-        if ( self._mustReset) and ( len(self._inputRegistrations) == len(self.getInLayers()) ) :
+        if force :
+            self._initStatus = 0
+
+        if ( self._initStatus == 0) or self._mustInit :
+            self.logEvent("%s: initParameters" % (self.name))
             self.logEvent("%s: _whateverFirstInit" % (self.name))
             self._whateverFirstInit()
-            self.logEvent("%s: _claimtakeAbstractions" % (self.name))
-            self._claimAbstractions()
             self.logEvent("%s: setInputs" % (self.name))
             self.setInputs()
             self.logEvent("%s: _initParameters" % (self.name))
             self._initParameters()
             self.logEvent("%s: _parametersSanityCheck" % (self.name))
             self._parametersSanityCheck()
+            self._initStatus = 1
+            
+    def _initA(self, force=False) :
+        """Initialize the essential attributes of the layer such as: outputs and activations. This function is automatically called before train/test etc..."""
+        if force :
+            self._initStatus = 0
+
+        if ( self._initStatus < 2) and ( len(self._inputRegistrations) == len(self.getInLayers()) ) :
+            self.logEvent("%s: initA" % (self.name))
+            self.initParameters()
+            if not self.getShape_abs() :
+                self.logEvent("%s: setShape_abs" % (self.name))
+                self.setShape_abs()
             self.logEvent("%s: setOutputs_abs" % (self.name))
             self.setOutputs_abs()
             self.logEvent("%s: _activate" % (self.name))
@@ -364,20 +396,26 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
             self._decorate()
             self.logEvent("%s: _outputsSanityCheck" % (self.name))
             self._outputsSanityCheck()
+            self._initStatus = 2
             
             for l in self.getOutLayers() :
-                self.logEvent("register %s as input of %s" % (self.name, l.name))
+                self.logEvent("register %s as input for %s" % (self.name, l.name))
                 l._registerInput(self)
-                l._initA()
-            self._mustReset=False
+                l._initA(force)
 
-    def _initB(self) :
+    def _initB(self, force) :
         """Initialize theano functions. This function is automatically called before train/test etc..."""
-        self.logEvent("%s: initB" % (self.name))
-        self.logEvent("%s: _setTheanoFunctions" % (self.name))
-        self._setTheanoFunctions()
-        self.logEvent("%s: _whateverLastInit" % (self.name))
-        self._whateverLastInit()
+        # print "\t", self, self._initStatus
+        if force :
+            self._initStatus = 2
+
+        if ( self._initStatus == 2) and ( len(self._inputRegistrations) == len(self.getInLayers()) ) :
+            self.logEvent("%s: initB" % (self.name))
+            self.logEvent("%s: _setTheanoFunctions" % (self.name))
+            self._setTheanoFunctions()
+            self.logEvent("%s: _whateverLastInit" % (self.name))
+            self._whateverLastInit()
+            self._initStatus = 3
         
     def maleConnect(self, layer) :
         """What happens to A when A > B"""
@@ -398,9 +436,9 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         This function returns the resulting network"""
         self.logEvent("%s > %s" % (self.name, layer.name))
         if layer not in self.getInLayers() :
+            self.network.merge(self, layer)
             self.maleConnect(layer)
             layer._femaleConnect(self)
-            self.network.merge(self, layer)
 
         return self.network
 
@@ -508,6 +546,8 @@ class Input(Layer_ABC) :
             raise ValueError("The maximum shape size allowed is 5")
 
         self.inputs = MTYPES.Inputs(typ, streams=self.streams)
+        for f in self.streams :
+            self.outputs[f]=self.inputs[f]
     
     def setInputs(self) :
         pass
@@ -517,8 +557,7 @@ class Input(Layer_ABC) :
 
     def setOutputs_abs(self) :
         "initializes the output to be the same as the inputs"
-        for f in self.streams :
-            self.outputs[f]=self.inputs[f]
+        pass
     
     def femaleConnect(self, *args) :
         raise ValueError("Nothing can be connected to an input layer")
@@ -604,7 +643,9 @@ class Concatenate(Layer_ABC):
             else :
                 v = self.croppedShapes[0][i]
             self.shape.append(v)
-        
+
+        self.shape = tuple(self.shape)
+
         self.streams = None
         for l in self.layers :
             l.connect(self)
@@ -697,10 +738,10 @@ class Pass(Layer_ABC) :
         super(Pass, self).__init__(name=name, **kwargs)
     
     def getShape_abs(self) :
-        return self.getInLayers().values()[0].getShape_abs()
+        return self.network.getInConnections(self)[0].getShape_abs()
 
     def setOutputs_abs(self) :
-        layer = self.getInLayers().values()[0]
+        layer = self.network.getInConnections(self)[0]
         for f in layer.outputs.streams :
             self.outputs[f] = layer.outputs[f]
 
@@ -710,16 +751,18 @@ class Dense(Layer_ABC) :
     def __init__(self, size, initializations=[MI.GlorotNormal('W'), MI.SingleValue('b', 0)], **kwargs) :
         super(Dense, self).__init__(initializations=initializations, **kwargs)
         if isinstance(size, int) :
-            sh = (1, size)
+            sh = (None, size)
+        elif isinstance(size, float) :
+            sh = (None, int(size))
         else :
-            sh = [1]
+            sh = [None]
             sh.extend(list(size))
             sh = tuple(sh)
             
         self.size = size
         self.setHP("shape", sh)
 
-        self.addParameters({
+        self.setParameters({
             "W": MTYPES.Parameter("%s.W" % (self.name)),
             "b": MTYPES.Parameter("%s.b" % (self.name))
         })
@@ -727,16 +770,22 @@ class Dense(Layer_ABC) :
         self.inputShape=None
         self.originalInputShape=None
 
+    def setShape_abs(self) :
+        # print self.network.getInConnections(self)
+        layer = self.network.getInConnections(self)[0]
+        if layer.getShape_abs() :
+            self.originalInputShape = tuple(layer.getShape_abs())
+            if len(self.originalInputShape) > 2 :
+                s = 1
+                for v in self.originalInputShape[1:] :
+                    if v is not None :
+                        s *= v
+                self.inputShape = (-1, s)
+            else :
+               self.inputShape = self.originalInputShape
+
     def femaleConnect(self, layer) :
-        self.originalInputShape = tuple(layer.getShape_abs())
-        if len(self.originalInputShape) > 2 :
-            s = 1
-            for v in self.originalInputShape[1:] :
-                if v is not None :
-                    s *= v
-            self.inputShape = (-1, s)
-        else :
-           self.inputShape = self.originalInputShape
+        self.setShape_abs()
 
     def getShape_abs(self) :
         """defines the number of inputs"""
@@ -754,6 +803,7 @@ class Dense(Layer_ABC) :
         """Defines, self.outputs["train"] and self.outputs["test"]"""
         if self.getP("W") is not None:
             for s in self.inputs.streams :
+                # print self, self.inputs[s], self.getP("W")()
                 self.outputs[s]=tt.dot(self.inputs[s], self.getP("W")())
                 if self.getP("b") is not None:
                     self.outputs[s]=self.outputs[s] + self.getP("b")()
@@ -781,7 +831,7 @@ class Output_ABC(Layer_ABC) :
         self.dependencies=None
 
     def _backTrckDependencies(self, force=False) :
-        """Finds all the hidden layers the ouput layer is influenced by"""
+        """Finds all the hidden layers the output layer is influenced by"""
         def _bckTrk(deps, layer) :
             for l in self.network.inConnections[layer] :
                 deps[l.name]=l
@@ -818,7 +868,12 @@ class DenseOutput_ABC(Output_ABC, Dense):
 
     def setOutputs_abs(self) :
         Dense.setOutputs_abs(self)
- 
+
+class PassOutput_ABC(Output_ABC, Pass):
+    """Generic output layer with weight and bias"""
+    def __init__(self, cost, learningScenari, activation, **kwargs):
+        super(PassOutput_ABC, self).__init__(cost=cost, learningScenari=learningScenari, activation=activation, **kwargs)
+
 class SoftmaxClassifier(DenseOutput_ABC) :
     """A softmax (probabilistic) Classifier"""
     def __init__(self, nbClasses, cost, learningScenari, temperature=1, **kwargs) :
@@ -853,6 +908,12 @@ class Regression(DenseOutput_ABC) :
     """For regressions, works great with a mean squared error cost"""
     def __init__(self, size, activation, learningScenari, cost, name=None, **kwargs) :
         super(Regression, self).__init__(size, activation=activation, learningScenari=learningScenari, cost=cost, name=name, **kwargs)
+        self.targets=MTYPES.Targets(tt.matrix)
+
+class PassRegression(PassOutput_ABC) :
+    """For regressions, works great with a mean squared error cost"""
+    def __init__(self, activation, learningScenari, cost, name=None, **kwargs) :
+        super(PassRegression, self).__init__(activation=activation, learningScenari=learningScenari, cost=cost, name=name, **kwargs)
         self.targets=MTYPES.Targets(tt.matrix)
 
 class Autoencode(DenseOutput_ABC) :

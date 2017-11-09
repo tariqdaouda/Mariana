@@ -30,7 +30,7 @@ class Variable(object):
 
     def tie(self, var, stream = None) :
         if stream is None :
-            if self.streams != var.streams :
+            if set(self.streams) != set(var.streams) :
                 raise ValueError( "%s does not have the same streams. Self: %s, var: %s" % (var, self.streams, var.streams) )
             for f in self.streams :
                 self.variables[f] = var.variables[f]
@@ -97,15 +97,37 @@ class Parameter(object):
         super(Parameter, self).__init__()
         self.name = name
         self.theano_var = None
+        self.tiedParams = {}
+        self.master = None
+
+    def _tie(self, master) :
+        self.master = master
+
+    def isTied(self) :
+        return self.master is not None
+
+    def isShared(self) :
+        return isinstance(self.theano_var, theano.compile.sharedvalue.SharedVariable)
 
     def isSet(self) :
-        return self.theano_var is not None
+        return self.theano_var is not None or self.isTied()
+
+    def tie(self, otherParam, transpose=False) :
+        if otherParam not in self.tiedParams :
+            self.tiedParams[otherParam] = transpose
+            otherParam.tie(self, transpose)
 
     def __call__(self) :
         return self.getVar()
 
     def getVar(self) :
-        return self.theano_var
+        if self.isTied() :
+            if self.tiedParams[self.master] :
+                return self.master().T
+            else :
+                return self.master()
+        else :
+            return self.theano_var
 
     def hasValue(self) :
         return self.theano_var is not None
@@ -123,6 +145,8 @@ class Parameter(object):
                 v = theano.shared(value = value, name = self.name)
 
         self.theano_var = v
+        for p in self.tiedParams :
+            p._tie(self)
 
     def updateValue(self, value, forceCast=False) :
         if forceCast :

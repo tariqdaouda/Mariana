@@ -32,6 +32,30 @@ class Sigmoid(Activation_ABC):
     def run(self, x):
         return tt.nnet.sigmoid(x)
 
+class Swish(Activation_ABC):
+    """
+    .. math::
+
+        x * (1/ (1/ + exp(-x)) )"""
+    def run(self, x):
+        return x*tt.nnet.sigmoid(x)
+
+class Softplus(Activation_ABC):
+    """
+    .. math::
+
+        ln(1 + exp(x))"""
+    def run(self, x):
+        return x*tt.nnet.softplus(x)
+
+class Sin(Activation_ABC):
+    """
+    .. math::
+
+        x * (1/ (1/ + exp(-x)) )"""
+    def run(self, x):
+        return tt.Sin(x)
+
 class Tanh(Activation_ABC):
     """
     .. math::

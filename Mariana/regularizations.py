@@ -7,17 +7,17 @@ class SingleLayerRegularizer_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC
 
     def __init__(self, streams=["train"], **kwargs):
         self.streams = streams
-        super(Abstraction_ABC, self).__init__(**kwargs)
+        super(SingleLayerRegularizer_ABC, self).__init__(**kwargs)
         
-    def apply(self, layer, variable) :
+    def apply(self, layer, variable, stream) :
         """Apply to a layer and update networks's log"""
 
-        for s in self.streams :
-            variable[s] += self.run(layer)
+        if stream in self.streams :
+            variable += self.run(layer, stream)
 
         return variable
         
-    def run(self, layer) :
+    def run(self, layer, streams) :
         """Returns the expression to be added to the cost"""
         raise NotImplemented("Must be implemented in child")
 
@@ -34,7 +34,7 @@ class L1(SingleLayerRegularizer_ABC) :
         self.factor = factor
         self.hyperParameters = ["factor"]
 
-    def run(self, layer) :
+    def run(self, layer, streams) :
         return self.factor * ( abs(layer.parameters["W"]).sum() )
 
 class L2(SingleLayerRegularizer_ABC) :
@@ -49,7 +49,7 @@ class L2(SingleLayerRegularizer_ABC) :
         self.factor = factor
         self.hyperParameters = ["factor"]
 
-    def run(self, layer) :
+    def run(self, layer, streams) :
         return self.factor * ( (layer.parameters["W"] ** 2).sum() )
 
 class ActivationL1(SingleLayerRegularizer_ABC) :
@@ -62,11 +62,11 @@ class ActivationL1(SingleLayerRegularizer_ABC) :
 
             factor * abs(activations)
     """
-    def __init__(self, factor) :
+    def __init__(self, factor, streams) :
         super(ActivationL1, self).__init__()
         SingleLayerRegularizer_ABC.__init__(self)
         self.factor = factor
         self.hyperParameters = ["factor"]
 
     def run(self, layer) :
-        return self.factor * ( abs(layer.outputs["train"]).sum() )
+        return self.factor * ( abs(layer.outputs[streams]).sum() )

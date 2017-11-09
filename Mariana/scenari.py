@@ -46,7 +46,7 @@ class Die(ConflictResolve):
     """No conflic resolve, crashes everything"""
     def resolve(self, previous, current) :
         if previous.gradient is not None or previous.update is not None:
-            raise IncompatibleLearningScenarios("Learning scenario is incompatible with previous ones")
+            raise IncompatibleLearningScenarios("Learning scenario is incompatible with previous ones (%s)" % previous)
 
 class ParameterGradUpdates(object):
     """docstring for ParameterGradUpdates"""
@@ -66,7 +66,10 @@ class OptimizerResult(ParameterGradUpdates):
     def addCoParameter(self, parameter, name, gradient, update) :
         param = ParameterGradUpdates(parameter, name, gradient, update)
         self.coParameters.append(param)
-        
+    
+    def __repr__(self) :
+        return "< optimizer result for: %s (id: %s)>"  % (self.parameter, id(self))
+
 class LearningScenario_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC):
     """
     This is the interface all optimizations rules must expose.
@@ -101,7 +104,7 @@ class LearningScenario_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC):
             try :
                 return self.conflictResolve.apply(previous, v)
             except IncompatibleLearningScenarios :
-                raise IncompatibleLearningScenarios("Learning scenario: '%s' is incompatible with previous updates (abstraction: '%s')" % (self.__class__.__name__, abstraction.name))
+                raise IncompatibleLearningScenarios("Learning scenario: '%s' is incompatible with previous updates (abstraction: '%s', previous: '%s')" % (self.__class__.__name__, abstraction.name, previous))
         return v
 
     def run(self, parameter, parameterName, loss, abstraction, previous) :
@@ -109,9 +112,9 @@ class LearningScenario_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC):
         raise NotImplemented("Must be implemented in child")
 
 class Independent(LearningScenario_ABC):
-    "Indicates that the abstraction does not inherit optimization rules form the outputs. Must be place at the first positon of the list."
+    "Indicates that the abstraction does not inherit optimization rules form the outputs. Must be placed at the first positon of the list."
     def __init__(self):
-       super(Independent, self).__init__()
+       super(Independent, self).__init__(inheritable=False)
 
     def run(*args, **kwargs) :
         return None
@@ -141,7 +144,7 @@ class GradientDescent(LearningScenario_ABC):
         
     def run(self, parameter, parameterName, loss, **kwargs) :
         gparam = tt.grad(loss, parameter.getVar())
-        if self.getHP("momentum") <= 0 :
+        if self.getHP("momentum") == 0 :
             if not self.getHP("reverse") :
                 param_update = parameter.getVar() - self.getHP("lr") * gparam
             else : 
@@ -149,8 +152,8 @@ class GradientDescent(LearningScenario_ABC):
             
             ret = OptimizerResult(parameter.getVar(), parameterName, gparam, param_update)
         else :
-            momentum_param = theano.shared(parameter.getVar()*0., broadcastable=parameter.broadcastable, name="momentum.%s" % (parameterName))
-            momentum_update = self.momentum * momentum_param + (1-self.getHP("momentum"))*gparam
+            momentum_param = theano.shared(parameter.getValue()*0., broadcastable=parameter.getVar().broadcastable, name="momentum.%s" % (parameterName))
+            momentum_update = self.getHP("momentum") * momentum_param + (1-self.getHP("momentum"))*gparam
             if not self.getHP("reverse") :
                 param_update = parameter.getVar() - self.getHP("lr") * momentum_param
             else :

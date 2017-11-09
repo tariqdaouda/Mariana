@@ -103,42 +103,42 @@ class Normalize(Decorator_ABC) :
         std = tt.sqrt( tt.var(layer.outputs[stream]) + self.epsilon )
         layer.outputs[stream] = ( layer.outputs[stream]-tt.mean(layer.output) / std )
 
-class BatchNormalization(Decorator_ABC):
-    """Applies Batch Normalization to the outputs of the layer.
-    Implementation according to Sergey Ioffe and Christian Szegedy (http://arxiv.org/abs/1502.03167)
+# class BatchNormalization(Decorator_ABC):
+#     """Applies Batch Normalization to the outputs of the layer.
+#     Implementation according to Sergey Ioffe and Christian Szegedy (http://arxiv.org/abs/1502.03167)
     
-        .. math::
+#         .. math::
 
-           \\gamma * \\frac{x - \\mu}{\\sqrt{\\sigma^2 + \\epsilon}} + \\beta
+#            \\gamma * \\frac{x - \\mu}{\\sqrt{\\sigma^2 + \\epsilon}} + \\beta
 
-        Where \\gamma and \\beta are learned and std stands for the standard deviation. The mean and the std are computed accross the whole minibatch.
+#         Where \\gamma and \\beta are learned and std stands for the standard deviation. The mean and the std are computed accross the whole minibatch.
 
-        :param float epsilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
-    """
+#         :param float epsilon: Actually it is not the std that is used but the approximation: sqrt(Variance + epsilon). Use this parameter to set the epsilon value
+#     """
 
-    def __init__(self, testMu, testSigma, initializations=[MI.SingleValue('gamma', 1), MI.SingleValue('beta', 0)], epsilon=1e-6, streams=["train", "test"], **kwargs) :
-        super(BatchNormalization, self).__init__(initializations=initializations, streams=streams, **kwargs)
-        self.setHP("testMu", testMu)
-        self.setHP("testSigma", testSigma)
-        self.setHP("epsilon", epsilon)
+#     def __init__(self, testMu, testSigma, initializations=[MI.SingleValue('gamma', 1), MI.SingleValue('beta', 0)], epsilon=1e-6, streams=["train", "test"], **kwargs) :
+#         super(BatchNormalization, self).__init__(initializations=initializations, streams=streams, **kwargs)
+#         self.setHP("testMu", testMu)
+#         self.setHP("testSigma", testSigma)
+#         self.setHP("epsilon", epsilon)
         
-        self.addParameters({
-            "gamma": MTYPES.Parameter("gamma"),
-            "beta": MTYPES.Parameter("beta")
-        })
+#         self.addParameters({
+#             "gamma": MTYPES.Parameter("gamma"),
+#             "beta": MTYPES.Parameter("beta")
+#         })
 
-    def getParameterShape_abs(self, param, **kwargs) :
-        return self.parent.getShape_abs()
+#     def getParameterShape_abs(self, param, **kwargs) :
+#         return self.parent.getShape_abs()
 
-    def run(self, layer, stream) :
-        if stream == "train" :
-            mu = tt.mean(layer.outputs[stream])
-            sigma = tt.sqrt( tt.var(layer.outputs[stream]) + self.getHP("epsilon") )
-        elif stream == "test" :
-            mu = self.getHP("testMu")
-            sigma = self.getHP("testSigma")
+#     def run(self, layer, stream) :
+#         if stream == "train" :
+#             mu = tt.mean(layer.outputs[stream])
+#             sigma = tt.sqrt( tt.var(layer.outputs[stream]) + self.getHP("epsilon") )
+#         elif stream == "test" :
+#             mu = self.getHP("testMu")
+#             sigma = self.getHP("testSigma")
         
-        layer.outputs[stream] = self.getP("gamma")() * ( (layer.outputs[stream] - mu) / sigma ) + self.getP("beta")()
+#         layer.outputs[stream] = self.getP("gamma")() * ( (layer.outputs[stream] - mu) / sigma ) + self.getP("beta")()
 
 class Clip(Decorator_ABC):
     """Clips the neurone activations, preventing them to go beyond the specified range"""

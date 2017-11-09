@@ -75,66 +75,70 @@ class Updates(object):
                     inheritables.append(ls)
 
             for abstraction in o.getTrainableAbstractions() :
-                optimizers[abstraction] = list(inheritables)
-                names[abstraction] = "%s.%s" % (o.name. abstraction.name)
+                if len(abstraction.getParameters()) > 0 :
+                    optimizers[abstraction] = list(inheritables)
+                    names[abstraction] = "%s.%s" % (o.name. abstraction.name)
         
             for l in o.dependencies.itervalues() :
-                if l not in optimizers :
-                    names[l] = l.name
-                    optimizers[l] = []
-                if len(l.abstractions["learningScenari"]) > 0 :
-                    if not isinstance(l.abstractions["learningScenari"][0], MS.Independent) :
-                        optimizers[l].extend(inheritables)
-                else :
-                    optimizers[l].extend(inheritables)
-
-                for abstraction in l.getTrainableAbstractions() :
-                    if abstraction not in optimizers :
-                        names[abstraction] = "%s.%s" % (l.name. abstraction.name)
-                        optimizers[abstraction] = []
-                    
-                    if len(abstraction.abstractions["learningScenari"]) > 0 :
-                        if not isinstance(abstraction.abstractions["learningScenari"][0], MS.Independent) :
-                            optimizers[abstraction].extend(inheritables)
+                if len(l.getParameters()) > 0  :
+                    if l not in optimizers :
+                        names[l] = l.name
+                        optimizers[l] = []
+                    if len(l.abstractions["learningScenari"]) > 0 :
+                        if not isinstance(l.abstractions["learningScenari"][0], MS.Independent) :
+                            optimizers[l].extend(inheritables)
                     else :
-                        optimizers[abstraction].extend(inheritables)
+                        optimizers[l].extend(inheritables)
+
+                    for abstraction in l.getTrainableAbstractions() :
+                        if len(abstraction.getParameters()) > 0 :
+                            if abstraction not in optimizers :
+                                names[abstraction] = "%s.%s" % (l.name. abstraction.name)
+                                optimizers[abstraction] = []
+                            
+                            if len(abstraction.abstractions["learningScenari"]) > 0 :
+                                if not isinstance(abstraction.abstractions["learningScenari"][0], MS.Independent) :
+                                    optimizers[abstraction].extend(inheritables)
+                            else :
+                                optimizers[abstraction].extend(inheritables)
 
         #append specific optimization rules
         for abstraction in optimizers :
             if abstraction not in self.output_layers :
                 optimizers[abstraction].extend(abstraction.abstractions["learningScenari"])
-                for reg in abstraction.abstractions["regularizations"] :
-                    self.loss = reg.apply(abstraction, self.loss)
+            for reg in abstraction.abstractions["regularizations"] :
+                self.loss = reg.apply(abstraction, self.loss, self.stream)
         
         preStore = {}
         appliedOptim = {}
         for abstraction, scenari in optimizers.iteritems() :
-            appliedOptim[abstraction] = set()
-            for sc in scenari :
-                if sc not in appliedOptim[abstraction] :
-                    appliedOptim[abstraction].add(sc)
-                    for paramName in abstraction.getParameters() :
-                        previousOptim=None
-                        optim = sc.apply(abstraction=abstraction, parameterName=paramName, loss=self.loss, previous=previousOptim)
-                        name = "%s.%s" % (names[abstraction], paramName)
-                        if optim :
-                            preStore[name] = {
-                                "parameter": optim.parameter,
-                                "gradient": optim.gradient,
-                                "update" : optim.update,
-                                "name" : name,
-                                "coParameters": []
-                            }
-                            for coParam in optim.coParameters :
-                                preStore[name]["coParameters"].append(
-                                    {
-                                        "parameter": coParam.parameter,
-                                        "gradient": coParam.gradient,
-                                        "update" : coParam.update,
-                                        "name" : "%s.%s.%s" % (name, coParam.name),
-                                    }
-                                )
-                            previousOptim = optim
+            for paramName in abstraction.getParameters() :
+                if abstraction.getP(paramName).isShared() :
+                    previousOptim=None
+                    appliedOptim[abstraction] = set()
+                    for sc in scenari :
+                        if sc not in appliedOptim[abstraction] :
+                            appliedOptim[abstraction].add(sc)
+                            optim = sc.apply(abstraction=abstraction, parameterName=paramName, loss=self.loss, previous=previousOptim)
+                            name = "%s.%s" % (names[abstraction], paramName)
+                            if optim :
+                                preStore[name] = {
+                                    "parameter": optim.parameter,
+                                    "gradient": optim.gradient,
+                                    "update" : optim.update,
+                                    "name" : name,
+                                    "coParameters": []
+                                }
+                                for coParam in optim.coParameters :
+                                    preStore[name]["coParameters"].append(
+                                        {
+                                            "parameter": coParam.parameter,
+                                            "gradient": coParam.gradient,
+                                            "update" : coParam.update,
+                                            "name" : "%s.%s" % (name, coParam.name),
+                                        }
+                                    )
+                                previousOptim = optim
         
         for gup in preStore.itervalues() :
             self.store.add( gup["parameter"], gup["gradient"], gup["update"], gup["name"] )
@@ -142,6 +146,11 @@ class Updates(object):
                 self.store.add( coParam["parameter"], coParam["gradient"], coParam["update"], coParam["name"] )
 
         self.isCompiled = True
+
+    def __getstate__(self) :
+        res = Updates(None, self.stream)
+        res.output_layers = self.output_layers
+        return res.__dict__
 
 class TheanoFunctionHandle(object) :
     """
@@ -199,6 +208,7 @@ class KolokoTheanoFunction(object) :
         super(KolokoTheanoFunction, self).__init__()
 
         self.theano_handles = []
+
         self.theano_fct = None
         self.gradients_fct = None
         self.updates_fct = None
@@ -209,7 +219,9 @@ class KolokoTheanoFunction(object) :
     
         self.perfomUpdates = None
         self.stream = None
-            
+        
+        self.uncompiledSelf = None
+
     def isCompiled(self) :
         """Has the compildation already happend?"""
         return self.theano_fct is not None
@@ -287,7 +299,7 @@ class KolokoTheanoFunction(object) :
             #         msg += "\n\t* If you have any dmatrix, dvector or dscalar in your code replace them with matrix, vector, scalar."
             #         MCAN.friendly("Run device", msg, warning = True)
             
-            self.results = OrderedDict()
+            # self.uncompiledSelfults = OrderedDict()
 
     def _parseInputs(self, inputs = {}, ignoreUnexpected=False) :
         """parse function inputs and raises SyntaxError exceptions with friendly, human readable errors"""
@@ -317,10 +329,10 @@ class KolokoTheanoFunction(object) :
         fct_inputs = self._parseInputs(inputs, ignoreUnexpected)
 
         fres = iter(self.theano_fct(*fct_inputs.values()))
+        results = OrderedDict()
         for k in self.outputs.iterkeys() :
-            self.results[k] = fres.next()
-
-        return self.results
+            results[k] = fres.next()
+        return results
 
     def getGradients(self, inputs={}, ignoreUnexpected=False) :
         """return the gradients that would be performed"""
@@ -336,7 +348,6 @@ class KolokoTheanoFunction(object) :
         results = OrderedDict()
         for k in self.updates.store.names["gradients"].itervalues() :
             results[k] = fres.next()
-
         return results
         
     def getUpdates(self, inputs={}, ignoreUnexpected=False) :
@@ -353,7 +364,6 @@ class KolokoTheanoFunction(object) :
         results = OrderedDict()
         for k in self.updates.store.names["updates"].itervalues() :
             results[k] = fres.next()
-
         return results
 
     def help(self, forceCompile = True):
@@ -402,6 +412,21 @@ class KolokoTheanoFunction(object) :
 
             return "<Compiled Mariana Theano Fct '%s'. Arguments: '%s'>" % (id(self), ', '.join(args))
 
+    def __getstate__(self) :
+        def getUncompiledSelf() :
+            res = KolokoTheanoFunction()
+            res.theano_handles = self.theano_handles
+            res.stream = self.stream
+            return res
+
+        if not self.isCompiled() :
+            return getUncompiledSelf().__dict__
+            
+        if not self.uncompiledSelf :
+            self.uncompiledSelf = getUncompiledSelf()        
+
+        return self.uncompiledSelf.__dict__
+
 class TheanoFunction(KolokoTheanoFunction):
     """docstring for TheanoFunction"""
     def __init__(self, name, layer, output, stream, update=False, **theano_kwargs):
@@ -434,6 +459,9 @@ class TheanoFunctionGroup(object):
         self.updates = set()
         self.mustInit = True
     
+    # def addGradients(self, stream) :
+
+
     def allowUpdates(self, stream) :
         """Apply updates on a given stream"""
         if stream not in self :

@@ -21,28 +21,22 @@ class LasagneStreamedLayer(object):
     def __init__(self, incomingShape, streams, lasagneLayerCls, hyperParameters, initParameters, lasagneKwargs={}):
         super(LasagneStreamedLayer, self).__init__()
         self.streams = streams
-        self.lasagneLayerCls = lasagneLayerCls
-        self.hyperParameters = hyperParameters
-        self.initParameters = initParameters
-        self.lasagneKwargs = lasagneKwargs
-        
         self.lasagneLayer = OrderedDict()
 
         kwargs = {}
-        kwargs.update(self.hyperParameters)
-        kwargs.update(self.initParameters)
-        kwargs.update(self.lasagneKwargs)
+        kwargs.update(hyperParameters)
+        kwargs.update(initParameters)
+        kwargs.update(lasagneKwargs)
 
         self.parameters = {}
-        # print "lkjhfasd", incomingShape
         for f in streams :
             if len(self.parameters) == 0 :
-                self.lasagneLayer[f] = self.lasagneLayerCls(incoming = incomingShape, **kwargs)
-                for k in self.initParameters :
+                self.lasagneLayer[f] = lasagneLayerCls(incoming = incomingShape, **kwargs)
+                for k in initParameters :
                     self.parameters[k] = getattr(self.lasagneLayer[f], k)
                 kwargs.update(self.parameters)
             else :
-                self.lasagneLayer[f] = self.lasagneLayerCls(incoming = incomingShape, **kwargs)
+                self.lasagneLayer[f] = lasagneLayerCls(incoming = incomingShape, **kwargs)
 
     def __getitem__(self, k) :
         return self.lasagneLayer[k]
@@ -93,7 +87,7 @@ class LasagneLayer(ML.Layer_ABC) :
         self.lasagneKwargs = lasagneKwargs
         
         self.lasagneLayer  = None
-        self.inLayer = None
+        # self.inLayer = None
         self.lasagneParameters = {}
         
         for init in self.abstractions["initializations"] :
@@ -101,17 +95,25 @@ class LasagneLayer(ML.Layer_ABC) :
             init.setup(self)
             self.lasagneParameters[init.getHP("parameter")] = init.run
 
+    def setShape_abs(self) :
+        inLayer = self.network.getInConnections(self)[0]
+        if not self.lasagneLayer and inLayer.getShape_abs() is not None:
+            self.lasagneLayer = LasagneStreamedLayer(incomingShape=inLayer.getShape_abs(), streams=self.streams, lasagneLayerCls=self.lasagneLayerCls, hyperParameters=self.lasagneHyperParameters, initParameters=self.lasagneParameters)
+
     def femaleConnect(self, layer) :
-        self.inLayer = layer
-        if not self.lasagneLayer :
-            self.lasagneLayer = LasagneStreamedLayer(incomingShape=self.inLayer.getShape_abs(), streams=self.streams, lasagneLayerCls=self.lasagneLayerCls, hyperParameters=self.lasagneHyperParameters, initParameters=self.lasagneParameters)
-        
+        # self.inLayer = layer
+        self.setShape_abs()
+
     def getShape_abs(self) :
-        if not self.inLayer :
+        try :
+            inLayer = self.network.getInConnections(self)[0]
+        except IndexError :
             return None
-        return self.lasagneLayer[self.streams[0]].get_output_shape_for(self.inLayer.getShape_abs())
+        return self.lasagneLayer[self.streams[0]].get_output_shape_for(inLayer.getShape_abs())
 
     def _initParameters(self) :
+        # self._setShape(self.inLayer)
+        self.lasagneParameters = None
         for k, v in self.lasagneLayer.parameters.iteritems() :
             self.parameters[k].setValue(v, forceCast=False)
 
@@ -120,5 +122,6 @@ class LasagneLayer(ML.Layer_ABC) :
         return v.get_value().shape
     
     def setOutputs_abs(self) :
+        inLayer = self.network.getInConnections(self)[0]
         for f in self.outputs.streams :
-            self.outputs[f] = self.lasagneLayer[f].get_output_for(self.inLayer.outputs[f])
+            self.outputs[f] = self.lasagneLayer[f].get_output_for(inLayer.outputs[f])
