@@ -337,13 +337,13 @@ class Network(object) :
         """Loads a model from disk"""
         import cPickle
 
-        ext = '.mar.mdl.pkl'
-        if filename.find(ext) < 0 :
-            fn = filename + ext
-        else :
-            fn = filename
+        # ext = '.mar.mdl.pkl'
+        # if filename.find(ext) < 0 :
+        #     fn = filename + ext
+        # else :
+        #     fn = filename
 
-        f = open(fn)
+        f = open(filename)
         model = cPickle.load(f)
         expandedLayers = {}
         while len(expandedLayers) < len(model["layers"]) :
