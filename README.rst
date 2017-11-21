@@ -1,8 +1,16 @@
 
 .. image:: https://github.com/tariqdaouda/Mariana/blob/master/MarianaLogo.png
+logo by  `Sawssan Kaddoura`_.
+
+.. _Sawssan Kaddoura: http://sawssankaddoura.com
 
 **WIP: NEW VERSION WITH MUCH IMPROVEMENTS. COMING SOON! (WHEN IT IS READY).**
 Checkout branch V2-dev_ for a list of upcoming feature.
+
+What will happen to MARIANA after theano?
+=========================================
+
+Theano developpement will officially end after the 1.0 release. My best guess is that MARIANA we'll be ported to tensorflow, but I am still weighting the different options.
 
 .. _V2-dev: https://github.com/tariqdaouda/Mariana/tree/V2-dev
 
