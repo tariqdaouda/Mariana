@@ -65,12 +65,12 @@ What's done
 * **New concatenation layer**: newLayer = C([Layer1, layer2])
 * **Unlimited number of inputs per layer**: Each layer used to be limited to one. Now it is infinit
 * **Abstractions are now divided into trainable (layers, decorators, activations) and untrainable (scenari, costs, initializations)**: All trainable abstractions can hold parameters and have untrainable abstractions applied to them. PReLU will finally join ReLU as an activation!
+* Fancy ways to go downhill: ADAM, Adagrad, ...
 
 What's almost done
 -------------------
 
 * Inclusion of popular recurrences (LSTM, recurent layers, ...)
-* Fancy ways to go downhill: ADAM, Adagrad, ...
 
 What's next
 -----------
