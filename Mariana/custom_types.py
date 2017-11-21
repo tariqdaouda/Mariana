@@ -105,6 +105,11 @@ class Parameter(object):
 
     def isTied(self) :
         return self.master is not None
+        # try :
+        #     print self
+        #     return self.master is not None
+        # except AttributeError :
+        #     return False
 
     def isShared(self) :
         return isinstance(self.theano_var, theano.compile.sharedvalue.SharedVariable)
@@ -169,7 +174,7 @@ class Parameter(object):
         return self.getValue().shape
 
     def __repr__(self) :
-        return "< Mariana Parameter: %s, %s>" % (self.name, self.getShape())
+        return "< Mariana Parameter: %s, %s. Tied to: %s>" % (self.name, self.getShape(), self.master)
 
 class Losses(object):
     """Contains the loss for every stream"""

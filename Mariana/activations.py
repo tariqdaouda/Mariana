@@ -46,7 +46,7 @@ class Softplus(Activation_ABC):
 
         ln(1 + exp(x))"""
     def run(self, x):
-        return x*tt.nnet.softplus(x)
+        return tt.nnet.softplus(x)
 
 class Sin(Activation_ABC):
     """

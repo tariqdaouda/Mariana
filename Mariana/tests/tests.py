@@ -323,7 +323,7 @@ class MLPTests(unittest.TestCase):
             pool2 = MSAMP.MaxPooling2D(
                 poolHeight = 1,
                 poolWidth = 2,
-                name="pool1"
+                name="pool2"
             )
 
             h = ML.Hidden(5, activation = MA.ReLU(), name = "hid" )

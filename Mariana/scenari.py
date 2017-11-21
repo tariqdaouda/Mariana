@@ -1,6 +1,7 @@
 import theano, numpy
 import theano.tensor as tt
 from collections import OrderedDict
+import lasagne.updates as LUP
 
 import Mariana.abstraction as MABS
 
@@ -143,7 +144,8 @@ class GradientDescent(LearningScenario_ABC):
         })
         
     def run(self, parameter, parameterName, loss, **kwargs) :
-        gparam = tt.grad(loss, parameter.getVar())
+        pVar = parameter.getVar()
+        gparam = tt.grad(loss, pVar)
         if self.getHP("momentum") == 0 :
             if not self.getHP("reverse") :
                 param_update = parameter.getVar() - self.getHP("lr") * gparam
@@ -161,5 +163,88 @@ class GradientDescent(LearningScenario_ABC):
             
             ret = OptimizerResult(parameter.getVar(), parameterName, gparam, param_update)
             ret.addCoParameter(momentum_param, "momentum", None, momentum_update)
+
+        return ret
+
+class Adam(LearningScenario_ABC):
+    "The Adam. Uses lasagne as backend"
+    def __init__(self, lr=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8, conflictResolve=Die(), **kwargs):
+        """
+        use reverse = True for gradient ascent.
+        """
+        super(Adam, self).__init__(**kwargs)
+        
+        self.addHyperParameters({
+            "lr": lr,
+            "beta1": beta1,
+            "beta2": beta2,
+            "epsilon": epsilon,
+        })
+        
+    def run(self, parameter, parameterName, loss, **kwargs) :
+        pVar = parameter.getVar()
+        gparam = tt.grad(loss, pVar)
+        updates = LUP.adam( [ gparam ], [pVar], learning_rate=self.getHP("lr"), beta1=self.getHP("beta1"), beta2=self.getHP("beta2"), epsilon=self.getHP("epsilon"))
+
+        ret = OptimizerResult(pVar, parameterName, gparam, updates[pVar])
+        i = 0
+        for param, update in updates.items() :
+            if param is not pVar :
+                name = "%s_adam_%s" % (parameterName, i)
+                ret.addCoParameter(param, name, None, update)
+                i += 1
+
+        return ret
+
+class Adamax(LearningScenario_ABC):
+    "The Adamax. Uses lasagne as backend"
+    def __init__(self, lr=0.002, beta1=0.9, beta2=0.999, epsilon=1e-8, conflictResolve=Die(), **kwargs):
+        super(Adamax, self).__init__(**kwargs)
+        
+        self.addHyperParameters({
+            "lr": lr,
+            "beta1": beta1,
+            "beta2": beta2,
+            "epsilon": epsilon,
+        })
+        
+    def run(self, parameter, parameterName, loss, **kwargs) :
+        pVar = parameter.getVar()
+        gparam = tt.grad(loss, pVar)
+        updates = LUP.adamax( [ gparam ], [pVar], learning_rate=self.getHP("lr"), beta1=self.getHP("beta1"), beta2=self.getHP("beta2"), epsilon=self.getHP("epsilon"))
+
+        ret = OptimizerResult(pVar, parameterName, gparam, updates[pVar])
+        i = 0
+        for param, update in updates.items() :
+            if param is not pVar :
+                name = "%s_adamax_%s" % (parameterName, i)
+                ret.addCoParameter(param, name, None, update)
+                i += 1
+
+        return ret
+
+class Adadelta(LearningScenario_ABC):
+    "The Adadelta. Uses lasagne as backend"
+    def __init__(self, lr=1.0, rho=0.9, epsilon=1e-6, conflictResolve=Die(), **kwargs):
+        super(Adadelta, self).__init__(**kwargs)
+        
+        self.addHyperParameters({
+            "lr": lr,
+            "rho": rho,
+            "epsilon": epsilon,
+        })
+        
+    def run(self, parameter, parameterName, loss, **kwargs) :
+        pVar = parameter.getVar()
+        gparam = tt.grad(loss, pVar)
+        updates = LUP.adadelta( [ gparam ], [pVar], learning_rate=self.getHP("lr"), rho=self.getHP("rho"), epsilon=self.getHP("epsilon"))
+
+        ret = OptimizerResult(pVar, parameterName, gparam, updates[pVar])
+        i = 0
+        for param, update in updates.items() :
+            if param is not pVar :
+                name = "%s_adadelta_%s" % (parameterName, i)
+                ret.addCoParameter(param, name, None, update)
+                i += 1
 
         return ret

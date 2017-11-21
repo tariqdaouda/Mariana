@@ -205,7 +205,7 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         for k, v in self.getParameters().iteritems() :
             newLayer.setP(k, copy.copy(v))
         
-        self._initStatus = 1
+        # self._initStatus = 1
         return newLayer
 
     def _registerInput(self, inputLayer) :
@@ -416,7 +416,12 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
             self.logEvent("%s: _whateverLastInit" % (self.name))
             self._whateverLastInit()
             self._initStatus = 3
-        
+    
+    def toInnput(self) :
+        """return an input layer with the same shape as self"""
+        inp = Input(self.getShape_abs(), self.name)
+        return inp
+
     def maleConnect(self, layer) :
         """What happens to A when A > B"""
         pass
@@ -424,7 +429,7 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
     def _femaleConnect(self, layer) :
         if self.maxInConnections is not None :
             if len(self.getInLayers()) > self.maxInConnections :
-                raise ValueError("Layer %s can have no more than %s incomming connections" % (layer.name, self.maxInConnections))
+                raise ValueError("Layer %s can have no more than %s incoming connections" % (layer.name, self.maxInConnections))
         return self.femaleConnect(layer)
 
     def femaleConnect(self, layer) :
@@ -682,7 +687,7 @@ class Embedding(Layer_ABC) :
     """Embeddings are learned representations of the inputs that are much loved in NLP.
     This layer will take care of creating the embeddings and optimizing them. It can either be used as an input layer or as hidden layer"""
 
-    def __init__(self, nbDimensions, dictSize, name=None, batchSize=None, zeroForNull=False, initializations=[MI.Uniform('embeddings', small=True)], **kwargs) :
+    def __init__(self, nbDimensions, dictSize, name=None, zeroForNull=False, initializations=[MI.Uniform('embeddings', small=True)], **kwargs) :
         """
         :param int nbDimensions: the number of dimensions in wich to encode each word.
         :param int dictSize: the total number of words.
@@ -708,7 +713,7 @@ class Embedding(Layer_ABC) :
         self.nbInputs = layer.getShape_abs()[1]
 
     def getShape_abs(self) :
-        return (batchSize, self.nbInputs * self.getHP("nbDimensions"))
+        return (None, self.nbInputs * self.getHP("nbDimensions"))
 
     def getParameterShape_abs(self, param, **kwargs) :
         if param == "embeddings" :

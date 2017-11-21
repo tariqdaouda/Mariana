@@ -33,7 +33,7 @@ class Network(MABS.Logger_ABC) :
         self._mustInit = True
         # self.outputMaps = {}
 
-    def getOuputs(self) :
+    def getOutputs(self) :
         """return network outputs"""
         return self.outputs
 
@@ -209,6 +209,26 @@ class Network(MABS.Logger_ABC) :
 
         network.log = pkl["network"]["log"]
         network.notes = pkl["network"]["notes"]
+
+        return network
+
+    def toInputs(self, toConvert) :
+        """returns a similar network with layers in toConvert transformed as inputs, toConvert must be a list of layer names."""
+        layers = {}
+
+        for l in self.layers.itervalues() :
+            if l.name in toConvert :
+                ll = l.toInput()
+            else :
+                ll = l.clone()
+
+            layers[l.name] = ll
+
+        for l1, l2 in self.edges() :
+            network = layers[l1] > layers[l2]
+        
+        # network.log = self.log
+        # network.notes = self.notes
 
         return network
 
