@@ -85,6 +85,7 @@ class LearningScenario_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC):
 
         self.inheritable = inheritable
         self.conflictResolve = conflictResolve
+        # self.memory = {}
 
     def isInheritable(self) :
         return self.inheritable
@@ -99,6 +100,9 @@ class LearningScenario_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC):
             parameter = abstraction.getP(parameterName)
         except :
             raise KeyError("%s has no parameter %s"%(abstraction, parameterName))
+
+        # if (parameter in self.memory) and not self.force :
+            # return self.memory[parameter]
 
         v = self.run(parameter=parameter, parameterName=parameterName, loss=loss, abstraction=abstraction, previous=previous)
         if previous :
@@ -121,7 +125,7 @@ class Independent(LearningScenario_ABC):
         return None
 
 class Fixed(LearningScenario_ABC):
-    "No learning, the abstraction parameteres stay fixed"
+    "No learning, the abstraction parameters stay fixed"
     def __init__(self, applyTo=None, inheritable=False, conflictResolve=Overwrite(), **kwargs):
        super(Fixed, self).__init__(applyTo, inheritable, conflictResolve, **kwargs)
         
@@ -244,6 +248,57 @@ class Adadelta(LearningScenario_ABC):
         for param, update in updates.items() :
             if param is not pVar :
                 name = "%s_adadelta_%s" % (parameterName, i)
+                ret.addCoParameter(param, name, None, update)
+                i += 1
+
+        return ret
+
+class Adagrad(LearningScenario_ABC):
+    "The Adagrad. Uses lasagne as backend"
+    def __init__(self, lr=1.0, epsilon=1e-6, conflictResolve=Die(), **kwargs):
+        super(Adagrad, self).__init__(**kwargs)
+        
+        self.addHyperParameters({
+            "lr": lr,
+            "epsilon": epsilon,
+        })
+        
+    def run(self, parameter, parameterName, loss, **kwargs) :
+        pVar = parameter.getVar()
+        gparam = tt.grad(loss, pVar)
+        updates = LUP.adagrad( [ gparam ], [pVar], learning_rate=self.getHP("lr"), epsilon=self.getHP("epsilon"))
+
+        ret = OptimizerResult(pVar, parameterName, gparam, updates[pVar])
+        i = 0
+        for param, update in updates.items() :
+            if param is not pVar :
+                name = "%s_adagrad_%s" % (parameterName, i)
+                ret.addCoParameter(param, name, None, update)
+                i += 1
+
+        return ret
+
+class RMSProp(LearningScenario_ABC):
+    "The RMSProp. Uses lasagne as backend"
+    def __init__(self, lr=1.0, rho=0.9, epsilon=1e-6, conflictResolve=Die(), **kwargs):
+        super(RMSProp, self).__init__(**kwargs)
+        
+        self.addHyperParameters({
+            "lr": lr,
+            "rho": rho,
+            "epsilon": epsilon,
+        })
+        
+    def run(self, parameter, parameterName, loss, **kwargs) :
+        pVar = parameter.getVar()
+        gparam = tt.grad(loss, pVar)
+        updates = LUP.rmsprop( [ gparam ], [pVar], learning_rate=self.getHP("lr"), rho=self.getHP("rho"), epsilon=self.getHP("epsilon"))
+
+        ret = OptimizerResult(pVar, parameterName, gparam, updates[pVar])
+        i = 0
+        for param, update in updates.items() :
+            if param is not pVar :
+                name = "%s_rmsprop_%s" % (parameterName, i)
                 ret.addCoParameter(param, name, None, update)
                 i += 1
 

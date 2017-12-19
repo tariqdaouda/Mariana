@@ -185,7 +185,7 @@ class RepeatedUpscaling1D(MLASAGNE.LasagneLayer):
         **kwargs
     ):
 
-        super(Upscale1D, self).__init__(
+        super(RepeatedUpscaling1D, self).__init__(
                 LasagnePOOL.Upscale1DLayer,
                 initializations=[],
                 lasagneHyperParameters={
@@ -206,7 +206,7 @@ class DilatedUpscaling1D(MLASAGNE.LasagneLayer):
         **kwargs
     ):
 
-        super(Upscale1D, self).__init__(
+        super(DilatedUpscaling1D, self).__init__(
                 LasagnePOOL.Upscale1DLayer,
                 initializations=[],
                 lasagneHyperParameters={
@@ -228,7 +228,7 @@ class RepeatedUpscaling2D(MLASAGNE.LasagneLayer):
         **kwargs
     ):
 
-        super(Upscale2D, self).__init__(
+        super(RepeatedUpscaling2D, self).__init__(
                 LasagnePOOL.Upscale2DLayer,
                 initializations=[],
                 lasagneHyperParameters={
@@ -250,7 +250,7 @@ class DilatedUpscaling2D(MLASAGNE.LasagneLayer):
         **kwargs
     ):
 
-        super(Upscale2D, self).__init__(
+        super(DilatedUpscaling2D, self).__init__(
                 LasagnePOOL.Upscale2DLayer,
                 initializations=[],
                 lasagneHyperParameters={
@@ -273,7 +273,7 @@ class RepeatedUpscaling3D(MLASAGNE.LasagneLayer):
         **kwargs
     ):
 
-        super(Upscale3D, self).__init__(
+        super(RepeatedUpscaling3D, self).__init__(
                 LasagnePOOL.Upscale3DLayer,
                 initializations=[],
                 lasagneHyperParameters={
@@ -295,7 +295,7 @@ class DilatedUpscaling3D(MLASAGNE.LasagneLayer):
         name,
         **kwargs
     ):
-        super(Upscale3D, self).__init__(
+        super(DilatedUpscaling3D, self).__init__(
                 LasagnePOOL.Upscale3DLayer,
                 initializations=[],
                 lasagneHyperParameters={
@@ -318,7 +318,7 @@ class WinnerTakesAll(MLASAGNE.LasagneLayer):
         **kwargs
     ):
 
-        super(Upscale3D, self).__init__(
+        super(WinnerTakesAll, self).__init__(
                 LasagnePOOL.FeatureWTALayer,
                 initializations=[],
                 lasagneHyperParameters={
@@ -341,7 +341,7 @@ class MaxSpatialPyramidPooling(MLASAGNE.LasagneLayer):
         **kwargs
     ):
 
-        super(Upscale3D, self).__init__(
+        super(MaxSpatialPyramidPooling, self).__init__(
                 LasagnePOOL.SpatialPyramidPooling,
                 initializations=[],
                 lasagneHyperParameters={
@@ -371,7 +371,7 @@ class AverageSpatialPyramidPooling(MLASAGNE.LasagneLayer):
         else:
             mode = "average_exc_pad"
 
-        super(Upscale3D, self).__init__(
+        super(AverageSpatialPyramidPooling, self).__init__(
                 LasagnePOOL.SpatialPyramidPooling,
                 initializations=[],
                 lasagneHyperParameters={

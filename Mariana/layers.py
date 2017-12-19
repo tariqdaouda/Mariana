@@ -377,7 +377,7 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
             self._parametersSanityCheck()
             self._initStatus = 1
             
-    def _initA(self, force=False) :
+    def _initA(self, force=False, asReasinedInput=False) :
         """Initialize the essential attributes of the layer such as: outputs and activations. This function is automatically called before train/test etc..."""
         if force :
             self._initStatus = 0
@@ -389,7 +389,30 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
                 self.logEvent("%s: setShape_abs" % (self.name))
                 self.setShape_abs()
             self.logEvent("%s: setOutputs_abs" % (self.name))
-            self.setOutputs_abs()
+    
+            if not asReasinedInput :
+                self.setOutputs_abs()
+                for k in self.streams :
+                    if self.outputs[k].dtype != theano.config.floatX :
+                        self.logEvent("output for stream %s is of the work type (%s vs %s) forcefully casting" % (k, self.outputs[k].dtype, theano.config.floatX))
+                        self.outputs[k] = tt.cast(self.outputs[k], theano.config.floatX)
+            else :
+                shape = self.getShape_abs()
+                if len(shape) == 2:
+                    typ = tt.matrix
+                elif len(shape) == 3:
+                    typ = tt.tensor3
+                elif len(shape) == 4:
+                    typ = tt.tensor4
+                elif len(shape) == 5:
+                    typ = tt.tensor5
+                else :
+                    raise ValueError("The maximum shape size allowed is 5")
+
+                self.values = MTYPES.Inputs(typ, streams=self.streams)
+                for f in self.streams :
+                    self.outputs[f] = self.values[f]
+
             self.logEvent("%s: _activate" % (self.name))
             self._activate()
             self.logEvent("%s: _decorate" % (self.name))
@@ -397,7 +420,7 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
             self.logEvent("%s: _outputsSanityCheck" % (self.name))
             self._outputsSanityCheck()
             self._initStatus = 2
-            
+
             for l in self.getOutLayers() :
                 self.logEvent("register %s as input for %s" % (self.name, l.name))
                 l._registerInput(self)
@@ -406,16 +429,20 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
     def _initB(self, force) :
         """Initialize theano functions. This function is automatically called before train/test etc..."""
         # print "\t", self, self._initStatus
+        # print self, self._initStatus, len(self._inputRegistrations), len(self.getInLayers())
         if force :
             self._initStatus = 2
 
-        if ( self._initStatus == 2) and ( len(self._inputRegistrations) == len(self.getInLayers()) ) :
+        if (self._initStatus == 2) and ( len(self._inputRegistrations) == len(self.getInLayers()) ) :
             self.logEvent("%s: initB" % (self.name))
             self.logEvent("%s: _setTheanoFunctions" % (self.name))
             self._setTheanoFunctions()
             self.logEvent("%s: _whateverLastInit" % (self.name))
             self._whateverLastInit()
             self._initStatus = 3
+    
+    def isInit(self) :
+        return self._initStatus == 3
     
     def toInnput(self) :
         """return an input layer with the same shape as self"""
@@ -522,9 +549,8 @@ class Input(Layer_ABC) :
     This one is not abstract an can instanciated wthout risk.
     
     :param int/tuple shape: the shape of the layer, can be a int if its just to specify a number of units. Do not add the minibatch to the shape. Mariana is smart enough to add it for you.
-    :param dtype: the numpy data type 
     """
-    def __init__(self, shape, name=None, batchSize=None, dtype=theano.config.floatX,  **kwargs) :
+    def __init__(self, shape, name=None, batchSize=None,  **kwargs) :
         super(Input, self).__init__(name=name, **kwargs)
         
         if isinstance(shape, int) :

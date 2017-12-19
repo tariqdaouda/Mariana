@@ -160,7 +160,8 @@ class TheanoFunctionHandle(object) :
 
     def __init__(self, name, layer, output, stream, update=False, **theano_kwargs) :
         """
-        :param str name: The name of the function used to identify its return value 
+        :param str name: The name of the function used to identify its return value
+        :param layer: The associated layer
         :param output: The theano expression to be returned
         :parama stream: Usually something like "train" or "test". Defines if regularizations and decorators should be applied
         :parama bool update: Should it update the parameters when called
@@ -221,6 +222,14 @@ class KolokoTheanoFunction(object) :
         self.stream = None
         
         self.uncompiledSelf = None
+         
+        self.transfer = False
+
+    def setTarget(self, transfer) :
+        """
+        :parama transfer: Will transfer the output to the desired device. Ex, for compatibility between GPU and CPU use 'cpu'. For lighting fast uncompatible with GPU results use None. If you don't know what this is don't use it.
+        """
+        self.transfer = transfer
 
     def isCompiled(self) :
         """Has the compildation already happend?"""
@@ -265,8 +274,13 @@ class KolokoTheanoFunction(object) :
                 
                 for k, v in handle.inputs.iteritems() :
                     varToName[v] = k
-                    
-                self.outputs["%s.%s" % (handle.layer.name, handle.name)] = handle.output
+                
+                output = handle.output
+                if self.transfer is not False :
+                    print "wrap: transfer", self.transfer
+                    output = output.transfer(self.transfer)
+                
+                self.outputs["%s.%s" % (handle.layer.name, handle.name)] = output
                 
                 if handle.hasUpdates() :
                     self.perfomUpdates = True
@@ -459,8 +473,13 @@ class TheanoFunctionGroup(object):
         self.updates = set()
         self.mustInit = True
     
-    # def addGradients(self, stream) :
+        self.transfer = False
 
+    def setTarget(self, transfer) :
+        """
+        :parama transfer: Will transfer the output to the desired device. Ex, for compatibility between GPU and CPU use 'cpu'. For lighting fast uncompatible with GPU results use None. If you don't know what this is don't use it.
+        """
+        self.transfer = transfer
 
     def allowUpdates(self, stream) :
         """Apply updates on a given stream"""
@@ -483,6 +502,8 @@ class TheanoFunctionGroup(object):
                     update = True
                 if self.functions[stream] is None :
                     self.functions[stream] = TheanoFunction("%s.%s" %(self.name, stream), self.layer, self.outputs, stream=stream, update = update, **self.theano_kwargs)
+                    self.functions[stream].setTarget(self.transfer)
+                    
             self.mustInit = False
 
     def help(self, forceInit=True):

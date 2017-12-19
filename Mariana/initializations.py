@@ -58,6 +58,8 @@ class Initialization_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC) :
             raise ValueError("Initialization has a wrong shape: %s, parameter shape is: %s " % (v.shape, retShape))
         
         v = MUSE.sparsify(v, self.getHP("sparsity"))
+        v = numpy.asarray(v, dtype = theano.config.floatX)
+        # print self, v.dtype
         abstraction.setP(self.getHP("parameter"), v)
     
     def run(self, shape) :
@@ -105,7 +107,7 @@ class Normal(Initialization_ABC):
     Initializes using a random normal distribution.
     **Small** uses my personal initialization than I find works very well in most cases with a uniform distribution, simply divides by the sum of the weights.
     """
-    def __init__(self, parameter, std, mean, small=False, **kwargs):
+    def __init__(self, parameter, mean=0, std=1, small=False, **kwargs):
         super(Normal, self).__init__(parameter, **kwargs)
         self.addHyperParameters({
             "std": std,
@@ -114,8 +116,8 @@ class Normal(Initialization_ABC):
         })
     
     def run(self, shape) :
-        v = numpy.random.normal(self.mean, self.std, size=shape)
-        if self.small :
+        v = numpy.random.normal(self.getHP("mean"), self.getHP("std"), size=shape)
+        if self.getHP("small") :
             return v / numpy.sum(v)
         return v
 

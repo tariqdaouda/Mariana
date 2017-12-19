@@ -155,7 +155,7 @@ class Clip(Decorator_ABC):
 class AddGaussianNoise(Decorator_ABC):
     """Add gaussian noise to the output of the layer"""
     
-    def __init__(self, std, avg=1, streams=["train"], **kwargs):
+    def __init__(self, std, avg=0, streams=["train"], **kwargs):
         assert std > 0
         super(AddGaussianNoise, self).__init__(streams, **kwargs) 
         self.setHP("std", std)
@@ -163,13 +163,13 @@ class AddGaussianNoise(Decorator_ABC):
         
     def run(self, layer, stream) :
         rnd = tt.shared_randomstreams.RandomStreams()
-        randomVals = rnd.normal(size = layer.getOutputShape_abs(), avg=self.avg, std=self.std)
+        randomVals = rnd.normal(size = layer.getIntrinsicShape(), avg=self.getHP("avg"), std=self.getHP("std") )
         layer.outputs[stream] = layer.outputs[stream] + randomVals
 
 class MultGaussianNoise(Decorator_ABC):
     """Multiply gaussian noise to the output of the layer"""
     
-    def __init__(self, std, avg=1, streams=["train"], **kwargs):
+    def __init__(self, std, avg=0, streams=["train"], **kwargs):
         assert std > 0
         super(MultGaussianNoise, self).__init__(streams, **kwargs) 
         self.setHP("std", std)
@@ -177,5 +177,5 @@ class MultGaussianNoise(Decorator_ABC):
         
     def run(self, layer, stream) :
         rnd = tt.shared_randomstreams.RandomStreams()
-        randomVals = rnd.normal(size = layer.getOutputShape_abs(), avg=self.avg, std=self.std)
+        randomVals = rnd.normal(size = layer.getIntrinsicShape(), avg=self.getHP("avg"), std=self.getHP("std") )
         layer.outputs[stream] = layer.outputs[stream] * randomVals

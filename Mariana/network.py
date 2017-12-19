@@ -162,11 +162,35 @@ class Network(MABS.Logger_ABC) :
                 inp._initA(force=True)
 
             for l in self.layers.itervalues() :
-                # print l._initStatus
                 l._initB(force=True)
-                self.parameters = self.getFullParameters()
+                self.parameters.append(self.getFullParameters())
     
             self._mustInit = False
+    
+        noInit = []
+        for l in self.layers.itervalues() :
+            if not l.isInit() :
+                noInit.append(l)
+
+        if len(noInit) > 0 :
+            raise AttributeError("These layers have not been initialized (please check network connectivity): %s" % str(noInit))
+
+    def reasignInputs(self, layerNameList) :
+        """Hiddens become the new inputs"""
+        if self._mustInit :
+            self.init(force=True)
+
+        self.logEvent("Reinitializating with input reasignement")
+        for name in layerNameList :
+            self.logEvent("Reasigning %s as an input" % name)
+            inp = self[name]
+            inp._initA(force=True, asReasinedInput=True)
+
+        for l in self.layers.itervalues() :
+            l._initB(force=True)
+            self.parameters.append(self.getFullParameters())
+    
+        self._mustInit = False
     
     def save(self, filename) :
         """Save a model on disk"""
