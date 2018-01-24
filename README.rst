@@ -7,7 +7,7 @@ However, for now the developement is halted. I am still taking care of the maint
 
 I still believe that Mariana can play a relevant role in the machine learning community and especially beyond. The most straightforward path would be a complete port to Tensorflow.  Let me know if you'd like to help!
 
-T.
+T .
 
 
 .. image:: https://github.com/tariqdaouda/Mariana/blob/master/MarianaLogo.png
