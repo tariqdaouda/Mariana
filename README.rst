@@ -1,10 +1,31 @@
+What will happen now that Theano is no longer developed?
+=========================================================
+
+Mariana works! I still use it almost everyday.
+
+However, for now the developement is halted. I am still taking care of the maintenance and may still add some minor features, but I am not planning on adding anything major.
+
+I still believe that Mariana can play a relevant role in the machine learning community and especially beyond. The most straightforward path would be a complete port to Tensorflow.  Let me know if you'd like to help!
+
+T .
+
+
+.. image:: https://github.com/tariqdaouda/Mariana/blob/master/MarianaLogo.png
+logo by  `Sawssan Kaddoura`_.
+
+.. _Sawssan Kaddoura: http://sawssankaddoura.com
+
+Mariana V1 is here_
+
+.. _here: https://github.com/tariqdaouda/Mariana/tree/master
+
 MARIANA: The Cutest Deep Learning Framework
 =============================================
 .. image:: https://img.shields.io/badge/python-2.7-blue.svg 
     
 **TEMPORARY README FOR MARIANA V2, WIP (BUT ALMOST DONE).**
 
-Mariana is an **efficient language** through which complex deep neural networks can be easily expressed and easily manipulated. It's simple enough for beginners and doesn't get much complicated for seniors.
+Mariana is an **efficient language** through which complex deep neural networks can be easily expressed and easily manipulated. It's simple enough for beginners and doesn't get much complicated.
 
 Intuitive, user-friendly and yet flexible enough for research. It's here to empower **researchers**, **teachers** and **students** alike, while greatly facilitating **AI knowledge transfer** into other domains.
 
@@ -65,12 +86,12 @@ What's done
 * **New concatenation layer**: newLayer = C([Layer1, layer2])
 * **Unlimited number of inputs per layer**: Each layer used to be limited to one. Now it is infinit
 * **Abstractions are now divided into trainable (layers, decorators, activations) and untrainable (scenari, costs, initializations)**: All trainable abstractions can hold parameters and have untrainable abstractions applied to them. PReLU will finally join ReLU as an activation!
+* Fancy ways to go downhill: **Adam, Adagrad**, ...
 
 What's almost done
 -------------------
 
 * Inclusion of popular recurrences (LSTM, recurent layers, ...)
-* Fancy ways to go downhill: ADAM, Adagrad, ...
 
 What's next
 -----------
