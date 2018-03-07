@@ -177,15 +177,19 @@ class Network(MABS.Logger_ABC) :
 
     def reasignInputs(self, layerNameList) :
         """Hiddens become the new inputs"""
+        
+        self.logEvent("Reinitializating for input reasignement")
         if self._mustInit :
             self.init(force=True)
 
-        self.logEvent("Reinitializating with input reasignement")
+        check = set()
         for name in layerNameList :
-            self.logEvent("Reasigning %s as an input" % name)
-            inp = self[name]
-            inp._initA(force=True, asReasinedInput=True)
-
+            if name not in check :
+                self.logEvent("Reasigning %s as an input" % name)
+                inp = self[name]
+                inp._initA(force=True, asReasinedInput=True)
+                check.add(name)
+        
         for l in self.layers.itervalues() :
             l._initB(force=True)
             self.parameters.append(self.getFullParameters())

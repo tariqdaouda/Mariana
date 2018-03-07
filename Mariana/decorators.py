@@ -179,3 +179,23 @@ class MultGaussianNoise(Decorator_ABC):
         rnd = tt.shared_randomstreams.RandomStreams()
         randomVals = rnd.normal(size = layer.getIntrinsicShape(), avg=self.getHP("avg"), std=self.getHP("std") )
         layer.outputs[stream] = layer.outputs[stream] * randomVals
+
+class Scale(Decorator_ABC):
+    """Multiplies the output by scale"""
+    
+    def __init__(self, scale, streams=["train", "test"], **kwargs):
+        super(Scale, self).__init__(streams, **kwargs) 
+        self.setHP("scale", scale)
+        
+    def run(self, layer, stream) :
+        layer.outputs[stream] = layer.outputs[stream] * self.getHP("scale")
+
+class Shift(Decorator_ABC):
+    """Shifts (addiction) the output by scale"""
+    
+    def __init__(self, shift, streams=["train", "test"], **kwargs):
+        super(Shift, self).__init__(streams, **kwargs) 
+        self.setHP("shift", shift)
+        
+    def run(self, layer, stream) :
+        layer.outputs[stream] = layer.outputs[stream] + self.getHP("shift")

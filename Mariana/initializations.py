@@ -52,7 +52,7 @@ class Initialization_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC) :
     def apply(self, abstraction, **kwargs) :
         
         retShape = abstraction._getParameterShape_abs(self.getHP("parameter"))
-
+        # print self
         v = MUSE.iCast_numpy(self.run(retShape))
         if (v.shape != retShape) :
             raise ValueError("Initialization has a wrong shape: %s, parameter shape is: %s " % (v.shape, retShape))
@@ -128,12 +128,12 @@ class Uniform(Initialization_ABC):
     """
     def __init__(self, parameter, low=0, high=1, small=False, **kwargs):
         super(Uniform, self).__init__(parameter, **kwargs)
-        self.setHP("low", low)
-        self.setHP("high", high)
+        self.setHP("low", int(low))
+        self.setHP("high", int(high))
         self.setHP("small", small)
     
     def run(self, shape) :
-        v = numpy.random.uniform(high=self.getHP("high"), low=self.getHP("low"), size=shape)
+        v = numpy.random.uniform(low=self.getHP("low"), high=self.getHP("high"), size=shape)
         if self.getHP("small") :
             return v / sum(v)
         return v

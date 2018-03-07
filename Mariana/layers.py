@@ -726,8 +726,8 @@ class Embedding(Layer_ABC) :
 
         self.zeroForNull=zeroForNull
 
-        self.setHP("dictSize", dictSize)
-        self.setHP("nbDimensions", nbDimensions)
+        self.setHP("dictSize", int(dictSize))
+        self.setHP("nbDimensions", int(nbDimensions))
 
         self.setP("embeddings", MTYPES.Parameter(name="%s.%s" % (self.name, "embeddings")))
 
@@ -762,7 +762,7 @@ class Embedding(Layer_ABC) :
        
         for s in self.streams :
             preOutputs=self.parameters["embeddings"].getVar()[self.inputs[s]]
-            self.outputs[s] = preOutputs.reshape((self.inputs[s].shape[0], self.getHP("nbDimensions")))
+            self.outputs[s] = preOutputs.reshape((self.inputs[s].shape[0], self.nbInputs * self.getHP("nbDimensions")))
 
 class Pass(Layer_ABC) :
     def __init__(self, name=None, **kwargs):
@@ -776,11 +776,34 @@ class Pass(Layer_ABC) :
         for f in layer.outputs.streams :
             self.outputs[f] = layer.outputs[f]
 
+class Translation(Layer_ABC) :
+    """This layer shift the ouput of the previous layer. It is basicallly like a bias"""
+    def __init__(self, initializations=[MI.SingleValue('b', 0)], name=None, **kwargs):
+        super(Translation, self).__init__(name=name, initializations=initializations, **kwargs)
+        
+        self.setParameters({
+            "b": MTYPES.Parameter("%s.b" % (self.name))
+        })
+
+    def getShape_abs(self) :
+        return self.network.getInConnections(self)[0].getShape_abs()
+
+    def setOutputs_abs(self) :
+        layer = self.network.getInConnections(self)[0]
+        for f in layer.outputs.streams :
+            self.outputs[f] = layer.outputs[f] + self.getP("b")()
+
+    def getParameterShape_abs(self, param, **kwargs) :
+        if param == "b" :
+            return self.getShape_abs()[1:]
+        else :
+            raise ValueError("Unknown parameter: %s" % param)
+
 class Dense(Layer_ABC) :
     """A layer with weigth and bias. If would like to disable either one of them do not provide an initialization"""
 
-    def __init__(self, size, initializations=[MI.GlorotNormal('W'), MI.SingleValue('b', 0)], **kwargs) :
-        super(Dense, self).__init__(initializations=initializations, **kwargs)
+    def __init__(self, size, initializations=[MI.GlorotNormal('W'), MI.SingleValue('b', 0)], name=None, **kwargs) :
+        super(Dense, self).__init__(initializations=initializations, name=name, **kwargs)
         if isinstance(size, int) :
             sh = (None, size)
         elif isinstance(size, float) :
@@ -854,7 +877,6 @@ class Output_ABC(Layer_ABC) :
     def __init__(self, cost, backTrckAll=False, **kwargs) :
         super(Output_ABC, self).__init__(**kwargs)
         self.targets=MTYPES.Targets()
-        self.dependencies=OrderedDict()
         self.backTrckAll=backTrckAll
 
         self.abstractions["cost"] = [cost]

@@ -139,12 +139,12 @@ class GradientDescent(LearningScenario_ABC):
         """
         use reverse = True for gradient ascent.
         """
-        super(GradientDescent, self).__init__(**kwargs)
+        super(GradientDescent, self).__init__(conflictResolve=conflictResolve, **kwargs)
         
         self.addHyperParameters({
-        	"lr": lr,
-        	"momentum": momentum,
-        	"reverse": reverse
+            "lr": lr,
+            "momentum": momentum,
+            "reverse": reverse
         })
         
     def run(self, parameter, parameterName, loss, **kwargs) :
@@ -169,6 +169,24 @@ class GradientDescent(LearningScenario_ABC):
             ret.addCoParameter(momentum_param, "momentum", None, momentum_update)
 
         return ret
+SGD = GradientDescent
+
+#class GradientClipping(LearningScenario_ABC):
+#    "Clips previous update to a minimum and maximum value."
+#    def __init__(self, minimum, maximum, conflictResolve=Overwrite(), **kwargs):
+#        """
+#        """
+#        super(GradientClipping, self).__init__(conflictResolve=conflictResolve, **kwargs)
+#        self.addHyperParameters({
+#            "minimum": minimum,
+#            "maximum": maximum,
+#        })
+        
+#    def run(self, parameter, parameterName, loss, **kwargs) :
+#        previous = kwargs["previous"]
+#        previous.gradient = tt.clip(previous.gradient, self.getHP("minimum"), self.getHP("maximum"))
+
+#        return previous
 
 class Adam(LearningScenario_ABC):
     "The Adam. Uses lasagne as backend"
@@ -203,7 +221,7 @@ class Adam(LearningScenario_ABC):
 class Adamax(LearningScenario_ABC):
     "The Adamax. Uses lasagne as backend"
     def __init__(self, lr=0.002, beta1=0.9, beta2=0.999, epsilon=1e-8, conflictResolve=Die(), **kwargs):
-        super(Adamax, self).__init__(**kwargs)
+        super(Adamax, self).__init__(conflictResolve=conflictResolve, **kwargs)
         
         self.addHyperParameters({
             "lr": lr,
@@ -230,7 +248,7 @@ class Adamax(LearningScenario_ABC):
 class Adadelta(LearningScenario_ABC):
     "The Adadelta. Uses lasagne as backend"
     def __init__(self, lr=1.0, rho=0.9, epsilon=1e-6, conflictResolve=Die(), **kwargs):
-        super(Adadelta, self).__init__(**kwargs)
+        super(Adadelta, self).__init__(conflictResolve=conflictResolve, **kwargs)
         
         self.addHyperParameters({
             "lr": lr,
@@ -256,7 +274,7 @@ class Adadelta(LearningScenario_ABC):
 class Adagrad(LearningScenario_ABC):
     "The Adagrad. Uses lasagne as backend"
     def __init__(self, lr=1.0, epsilon=1e-6, conflictResolve=Die(), **kwargs):
-        super(Adagrad, self).__init__(**kwargs)
+        super(Adagrad, self).__init__(conflictResolve=conflictResolve, **kwargs)
         
         self.addHyperParameters({
             "lr": lr,
@@ -281,7 +299,7 @@ class Adagrad(LearningScenario_ABC):
 class RMSProp(LearningScenario_ABC):
     "The RMSProp. Uses lasagne as backend"
     def __init__(self, lr=1.0, rho=0.9, epsilon=1e-6, conflictResolve=Die(), **kwargs):
-        super(RMSProp, self).__init__(**kwargs)
+        super(RMSProp, self).__init__(conflictResolve=conflictResolve, **kwargs)
         
         self.addHyperParameters({
             "lr": lr,
