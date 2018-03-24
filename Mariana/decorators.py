@@ -69,13 +69,13 @@ class BinomialDropout(Decorator_ABC):
     def __init__(self, dropoutRatio, streams=["train"], **kwargs):
         super(BinomialDropout, self).__init__(streams, **kwargs)
         assert (dropoutRatio >= 0 and dropoutRatio <= 1)
-        self.dropoutRatio = dropoutRatio
-        self.seed = MSET.RANDOM_SEED
+        # self.dropoutRatio = dropoutRatio
+        # self.seed = MSET.RANDOM_SEED
         self.setHP("dropoutRatio", dropoutRatio)
         
     def run(self, layer, stream) :        
         rnd = tt.shared_randomstreams.RandomStreams()
-        mask = rnd.binomial(n = 1, p = (1-self.dropoutRatio), size = layer.outputs[stream].shape)
+        mask = rnd.binomial(n = 1, p = (1-self.getHP("dropoutRatio")), size = layer.outputs[stream].shape)
         # cast to stay in GPU float limit
         mask = MUSE.iCast_theano(mask)
         layer.outputs[stream] = layer.outputs[stream] * mask
