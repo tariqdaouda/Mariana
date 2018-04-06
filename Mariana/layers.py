@@ -755,19 +755,14 @@ class Embedding(Layer_ABC) :
                self.inputs[f] = inpLayer.outputs[f]
         
     def setOutputs_abs(self) :
-        if self.getP("embeddings").isTied() :
-            for s in self.streams :
-                preOutputs=self.parameters["embeddings"].getVar()[self.inputs[s]]
-                self.outputs[s] = preOutputs.reshape((self.inputs[s].shape[0], self.nbInputs * self.getHP("nbDimensions")))
-        else :
-            if self.zeroForNull :
-                self.null=numpy.zeros((1, self.getHP("nbDimensions")))
-                embs = self.getP("embeddings").getValue()
-                self.parameters["embeddings"].setValue( tt.concatenate( [self.null, embs], axis=0) )
-            
-            for s in self.streams :
-                preOutputs=self.parameters["embeddings"].getVar()[self.inputs[s]]
-                self.outputs[s] = preOutputs.reshape((self.inputs[s].shape[0], self.nbInputs * self.getHP("nbDimensions")))
+        if self.zeroForNull and not self.getP("embeddings").isTied() :
+            self.null=numpy.zeros((1, self.getHP("nbDimensions")))
+            embs = self.parameters["embeddings"].getValue()
+            self.parameters["embeddings"].setValue( tt.concatenate( [self.null, embs], axis=0) )
+       
+        for s in self.streams :
+            preOutputs=self.parameters["embeddings"].getVar()[self.inputs[s]]
+            self.outputs[s] = preOutputs.reshape((self.inputs[s].shape[0], self.nbInputs * self.getHP("nbDimensions")))
 
 class Pass(Layer_ABC) :
     def __init__(self, name=None, **kwargs):

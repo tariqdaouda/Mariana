@@ -99,10 +99,8 @@ class Parameter(object):
         self.theano_var = None
         self.tiedParams = {}
         self.master = None
-        self.shape = None
 
     def _tie(self, master) :
-        # print "master", master
         self.master = master
 
     def isTied(self) :
@@ -140,59 +138,40 @@ class Parameter(object):
         return self.theano_var is not None
     
     def setValue(self, value, forceCast = True) :
-        if self.master is None :
-            if isinstance(value, theano.Variable) :
-                if forceCast :
-                    v = MUSE.iCast_theano(value)
-                else :
-                    v = value
+        if isinstance(value, theano.Variable) :
+            if forceCast :
+                v = MUSE.iCast_theano(value)
             else :
-                if forceCast :
-                    v = theano.shared(value = MUSE.iCast_numpy(value), name = self.name)
-                else :
-                    v = theano.shared(value = value, name = self.name)
-
-            self.theano_var = v
-            for p in self.tiedParams :
-                p._tie(self)
+                v = value
         else :
-            self.master.setValue(value, forceCast)
-
-    def updateValue(self, value, forceCast=False) :
-        if self.master is None :
             if forceCast :
                 v = theano.shared(value = MUSE.iCast_numpy(value), name = self.name)
             else :
-                v = value
+                v = theano.shared(value = value, name = self.name)
 
-            if v.shape != self.getShape() :
-                print("Warning update has a different shape: %s -> %s" %(self.shape, v.shape))
-            self.theano_var.set_value(v)
+        self.theano_var = v
+        for p in self.tiedParams :
+            p._tie(self)
+
+    def updateValue(self, value, forceCast=False) :
+        if forceCast :
+            v = theano.shared(value = MUSE.iCast_numpy(value), name = self.name)
         else :
-            self.master.updateValue(value, forceCast)
-        self.shape = None
+            v = value
 
+        if v.shape != self.getShape() :
+            print("Warning update has a different shape: %s -> %s" %(self.shape, v.shape))
+        self.theano_var.set_value(v)
+    
     def getValue(self) :
-        if self.master is not None :
-            return self.master.getValue()
-
         if self.theano_var is None :
             return None
         return self.theano_var.get_value()
 
     def getShape(self) :
-        if self.master is not None :
-            return self.master.getShape()
-
-        if self.shape is not None :
-            return self.shape
-
         if self.theano_var is None :
             return None
-        
-        self.shape = self.getValue().shape
-
-        return self.shape
+        return self.getValue().shape
 
     def __repr__(self) :
         return "< Mariana Parameter: %s, %s. Tied to: %s>" % (self.name, self.getShape(), self.master)

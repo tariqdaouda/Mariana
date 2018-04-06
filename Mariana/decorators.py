@@ -74,11 +74,12 @@ class BinomialDropout(Decorator_ABC):
         self.setHP("dropoutRatio", dropoutRatio)
         
     def run(self, layer, stream) :        
-        rnd = tt.shared_randomstreams.RandomStreams()
-        mask = rnd.binomial(n = 1, p = (1-self.getHP("dropoutRatio")), size = layer.outputs[stream].shape)
-        # cast to stay in GPU float limit
-        mask = MUSE.iCast_theano(mask)
-        layer.outputs[stream] = layer.outputs[stream] * mask
+        if self.getHP("dropoutRatio") > 0 :
+            rnd = tt.shared_randomstreams.RandomStreams()
+            mask = rnd.binomial(n = 1, p = (1-self.getHP("dropoutRatio")), size = layer.outputs[stream].shape, dtype=theano.config.floatX)
+            # cast to stay in GPU float limit
+            mask = MUSE.iCast_theano(mask)
+            layer.outputs[stream] = layer.outputs[stream] * mask
 
 class Center(Decorator_ABC) :
     """Centers the outputs by substracting the mean"""

@@ -49,15 +49,22 @@ class MeanSquaredError(Cost_ABC) :
         cost = tt.mean((outputs - targets) ** 2)
         return cost
 
+class AbsoluteAverage(Cost_ABC) :
+    """Average absolute value"""
+    def run(self, targets, outputs, stream) :
+        cost = tt.mean((outputs - targets))
+        return cost
+
 class CategoricalCrossEntropy(Cost_ABC) :
     """Returns the average number of bits needed to identify an event."""
     def run(self, targets, outputs, stream) :
         cost = tt.mean( tt.nnet.categorical_crossentropy(outputs, targets) )
         return cost
-        
-class CrossEntropy(CategoricalCrossEntropy) :
-    """Short hand for CategoricalCrossEntropy"""
-    pass
+      
+CrossEntropy = CategoricalCrossEntropy
+# class CrossEntropy(CategoricalCrossEntropy) :
+#     """Short hand for CategoricalCrossEntropy"""
+#     pass
 
 class BinaryCrossEntropy(Cost_ABC) :
     """Use this one for binary data"""
