@@ -58,7 +58,7 @@ class RandomMask(Decorator_ABC):
         self.setHP("masks", masks)
 
     def run(self, layer, stream) :
-        rnd = tt.shared_randomstreams.RandomStreams()
+        rnd = tt.shared_randomstreams.RandomStreams(seed=MSET.RANDOM_SEED)
         maskId = rnd.random_integers(low=0, high=self.nbMasks-1, ndim=1)
         mask = self.masks[maskId]
 
@@ -75,7 +75,7 @@ class BinomialDropout(Decorator_ABC):
         
     def run(self, layer, stream) :        
         if self.getHP("dropoutRatio") > 0 :
-            rnd = tt.shared_randomstreams.RandomStreams()
+            rnd = tt.shared_randomstreams.RandomStreams(seed=MSET.RANDOM_SEED)
             mask = rnd.binomial(n = 1, p = (1-self.getHP("dropoutRatio")), size = layer.outputs[stream].shape, dtype=theano.config.floatX)
             # cast to stay in GPU float limit
             mask = MUSE.iCast_theano(mask)
@@ -163,7 +163,7 @@ class AddGaussianNoise(Decorator_ABC):
         self.setHP("avg", avg)
         
     def run(self, layer, stream) :
-        rnd = tt.shared_randomstreams.RandomStreams()
+        rnd = tt.shared_randomstreams.RandomStreams(seed=MSET.RANDOM_SEED)
         randomVals = rnd.normal(size = layer.getIntrinsicShape(), avg=self.getHP("avg"), std=self.getHP("std") )
         layer.outputs[stream] = layer.outputs[stream] + randomVals
 
@@ -177,7 +177,7 @@ class MultGaussianNoise(Decorator_ABC):
         self.setHP("avg", avg)
         
     def run(self, layer, stream) :
-        rnd = tt.shared_randomstreams.RandomStreams()
+        rnd = tt.shared_randomstreams.RandomStreams(seed=MSET.RANDOM_SEED)
         randomVals = rnd.normal(size = layer.getIntrinsicShape(), avg=self.getHP("avg"), std=self.getHP("std") )
         layer.outputs[stream] = layer.outputs[stream] * randomVals
 

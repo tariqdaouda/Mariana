@@ -39,13 +39,15 @@ class UpdateStore(object):
 
 class Updates(object):
     """Derives the updates for a theano function"""
-    def __init__(self, output_layer, stream):
+    def __init__(self, output_layer, stream, coParametersValues={}):
         super(Updates, self).__init__()
         self.output_layers = [output_layer]
         self.loss = 0
         self.stream = stream
         self.store = UpdateStore()
         self.isCompiled = False
+        self.coParametersValues = coParametersValues
+        # self.coParameters = {}
 
     def merge(self, updates) :
         """Merge tow updates by combining their outputs and adding theirs losses. Must be None or another Updates instance"""
@@ -60,8 +62,8 @@ class Updates(object):
 
     def compile(self) :
         """Derive the updates and gradients for every parameter in the network"""
-        
         #append outputs optimization rules at the top level
+        # print "comp"
         self.loss = 0
         optimizers = {}
         names = {}
@@ -143,14 +145,21 @@ class Updates(object):
         for gup in preStore.itervalues() :
             self.store.add( gup["parameter"], gup["gradient"], gup["update"], gup["name"] )
             for coParam in gup["coParameters"] :
+                if coParam["name"] in self.coParametersValues :
+                    coParam["parameter"].set_value(self.coParametersValues[coParam["name"]])
+                    self.output_layers[0].network.logEvent("updating %s with previoustly saved value" % coParam["name"])
+
                 self.store.add( coParam["parameter"], coParam["gradient"], coParam["update"], coParam["name"] )
+                self.coParametersValues[coParam["name"]] = coParam["parameter"].get_value()
 
         self.isCompiled = True
 
-    def __getstate__(self) :
-        res = Updates(None, self.stream)
-        res.output_layers = self.output_layers
-        return res.__dict__
+    # def __getstate__(self) :
+    #     print "asdsafsa"
+
+    #     res = Updates(None, self.stream, coParametersValues)
+    #     res.output_layers = self.output_layers
+    #     return res.__dict__
 
 class TheanoFunctionHandle(object) :
     """
@@ -438,7 +447,7 @@ class KolokoTheanoFunction(object) :
             
         if not self.uncompiledSelf :
             self.uncompiledSelf = getUncompiledSelf()        
-
+        # print "aaa", self.updates.coParameters
         return self.uncompiledSelf.__dict__
 
 class TheanoFunction(KolokoTheanoFunction):

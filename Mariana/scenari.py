@@ -110,6 +110,10 @@ class LearningScenario_ABC(MABS.UntrainableAbstraction_ABC, MABS.Apply_ABC):
                 return self.conflictResolve.apply(previous, v)
             except IncompatibleLearningScenarios :
                 raise IncompatibleLearningScenarios("Learning scenario: '%s' is incompatible with previous updates (abstraction: '%s', previous: '%s')" % (self.__class__.__name__, abstraction.name, previous))
+
+        # for cp in v.coParameters :
+            # abstraction.registerCoParameter(cp.name, cp)
+    
         return v
 
     def run(self, parameter, parameterName, loss, abstraction, previous) :
@@ -169,6 +173,7 @@ class GradientDescent(LearningScenario_ABC):
             ret.addCoParameter(momentum_param, "momentum", None, momentum_update)
 
         return ret
+
 SGD = GradientDescent
 
 #class GradientClipping(LearningScenario_ABC):

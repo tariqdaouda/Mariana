@@ -4,6 +4,7 @@ import Mariana.settings as MSET
 import Mariana.abstraction as MABS
 
 import cPickle, pickle
+import numpy
 
 __all__= ["loadModel", "Network"]
 
@@ -31,6 +32,9 @@ class Network(MABS.Logger_ABC) :
         self.parameterStash = {}
 
         self._mustInit = True
+        self.random_seed = MSET.RANDOM_SEED
+
+        numpy.random.seed(self.random_seed)
         # self.outputMaps = {}
 
     def getOutputs(self) :
