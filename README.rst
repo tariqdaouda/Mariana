@@ -1,11 +1,7 @@
 What will happen now that Theano is no longer developed?
 =========================================================
 
-Mariana works! I still use it almost everyday.
-
-However, for now the developement is halted. I am still taking care of the maintenance and may still add some minor features, but I am not planning on adding anything major.
-
-I still believe that Mariana can play a relevant role in the machine learning community and especially beyond. The most straightforward path would be a complete port to Tensorflow.  Let me know if you'd like to help!
+Mariana works! I still use it almost everyday. I am still taking care of the maintenance and may still add some minor features. For the future, the most straightforward path would be a complete port to Tensorflow or PyTorch. Let me know if you'd like to help!
 
 T .
 
@@ -23,11 +19,9 @@ MARIANA: The Cutest Deep Learning Framework
 =============================================
 .. image:: https://img.shields.io/badge/python-2.7-blue.svg 
     
-**TEMPORARY README FOR MARIANA V2, WIP (BUT ALMOST DONE).**
+**TEMPORARY README FOR MARIANA V2.**
 
-Mariana is an **efficient language** through which complex deep neural networks can be easily expressed and easily manipulated. It's simple enough for beginners and doesn't get much complicated.
-
-Intuitive, user-friendly and yet flexible enough for research. It's here to empower **researchers**, **teachers** and **students** alike, while greatly facilitating **AI knowledge transfer** into other domains.
+Mariana is meant to be a **efficient language** through which complex deep neural networks can be easily expressed and easily manipulated. It's simple enough for beginners and doesn't get much complicated. Intuitive, user-friendly and yet flexible enough for research. It's here to empower **researchers**, **teachers** and **students** alike, while greatly facilitating **AI knowledge transfer** into other domains.
 
 .. code:: python
 
