@@ -1,7 +1,8 @@
 What will happen now that Theano is no longer developed?
 =========================================================
 
-Mariana works! I still use it almost everyday. I am still taking care of the maintenance and may still add some minor features. For the future, the most straightforward path would be a complete port to Tensorflow or PyTorch. Let me know if you'd like to help!
+**Mariana works!** I still use it almost everyday.
+I am still taking care of the maintenance and may still add some minor features. For the future, the most straightforward path would be a complete port to Tensorflow or PyTorch. Let me know if you'd like to help!
 
 T .
 
