@@ -41,7 +41,7 @@ Mariana is meant to be a **efficient language** through which complex deep neura
 	inp = ML.Input(28*28, name = "InputLayer")
 	h1 = ML.Hidden(300, activation = MA.ReLU(), name = "Hidden1", regularizations = [ MR.L1(0.0001) ])
 	h2 = ML.Hidden(300, activation = MA.ReLU(), name = "Hidden2", regularizations = [ MR.L1(0.0001) ])
-	o = ML.SoftmaxClassifier(10, learningScenario = ls, costObject = cost, name = "Probabilities")
+	o = ML.SoftmaxClassifier(10, learningScenari = [ls], cost = cost, name = "Probabilities")
 
 	#Connecting layers
 	inp > h1 > h2
