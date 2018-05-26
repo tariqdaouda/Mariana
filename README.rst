@@ -1,11 +1,9 @@
 What will happen now that Theano is no longer developed?
 =========================================================
 
-Mariana works! I still use it almost everyday.
+**Mariana works!** I still use it almost everyday.
 
-However, for now the developement is halted. I am still taking care of the maintenance and may still add some minor features, but I am not planning on adding anything major.
-
-I still believe that Mariana can play a relevant role in the machine learning community and especially beyond. The most straightforward path would be a complete port to Tensorflow.  Let me know if you'd like to help!
+I am still taking care of the maintenance and may still add some minor features. For the future, the most straightforward path would be a complete port to Tensorflow or PyTorch. Let me know if you'd like to help!
 
 T .
 
@@ -23,11 +21,9 @@ MARIANA: The Cutest Deep Learning Framework
 =============================================
 .. image:: https://img.shields.io/badge/python-2.7-blue.svg 
     
-**TEMPORARY README FOR MARIANA V2, WIP (BUT ALMOST DONE).**
+**TEMPORARY README FOR MARIANA V2.**
 
-Mariana is an **efficient language** through which complex deep neural networks can be easily expressed and easily manipulated. It's simple enough for beginners and doesn't get much complicated.
-
-Intuitive, user-friendly and yet flexible enough for research. It's here to empower **researchers**, **teachers** and **students** alike, while greatly facilitating **AI knowledge transfer** into other domains.
+Mariana is meant to be a **efficient language** through which complex deep neural networks can be easily expressed and easily manipulated. It's simple enough for beginners and doesn't get much complicated. Intuitive, user-friendly and yet flexible enough for research. It's here to empower **researchers**, **teachers** and **students** alike, while greatly facilitating **AI knowledge transfer** into other domains.
 
 .. code:: python
 
@@ -45,7 +41,7 @@ Intuitive, user-friendly and yet flexible enough for research. It's here to empo
 	inp = ML.Input(28*28, name = "InputLayer")
 	h1 = ML.Hidden(300, activation = MA.ReLU(), name = "Hidden1", regularizations = [ MR.L1(0.0001) ])
 	h2 = ML.Hidden(300, activation = MA.ReLU(), name = "Hidden2", regularizations = [ MR.L1(0.0001) ])
-	o = ML.SoftmaxClassifier(10, learningScenario = ls, costObject = cost, name = "Probabilities")
+	o = ML.SoftmaxClassifier(10, learningScenari = [ls], cost = cost, name = "Probabilities")
 
 	#Connecting layers
 	inp > h1 > h2
