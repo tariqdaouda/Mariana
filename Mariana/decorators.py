@@ -153,6 +153,16 @@ class Clip(Decorator_ABC):
     def run(self, layer, stream) :
         layer.outputs[stream] = layer.outputs[stream].clip(self.lower, self.upper)
 
+# class ForceUnitRange(Decorator_ABC):
+#     """Force the output to be between [0, 1]"""
+    
+#     def __init__(self, streams=["train"], **kwargs):
+#         super(ForceUnitRange, self).__init__(streams, **kwargs) 
+        
+#     def run(self, layer, stream) :
+#         layer.outputs[stream] = (layer.outputs[stream] - min(layer.outputs[stream]))
+#         layer.outputs[stream] /= max(layer.outputs[stream])
+
 class AddGaussianNoise(Decorator_ABC):
     """Add gaussian noise to the output of the layer"""
     
