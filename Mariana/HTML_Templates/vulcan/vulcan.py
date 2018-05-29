@@ -1,15 +1,56 @@
 import inspect, sys, os, shutil
 import Mariana.HTML_Templates.template as MTMP
 
+
 class Vulcan(MTMP.HTMLTemplate_ABC):
     """A theme"""
+    TEMPLATE="""
+        <!doctype html>
+        <html>
+        <head>
+            <title>{TITLE}</title>
+            {LIBS}
+        </head>
+
+        <body>
+            <div id="all" class="uk-container uk-container-center">
+                <div class="uk-grid uk-flex-center uk-text-center" uk-grid>
+                    <div class="uk-card uk-card-default uk-width-expand">
+                        <p>
+                            <a target="_blank" href='{DOCUMENTATION_URL}'>
+                                <img src="{LIBS_FOLDER}/mariana_logo.png" alt="Documentation" height="150" width="150" title="Documentation"/>
+                            </a>
+                        </p> 
+                        <h3 class="uk-card-title uk-margin-remove-bottom">{TITLE}</h3>
+                        <p class="uk-text-meta uk-margin-remove-top"><time datetime="{MACHINE_TIME}">{USER_TIME}</time></p>
+                        <div class="uk-card-body">
+                            {MODEL_NOTES}
+                        </div>
+                        <a target="_blank" href="{GITHUB_URL}" class="uk-icon-button">
+                            <i uk-icon="icon: github"></i>
+                        </a>
+                    </div>
+                    <div class="uk-width-1-1"></div>
+                    <div class="uk-width-1-1">
+                        <graph-view nodesp='{LAYERS_JSON}' edgesp='{EDGES_JSON}' physicsp="false" ></graph-view>
+                    </div>
+                </div>
+            </div>
+        </body>
+
+        <script src="{LIBS_FOLDER}/uikit/3.0.0-beta.21/js/uikit-icons.min.js"></script>
+        <script type="text/javascript" src="{LIBS_FOLDER}/vulcan.js"></script>
+
+        </html>
+    """
+
     def __init__(self):
         super(Vulcan, self).__init__()
         self.dirname = os.path.dirname(inspect.getfile(sys.modules[__name__]))
         
-        f = open(os.path.join(self.dirname, "vulcan.html"))
-        self.html = f.read()
-        f.close()
+        # f = open(os.path.join(self.dirname, "vulcan.html"))
+        # self.html = f.read()
+        # f.close()
         
         self.weblibsDir = os.path.join(self.dirname, "weblibs")
         self.libs_local = """
@@ -108,7 +149,7 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
         else :
             libs = self.libs_remote
 
-        html = self.html.format(
+        html = self.TEMPLATE.format(
             TITLE=title,
             LIBS=libs,
             LIBS_FOLDER=libsFolder,
