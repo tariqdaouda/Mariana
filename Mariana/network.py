@@ -405,16 +405,20 @@ class Network(MABS.Logger_ABC) :
         template = Vulcan()
         template.render(name, self.toDictionary(name), save=True)
 
-    def view(self, modelName, init = True) :
-        """Returns an interactive visualization for JuPyter etc..."""
-        from IPython.core.display import display, HTML
+    def toHTML(self, modelName, init = True) :
+        """Returns the interactive visualization html"""
         from Mariana.HTML_Templates.vulcan.vulcan import Vulcan
         
         if init :
             self.init()
         template = Vulcan()
         ret = template.render(modelName, self.toDictionary(modelName), save=False)
-        print ret
+        return ret 
+
+    def view(self, modelName, init = True) :
+        """Returns an interactive visualization for JuPyter etc..."""
+        from IPython.core.display import display, HTML
+        ret = self.toHTML(modelName, init)
         return display(HTML(ret)) 
 
     def saveHTML_old(self, name, forceInit = True) :
