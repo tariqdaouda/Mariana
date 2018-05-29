@@ -414,6 +414,7 @@ class Network(MABS.Logger_ABC) :
             self.init()
         template = Vulcan()
         ret = template.render(modelName, self.toDictionary(modelName), save=False)
+        print ret
         return display(HTML(ret)) 
 
     def saveHTML_old(self, name, forceInit = True) :

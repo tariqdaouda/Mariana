@@ -9,7 +9,13 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
         <html>
         <head>
             <title>{TITLE}</title>
-            {LIBS}
+            <script type="text/javascript" src="{LIBS_FOLDER}/jquery-3.2.1.min.js"></script>
+            <link rel="stylesheet" href="{LIBS_FOLDER}/uikit/3.0.0-beta.21/css/uikit.min.css" />
+            <script src="{LIBS_FOLDER}/uikit/3.0.0-beta.21/js/uikit.min.js"></script>
+            <script type="text/javascript" src="{LIBS_FOLDER}/vue.min.js"></script>    
+            <script type="text/javascript" src="{LIBS_FOLDER}/vis/4.19.1/vis.min.js"></script>
+            <link href="{LIBS_FOLDER}/vis/4.19.1/vis.min.css" rel="stylesheet" type="text/css"/>
+            <link href="{LIBS_FOLDER}/vulcan.css" rel="stylesheet" type="text/css"/>
         </head>
 
         <body>
@@ -53,25 +59,19 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
         # f.close()
         
         self.weblibsDir = os.path.join(self.dirname, "weblibs")
-        self.libs_local = """
-            <script type="text/javascript" src="{LIBS_FOLDER}/jquery-3.2.1.min.js"></script>
-            <link rel="stylesheet" href="{LIBS_FOLDER}/uikit/3.0.0-beta.21/css/uikit.min.css" />
-            <script src="{LIBS_FOLDER}/uikit/3.0.0-beta.21/js/uikit.min.js"></script>
-            <script type="text/javascript" src="{LIBS_FOLDER}/vue.min.js"></script>    
-            <script type="text/javascript" src="{LIBS_FOLDER}/vis/4.19.1/vis.min.js"></script>
-            <link href="{LIBS_FOLDER}/vis/4.19.1/vis.min.css" rel="stylesheet" type="text/css"/>
-            <link href="{LIBS_FOLDER}/vulcan.css" rel="stylesheet" type="text/css"/>
-        """
+        # self.libs = """
+           
+        # """
 
-        self.libs_remote = """
-            <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.0.0-beta.21/css/uikit.min.css" />
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.0.0-beta.21/js/uikit.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.0.0-beta.21/js/uikit-icons.min.js"></script>
-            <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.19.1/vis.min.js"></script>
-            <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.19.1/vis.min.css" rel="stylesheet" type="text/css"/>
-            <script type="text/javascript" src="https://unpkg.com/vue"></script>
-        """
+        # self.libs_remote = """
+        #     <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+        #     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.0.0-beta.21/css/uikit.min.css" />
+        #     <script src="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.0.0-beta.21/js/uikit.min.js"></script>
+        #     <script src="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.0.0-beta.21/js/uikit-icons.min.js"></script>
+        #     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.19.1/vis.min.js"></script>
+        #     <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.19.1/vis.min.css" rel="stylesheet" type="text/css"/>
+        #     <script type="text/javascript" src="https://unpkg.com/vue"></script>
+        # """
 
     def formatNotes(self, notes) :
         tmp = """
@@ -99,10 +99,11 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
 
         title = os.path.basename(filename)
         noSpaceTitle = title.replace(" ", "-")
-        libsFolder = "%s_weblibs" % noSpaceTitle
-    
         if save :
+            libsFolder = "%s_weblibs" % noSpaceTitle
             currFolder = os.path.dirname(filename)
+        else :
+            libsFolder = "https://cdn.rawgit.com/tariqdaouda/Mariana/V2-dev/Mariana/HTML_Templates/vulcan/weblibs/"
 
         layers = []
         for l in networkJson["layers"] :
@@ -144,14 +145,14 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
                             pass    
             layers.append([l, dct])
 
-        if save :
-            libs = self.libs_local
-        else :
-            libs = self.libs_remote
+        # if save :
+        #     libs = self.libs_local
+        # else :
+        #     libs = self.libs_remote
 
         html = self.TEMPLATE.format(
             TITLE=title,
-            LIBS=libs,
+            # LIBS=libs,
             LIBS_FOLDER=libsFolder,
             DOCUMENTATION_URL="http://bioinfo.iric.ca/~daoudat/Mariana/",
             GITHUB_URL="https://github.com/tariqdaouda/Mariana",
