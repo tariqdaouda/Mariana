@@ -398,11 +398,23 @@ class Network(MABS.Logger_ABC) :
         return json.dumps(self.toDictionary(name))
 
     def saveHTML(self, name, init=True) :
+        """Saves an interactive HTML representation of the model."""
         from Mariana.HTML_Templates.vulcan.vulcan import Vulcan
         if init :
             self.init()
         template = Vulcan()
-        template.render(name, self.toDictionary(name))
+        template.render(name, self.toDictionary(name), save=True)
+
+    def view(self, modelName, init = True) :
+        """Returns an interactive visualization for JuPyter etc..."""
+        from IPython.core.display import display, HTML
+        from Mariana.HTML_Templates.vulcan.vulcan import Vulcan
+        
+        if init :
+            self.init()
+        template = Vulcan()
+        ret = template.render(modelName, self.toDictionary(modelName), save=False)
+        return display(HTML(ret)) 
 
     def saveHTML_old(self, name, forceInit = True) :
         """Creates an HTML file with the graph representation."""

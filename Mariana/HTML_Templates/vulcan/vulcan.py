@@ -12,7 +12,26 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
         f.close()
         
         self.weblibsDir = os.path.join(self.dirname, "weblibs")
-    
+        self.libs_local = """
+            <script type="text/javascript" src="{LIBS_FOLDER}/jquery-3.2.1.min.js"></script>
+            <link rel="stylesheet" href="{LIBS_FOLDER}/uikit/3.0.0-beta.21/css/uikit.min.css" />
+            <script src="{LIBS_FOLDER}/uikit/3.0.0-beta.21/js/uikit.min.js"></script>
+            <script type="text/javascript" src="{LIBS_FOLDER}/vue.min.js"></script>    
+            <script type="text/javascript" src="{LIBS_FOLDER}/vis/4.19.1/vis.min.js"></script>
+            <link href="{LIBS_FOLDER}/vis/4.19.1/vis.min.css" rel="stylesheet" type="text/css"/>
+            <link href="{LIBS_FOLDER}/vulcan.css" rel="stylesheet" type="text/css"/>
+        """
+
+        self.libs_remote = """
+            <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.0.0-beta.21/css/uikit.min.css" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.0.0-beta.21/js/uikit.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.0.0-beta.21/js/uikit-icons.min.js"></script>
+            <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.19.1/vis.min.js"></script>
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.19.1/vis.min.css" rel="stylesheet" type="text/css"/>
+            <script type="text/javascript" src="https://unpkg.com/vue"></script>
+        """
+
     def formatNotes(self, notes) :
         tmp = """
             <div class="uk-flex-center uk-child-width-1-2@s uk-child-width-1-3@m" uk-grid>
@@ -33,14 +52,16 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
        
         return tmp.format(trs = "\n".join(trs))
 
-    def render(self, filename, networkJson) :
+    def render(self, filename, networkJson, save) :
         import time
         import json
 
         title = os.path.basename(filename)
         noSpaceTitle = title.replace(" ", "-")
         libsFolder = "%s_weblibs" % noSpaceTitle
-        currFolder = os.path.dirname(filename)
+    
+        if save :
+            currFolder = os.path.dirname(filename)
 
         layers = []
         for l in networkJson["layers"] :
@@ -82,8 +103,14 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
                             pass    
             layers.append([l, dct])
 
+        if save :
+            libs = self.libs_local
+        else :
+            libs = self.libs_remote
+
         html = self.html.format(
             TITLE=title,
+            LIBS=libs,
             LIBS_FOLDER=libsFolder,
             DOCUMENTATION_URL="http://bioinfo.iric.ca/~daoudat/Mariana/",
             GITHUB_URL="https://github.com/tariqdaouda/Mariana",
@@ -94,13 +121,15 @@ class Vulcan(MTMP.HTMLTemplate_ABC):
             EDGES_JSON=json.dumps(networkJson["edges"])
         )
         
-        
-        if os.path.isdir(self.weblibsDir) :
-            dstFolder = os.path.join(currFolder, libsFolder)
-            if os.path.isdir(dstFolder) :
-                shutil.rmtree(dstFolder)    
-            shutil.copytree(self.weblibsDir, dstFolder)
-        
-        f = open(os.path.join(currFolder, "%s.html" % noSpaceTitle), "w") 
-        f.write(html)
-        f.close()
+        if save :
+            if os.path.isdir(self.weblibsDir) :
+                dstFolder = os.path.join(currFolder, libsFolder)
+                if os.path.isdir(dstFolder) :
+                    shutil.rmtree(dstFolder)    
+                shutil.copytree(self.weblibsDir, dstFolder)
+            
+            f = open(os.path.join(currFolder, "%s.html" % noSpaceTitle), "w") 
+            f.write(html)
+            f.close()
+
+        return html
