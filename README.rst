@@ -21,9 +21,13 @@ MARIANA: The Cutest Deep Learning Framework
 =============================================
 .. image:: https://img.shields.io/badge/python-2.7-blue.svg 
     
-**TEMPORARY README FOR MARIANA V2.**
+**MARIANA V2.**
 
 Mariana is meant to be a **efficient language** through which complex deep neural networks can be easily expressed and easily manipulated. It's simple enough for beginners and doesn't get much complicated. Intuitive, user-friendly and yet flexible enough for research. It's here to empower **researchers**, **teachers** and **students** alike, while greatly facilitating **AI knowledge transfer** into other domains.
+
+Mariana is also compatible with google's GPUs and colab. For a running basic example you can check here on colab_.
+
+.. _colab: https://colab.research.google.com/github/tariqdaouda/Mariana/blob/V2-dev/Mariana_basics_example.ipynb
 
 .. code:: python
 
