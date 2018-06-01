@@ -28,6 +28,9 @@ CHANGELOG
 * feature: Layers now perform basic sanity checks.
 * added test for Autoencode layer
 * bug fix: _setShape() now gives a last chance to set the layers shape before initialization. Fixes a bug where weight matrices could be wrongly initiliazed when the input was a Composite layer
+* bug fix: Added missing test outputs to Composite
+* bug fix: Ensure that composite layers are always concatenanted in the same order
+* Addded fcuntion for getting a layer inner and outer connections sorted in alphabetical order
 
 1.0.2rc:
 --------

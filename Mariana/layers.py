@@ -14,7 +14,7 @@ import Mariana.network as MNET
 import Mariana.wrappers as MWRAP
 import Mariana.candies as MCAN
 
-__all__=["Layer_ABC", "ArithmeticMerge", "Input", "Embedding", "Dense", "Hidden",  "Merge", "M", "Concatenation", "C", "DenseOutput_ABC", "Output_ABC", "SoftmaxClassifier", "Regression", "Autoencode"]
+__all__=["Layer_ABC", "ArithmeticMerge", "Input", "Embedding", "Dense", "Hidden",  "Merge", "M", "Concatenation", "C", "DenseOutput_ABC", "Output_ABC", "SoftmaxClassifier", "Regression", "Autoencode", "GaussianSampling"]
 
 
 class ArithmeticMerge(object):
@@ -124,10 +124,10 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
 
     def __new__(cls, *args, **kwargs) :
         import inspect
-        
+       
         obj=super(Layer_ABC, cls).__new__(cls, *args, **kwargs)
         # argNames=inspect.getargspec(obj.__init__)[0][1:] #remove self
-        
+       
         finalKwargs={}
         for k, v in kwargs.iteritems() :
             finalKwargs[k]=v
@@ -201,7 +201,7 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         creationArguments=dict(self.creationArguments["kwargs"])
         creationArguments.update(kwargs)
         newLayer=self.__class__(*self.creationArguments["args"], **creationArguments)
-        
+
         for k, v in self.getParameters().iteritems() :
             newLayer.setP(k, copy.copy(v))
         
@@ -221,7 +221,7 @@ class Layer_ABC(MABS.TrainableAbstraction_ABC) :
         """The last function called during initialization. Does nothing by default, you can put in it
         whatever post-action you want performed on the layer post normal initialization"""
         pass
-    
+
     def getInLayers(self) :
         """get the list of all incoming layers"""
         return self.network.inConnections[self]
@@ -719,7 +719,6 @@ class Embedding(Layer_ABC) :
         :param int dictSize: the total number of words.
         :param bool zeroForNull: if True the dictionnary will be augmented by one elements at te begining (index=0) whose parameters will always be vector of zeros. This can be used to selectively mask some words in the input, but keep in mind that the index for the first word is moved to one.
         :param int size: the size of the input vector (if your input is a sentence this should be the number of words in it). You don't have to provide a value in the embedding layer is a hidden layer
-        
         """
 
         super(Embedding, self).__init__(initializations=initializations, name=name, **kwargs)
@@ -979,3 +978,59 @@ class Autoencode(DenseOutput_ABC) :
  
     def _whateverFirstInit(self) :
         self.targets.tie(self.network[self.targetLayerName].outputs)
+
+class GaussianSampling(Layer_ABC):
+    """
+        Given a vector V of length 2N, samples S times from N(V[:N], V[N:]) and
+            returns the average of the S samples.
+        if samples <= 0, returns V[:N] (infinite averaged samples) instead.
+    
+        `size`: int - value of N above
+        `samples`: int - how many samples to average (S above)
+        `rng`: int - seed to initialize the rng with
+        `name`: str - layer name
+    """
+
+    def __init__(self, size, samples=1, rng=None, name=None, **kwargs):
+        super(GaussianSampling, self).__init__(name=name, initializations=[], **kwargs)
+        self.size = int(size)
+        self.samples = int(samples)
+        self.rng = tt.shared_randomstreams.RandomStreams(rng if rng is not None else 0)
+        self.setHP('shape', (None, self.size))
+
+    def setOutputs_abs(self):
+        layer = self.network.getInConnections(self)[0]
+        for s in self.inputs.streams:
+            mu, logsigma = tt.split(self.inputs[s], [self.size, self.size], 2, axis=1)
+            self.outputs[s] = 0
+            if self.samples > 0:
+                for k in xrange(self.samples):
+                    self.outputs[s] += mu + tt.exp(logsigma) * self.rng.normal(size=mu.shape)
+
+                self.outputs[s] /= self.samples
+            else:
+                self.outputs[s] = mu
+
+    def setShape_abs(self):
+        layer = self.network.getInConnections(self)[0]
+        if layer.getShape_abs():
+            self.originalInputShape = tuple(layer.getShape_abs())
+            if len(self.originalInputShape) > 2:
+                s = 1
+                for v in self.originalInputShape[1:]:
+                    if v is not None:
+                        s *= v
+
+                self.inputShape = (-1, s)
+            else:
+                self.inputShape = self.originalInputShape
+
+    def femaleConnect(self, layer):
+        self.setShape_abs()
+
+    def getShape_abs(self):
+        """defines the number of inputs"""
+        return self.getHP('shape')
+
+    def getParameterShape_abs(self, param, **kwargs):
+        raise ValueError('Layer has no parameters')

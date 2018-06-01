@@ -89,6 +89,22 @@ class Network(MABS.Logger_ABC) :
 
         self.logEvent("New edge %s > %s" % (layer1.name, layer2.name))
 
+    def getSortedInConnections(self, layer) :
+        """Returns a layer's inner connections sorted in alphetical order"""
+        names = []
+        for l in self.inConnections[layer] :
+            names.append(l.name)
+        names.sort()
+        return [self.layers[name] for name in names]
+        
+    def getSortedOutConnections(self, layer) :
+        """Returns a layer's outer connections sorted in alphetical order"""
+        names = []
+        for l in self.outConnections[layer] :
+            names.append(l.name)
+        names.sort()
+        return [self.layers[name] for name in names]
+    
     def _addLayer(self, h) :
         """adds a layer to the network"""
         
